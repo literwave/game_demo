@@ -1,0 +1,33 @@
+syntax = "proto2";
+
+package Login;
+// 登录相关
+
+// 请求登录账号验证
+message c2splaylogin {
+	optional string account = 1;			//帐号
+	optional string passwd = 2;				//密码
+}
+
+// 登录账号验证返回
+message s2cplaylogin {
+	optional string account = 1;			//帐号
+	optional string passwd = 2;				//密码
+	optional int32 result = 3;				//登录结果
+}
+
+// 请求注册账号
+message c2splayregister {
+	optional string account = 1;			//帐号
+	optional string passwd = 2;				//密码
+	optional string confirm_passwd = 3;		//确认密码
+}
+
+// 注册账号证返回
+message s2cplayregister {
+	optional string account = 1;			//帐号
+	optional string passwd = 2;				//密码
+	optional string confirm_passwd = 3;		//确认密码
+}
+
+

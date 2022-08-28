@@ -1,0 +1,13 @@
+syntax="proto2";
+
+package Chat;
+// 聊天相关
+
+message C2SChat {
+    optional string content = 1;    // 聊天内容
+}
+
+message S2CChat {
+    optional string content = 1;    // 聊天内容
+}
+

@@ -1,0 +1,48 @@
+skynetdir = "./"   -- skynet目录
+gdir = "../"       -- 日志目录
+luaservice = skynetdir.."service/?.lua;"..skynetdir.."../logic/service/?.lua;"..skynetdir.."../start_up/?.lua;"
+lualoader = skynetdir .. "lualib/loader.lua"
+lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua";
+lua_cpath = skynetdir .. "luaclib/?.so;"..skynetdir .. "luaclib/?.dll"
+snax = skynetdir.."script/?.lua;"
+-- snax_interface_g = "snax_g"
+cpath = skynetdir.."cservice/?.so"
+
+
+
+-- preload = "./script/preload.lua"	-- run preload.lua before every lua service run
+thread = 8
+logger = nil
+logpath = "."
+harbor = 1
+address = "127.0.0.1:2526"
+master = "127.0.0.1:2013"
+start = "main_start"	-- main script
+bootstrap = "snlua bootstrap"	-- The service for bootstrap
+standalone = "0.0.0.0:2013"
+-- daemon = "./skynet.pid"
+
+-- mysql etc
+
+db_info = [[{
+    [1]="127.0.0.1",
+    [2]="3306",
+    [3]="dbgame",
+    [4]="root",
+    [5]=""
+}]]
+
+-- 协议路径
+ppath = gdir .. "proto/pb/"
+
+-- 日志路径
+logpath = gdir.."log"
+
+------------ 网关相关 --------------
+gate_port = 8888
+
+------------ 登录相关 --------------
+login_port = 33021
+slave_cnt = 3
+maxonline = 2000  -- 单服人数
+nodelay = true    -- 尽可能快socket发送包
