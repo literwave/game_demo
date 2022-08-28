@@ -10,13 +10,13 @@ function self.init()
     self.m_nMaxRoleID = 10000;
     misc.log_print('----maxaccount ',self.i);
     local sql = "SELECT MAX(rl_sRoleID) FROM tbl_account;"
-    local rz = skynet.call(".sql", "lua", "querycb",sql);
+    local rz = skynet.call(".dbserver", "lua", "querycb",sql);
     misc.log_print("maxaccount rz",rz,#rz[1],rz[1]);
     if rz[1] ~= nil and rz[1]["MAX(rl_sRoleID)"]~=nil then
         self.m_nMaxRoleID = rz[1]["MAX(rl_sRoleID)"];
     end
     local sql = "SELECT MAX(rl_uID) FROM tbl_player;"
-    local rz_player = skynet.call(".sql", "lua", "querycb",sql);
+    local rz_player = skynet.call(".dbserver", "lua", "querycb",sql);
     misc.log_print("++++maxaccount rz",#rz_player[1],rz_player[1]);
     if rz_player[1] ~= nil and  rz_player[1]["MAX(rl_uID)"]~=nil and self.m_nMaxRoleID < rz_player[1]["MAX(rl_uID)"] then
         self.m_nMaxRoleID = rz_player[1]["MAX(rl_uID)"];

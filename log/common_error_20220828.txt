@@ -1,0 +1,8 @@
+[2022/08/28/18:34:08]:-:{1=[/../logic/service/maxaccount.lua]: line: 11 print: 2=----maxaccount }   
+[2022/08/28/18:34:08]:-:{1=[/../logic/service/maxaccount.lua]: line: 14 print: 2=maxaccount rz3={1={} } 4=05={} }   
+[2022/08/28/18:34:08]:-:{1=[/../logic/service/maxaccount.lua]: line: 20 print: 2=++++maxaccount rz3=04={} }   
+[2022/08/28/18:34:08]:-:{1=[/../logic/service/maxaccount.lua]: line: 25 print: 2=----------self.m_nMaxRoleID3=10000}   
+[2022/08/28/18:34:25]:-:{1=[/../logic/service/maxaccount.lua]: line: 11 print: 2=----maxaccount }   
+[2022/08/28/18:34:25]:-:{1=[/../logic/service/maxaccount.lua]: line: 14 print: 2=maxaccount rz3={1={} } 4=05={} }   
+[2022/08/28/18:34:25]:-:{1=[/../logic/service/maxaccount.lua]: line: 20 print: 2=++++maxaccount rz3=04={} }   
+[2022/08/28/18:34:25]:-:{1=[/../logic/service/maxaccount.lua]: line: 25 print: 2=----------self.m_nMaxRoleID3=10000}   

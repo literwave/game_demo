@@ -1,7 +1,7 @@
 -- 现在只做按照日志存的log文件，先不存分日志等级lv存相应的文件夹的设计
 
 package.path = SERVICE_PATH.."?.lua;" .. package.path
-local TimeFormat = os.date("[%Y/%m/%W/%X]:")
+local TimeFormat = os.date("[%Y/%m/%d/%X]:")
 local skynet = require "skynet"
 
 function log(...) --ͬ
@@ -30,7 +30,9 @@ end
 function warn(...) log("****Warn***:",...) end;
 function writefile(msg, mod)
     if not mod then mod = "a+" end;
-	local fileName = logPath .. "/" .. "common_error_"..os.date("%Y%m%W")..".txt"
+	skynet.error(os.date("%Y%m%d"))
+	skynet.error(os.date())
+	local fileName = logPath .. "/" .. "common_error_"..os.date("%Y%m%d")..".txt"
     local file = io.open(fileName, mod);
 	-- 这样会复制三份字符串数据，优缺点，但先这样写，没有好的方案
 	msg = TimeFormat .. msg

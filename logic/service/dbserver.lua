@@ -6,16 +6,6 @@ local skynet = require "skynet"
 require "skynet.manager" 
 local mysql = require "skynet.db.mysql"
 
-local cjson = require "cjson"
-print(cjson)
-local cjson2 = cjson.new()
-local lua_object = {
-    ["name"] = "1231"
-}
-print(cjson2.encode(lua_object))
-
-
-
 local db
 local CMD = {}
 
@@ -58,7 +48,8 @@ end
 
 -- 这个主的数据库做的服务应该是建表,对应表字段的修改和删除
 skynet.start(function()
-    
+    dofile "../common/dbglobal.lua"
+    modify_actor_table()
    local db_etc = load("return "..skynet.getenv "db_info")()
    local function on_connect(db)
       db:query("set charset utf8");
@@ -85,6 +76,7 @@ skynet.start(function()
 		    skynet.ret(skynet.pack(f(subcmd, ...)))
         end
 	 end)
+
      
     skynet.register ".dbserver"
     -- skynet.register ".sql"
