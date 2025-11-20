@@ -1,0 +1,77 @@
+skynetdir = "./"   -- skynet目录
+rootdir = "../"    -- 根目录
+workdir = "../logic/"
+
+preload = "../common/preload.lua"
+
+luaservice = skynetdir.."service/?.lua;"..workdir.."service/?.lua;"..skynetdir.."../start_up/?.lua;"..workdir.. "service/?/?.lua;"
+
+lualoader = skynetdir .. "lualib/loader.lua"
+lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua;"..workdir.."base/?.lua;";
+lua_cpath = skynetdir .. "luaclib/?.so;"..skynetdir .. "luaclib/?.dll"
+snax = skynetdir.."script/?.lua;"
+-- snax_interface_g = "snax_g"
+cpath = skynetdir.."cservice/?.so"
+
+host_id = "120"
+
+-- preload = "./script/preload.lua"	-- run preload.lua before every lua service run
+thread = 8
+logger = nil
+logpath = "."
+harbor = 0
+-- address = "127.0.0.1:2526"
+-- master = "127.0.0.1:2013"
+start = "main_start"	-- main script
+bootstrap = "snlua bootstrap"	-- The service for bootstrap
+-- standalone = "0.0.0.0:2013"
+-- daemon = "./skynet.pid"
+
+-- mysql etc
+
+db_info = [[{
+    [1]="127.0.0.1",
+    [2]="3306",
+    [3]="dbgame",
+    [4]="root",
+    [5]="123"
+}]]
+
+-- mongo etc
+mongodb_host = "192.168.24.185"
+mongodb_port = "27017"
+mongodb_user = "root"
+mongodb_password = "123"
+
+-- 协议路径
+ppath = rootdir .. "proto/pb/"
+
+-- 日志路径
+logpath = rootdir.."log"
+
+------------ 网关相关 --------------
+gate_port = 8888
+
+------------ 登录相关 --------------
+address = "0.0.0.0"
+login_port = 33021
+slave_cnt = 3
+maxonline = 2000  -- 单服人数
+nodelay = true    -- 尽可能快socket发送包 会有零碎小包
+
+agent_init_cnt = 4    -- 一开始初始化agent的数量  前期就用一个agent做玩法把，简单些
+agent_max_user_cnt = 500
+
+isTestServer = true  -- 是否是测试服
+
+------------ http相关 --------------
+http_port = 33022
+http_agent_cnt = 3
+------------ https相关 --------------
+https_port = 33023
+
+------------ game相关 --------------
+game = "c1"
+
+------------ 配置路径相关 --------------
+config_path = "../read_config/"

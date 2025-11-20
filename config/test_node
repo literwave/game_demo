@@ -1,0 +1,28 @@
+skynetdir = "./"   -- skynet目录
+rootdir = "../"    -- 根目录
+workdir = "../logic/"
+
+preload = "../common/preload.lua"
+
+luaservice = skynetdir.."service/?.lua;"..workdir.."service/?.lua;"..skynetdir.."../start_up/?.lua;"..workdir.. "service/?/?.lua;"..skynetdir.."../test/?.lua;"
+
+lualoader = skynetdir .. "lualib/loader.lua"
+lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua;"..workdir.."base/?.lua;";
+lua_cpath = skynetdir .. "luaclib/?.so;"..skynetdir .. "luaclib/?.dll"
+snax = skynetdir.."script/?.lua;"
+-- snax_interface_g = "snax_g"
+cpath = skynetdir.."cservice/?.so"
+
+-- preload = "./script/preload.lua"	-- run preload.lua before every lua service run
+thread = 8
+logger = nil
+logpath = "."
+harbor = 0
+address = "127.0.0.1:2526"
+master = "127.0.0.1:2013"
+start = "testlogin"	-- main script
+bootstrap = "snlua bootstrap"	-- The service for bootstrap
+-- standalone = "0.0.0.0:2013"
+-- daemon = "./skynet.pid"
+
+

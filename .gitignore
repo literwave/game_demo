@@ -1,0 +1,32 @@
+# OS & IDE
+.DS_Store
+Thumbs.db
+*.suo
+*.user
+*.userprefs
+*.tmp
+*.swp
+*.lnk
+.vs/
+.idea/
+
+# Build artifacts
+bin/
+obj/
+Build/
+build/
+temp/
+Temp/
+
+# Logs
+log/
+logs/
+*.log
+
+src/
+skynet/3rd/protobuf/
+
+# Third-party tarballs / archives
+src/
+
+

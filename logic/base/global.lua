@@ -1,0 +1,1 @@
+LOG		= Import("../logic/base/log.lua")
