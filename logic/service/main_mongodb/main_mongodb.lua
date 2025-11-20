@@ -83,10 +83,13 @@ end
 
 skynet.start(function()
 	dofile "../logic/service/main_mongodb/preload.lua"
-	skynet.dispatch("lua", function(_, _, cmd, ...)
+	skynet.dispatch("lua", function(session, _, cmd, ...)
 		local f = CMD[cmd]
 		if f then
-			skynet.ret(skynet.pack(f(...)))
+			local ret = f(...)
+			if session ~= 0 then
+				skynet.ret(skynet.pack(ret))	
+			end
 		else
 			error(string.format("Unknown command %s", tostring(cmd)))
 		end

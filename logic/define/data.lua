@@ -1,13 +1,13 @@
 local sharedata = require "skynet.sharedata"
 local DATA_REPORT = sharedata.query("ReportInfo")
 local DATA_SERVER_GROUP = sharedata.query("ServerGroup")
-local DATA_NAME_CN = sharedata.query("NameCn")
+-- local DATA_NAME_CN = sharedata.query("NameCn")
 
-local conf = {
-	[CONST.LANGUAGE.CHINESE] = function()
-		return DATA_NAME_CN
-	end,
-}
+-- local conf = {
+-- 	[CONST.LANGUAGE.CHINESE] = function()
+-- 		return DATA_NAME_CN
+-- 	end,
+-- }
 
 local function getReportInfo(reportId)
 	return DATA_REPORT[reportId]

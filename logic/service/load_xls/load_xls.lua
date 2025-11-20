@@ -3,10 +3,15 @@ local sharedata = require "skynet.sharedata"
 local CONFIG_PATH = skynet.getenv("config_path")
 local CMD = {}
 
-local lfs = require "lfs"
-
 FILE_MODIFY_TIME_TBL = {
 	-- [filename] = modification
+}
+
+-- 这里先这样手动加载数据，后续优化成遍历dir目录下的文件，然后new
+DATA_FILE_LIST = {
+	"../read_config/hero.lua",
+	"../read_config/ReportInfo.lua",
+	"../read_config/ServerGroup.lua",
 }
 
 function CMD.hotUpdate()
@@ -28,15 +33,18 @@ function CMD.hotUpdate()
 	end
 end
 
+local function loadDataFile()
+	for _, file in ipairs(DATA_FILE_LIST) do
+		local filename = file:match("([^/\\]+)%.lua$")
+		local loadData = require(filename)
+		sharedata.new(file, loadData)
+		FILE_MODIFY_TIME_TBL[filename] = os.time()
+        end
+end
+
 -- 待做，类似于协议初始化
 skynet.start(function()
-	for file in lfs.dir (CONFIG_PATH) do
-		local temdata = require (CONFIG_PATH .. file)
-		sharedata.new(file, temdata)
-		local filename = file:sub(1, -5)
-		local fileAttr = lfs.attributes(CONFIG_PATH .. file)
-		FILE_MODIFY_TIME_TBL[filename] = fileAttr.modification
-        end
+	loadDataFile()
 	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
 		assert(CMD[cmd])
 		local f = CMD[cmd]

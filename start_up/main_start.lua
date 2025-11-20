@@ -7,7 +7,7 @@ skynet.start(function()
 	skynet.newservice("main_mongodb")
 	skynet.call(".mongodb", "lua", "start")
 	skynet.newservice("game_sid")
-	-- skynet.newservice("load_xls")
+	skynet.newservice("load_xls")
 	local gate = skynet.newservice("gated")
 	skynet.call(gate, "lua", "open", {
 		port = skynet.getenv("gate_port") or 8888,
