@@ -63,8 +63,6 @@ nodelay = true    -- 尽可能快socket发送包 会有零碎小包
 agent_init_cnt = 4    -- 一开始初始化agent的数量  前期就用一个agent做玩法把，简单些
 agent_max_user_cnt = 500
 
-isTestServer = true  -- 是否是测试服
-
 ------------ http相关 --------------
 http_port = 33022
 http_agent_cnt = 3

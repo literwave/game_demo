@@ -1,7 +1,6 @@
 local skynet = require "skynet"
 local queue = require "skynet.queue"
 local protobuf = require "protobuf"
-local isTestServer = skynet.getenv("isTestServer")
 
 local CMD = {}
 
@@ -52,17 +51,11 @@ skynet.start(function()
 		-- 取第一位  协议号
 		-- 这里应该用xpacll的，不然报错卡所有玩家
 		local id = string.unpack(">I2", packet, 1)
-		if isTestServer then
-			LOG._debug(id)
-		end
 		assert(fd)
 		-- 接下来就是对应数据
 		local decodeMsg = string.sub(packet, 3)
 
 		local ptoName = ID_TO_PTONAME[id]
-		if isTestServer then
-			LOG._debug(ptoName)
-		end
 		if ptoName ~= "c2splaylogin" and USER_MGR.getUserIdByVfd(fd) then
 			-- 这里肯定是没校验过的玩家发过来的消息
 			return
@@ -73,10 +66,6 @@ skynet.start(function()
 		end
 
 		local packName = ID_TO_PACK_NAME[id]
-		if isTestServer then
-			LOG._debug(packName)
-			LOG._debug(fd)
-		end
 		local msg = protobuf.decode(packName, decodeMsg)
 		if not msg then
 			if not msg then
