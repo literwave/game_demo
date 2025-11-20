@@ -1,6 +1,3 @@
----        filename agent
--------    @author  xiaobo
----        date 2022/03/30/22/17/25
 local skynet = require "skynet"
 local queue = require "skynet.queue"
 local protobuf = require "protobuf"

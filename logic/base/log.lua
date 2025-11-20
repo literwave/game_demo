@@ -1,7 +1,3 @@
----        filename log
--------    @author  xiaobo
----        date 2023/06/02/21/48/48
-
 package.path = SERVICE_PATH.."?.lua;" .. package.path
 local skynet = require "skynet"
 

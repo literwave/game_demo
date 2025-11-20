@@ -1,7 +1,3 @@
----        filename dbglobal
--------    @author  xiaobo
----        date 2022/08/27/18/55/40
-
 local skynet = require "skynet"
 local mysql = require "skynet.db.mysql"
 
@@ -39,7 +35,7 @@ function modify_actor_table()
 	 end
 	 local sql = "desc actors;"
 	 local result = db:query(sql) 
-	 -- 如果表不存在就建�?
+	 -- 如果表不存在就建�?
 	 if result["badresult"] then
 	    local tem_list = {}
 	    for i = #ACTOR_VARIES ,1 , -1 do
@@ -52,7 +48,7 @@ function modify_actor_table()
 	    sql = "alter table actors add primary key(actor_id)"
 	    db:query(sql) 
 	 end
-	 -- 关闭数据�?
+	 -- 关闭数据�?
 	 db:disconnect()
 	--  待调整表的列
 	--  local modify_columns

@@ -1,7 +1,3 @@
----        filename dbserver
--------    @author  xiaobo
----        date 2022/08/28/13/36/14
-
 local skynet = require "skynet"
 require "skynet.manager" 
 local mysql = require "skynet.db.mysql"
@@ -18,7 +14,7 @@ function CMD.querycb(sqlst)
 end
 
 
--- 这个主的数据库做的服务应该是建表,对应表字段的修改和删�?
+-- 这个主的数据库做的服务应该是建表,对应表字段的修改和删�?
 skynet.start(function()
 	dofile "../common/dbglobal.lua"
 	dofile "../logic/service/dbserver/preload.lua"

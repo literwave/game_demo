@@ -1,7 +1,3 @@
----        filename gamelogin
--------    @author  xiaobo
----        date 2022/03/30/22/16/57
-
 package.path = SERVICE_PATH.."?.lua;" .. package.path
 
 require "errorcode"
@@ -19,12 +15,12 @@ function creategamelogin()--create game login
 	        return;
 	    end
 	    misc.log_print("step[1]: self.CheckLoginEnter");
-	    -- 检查账号是否到了最大限�?
+	    -- 检查账号是否到了最大限�?
 	    if not self.IsCanLogin() then
 	        return;
 	    end
 	    misc.log_print("step[2]: self.CheckLoginEnter");
-	    -- 向mysql服务发起call，检查是否存在账�?
+	    -- 向mysql服务发起call，检查是否存在账�?
 	    accont.checkAccount(who, info);
 
 	end

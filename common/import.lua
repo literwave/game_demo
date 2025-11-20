@@ -1,6 +1,3 @@
----        filename import
--------    @author  xiaobo
----        date 2023/05/28/15/40/49
 local skynet = require "skynet"
 local tinsert = table.insert
 

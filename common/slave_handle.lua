@@ -1,7 +1,3 @@
----        filename master_handle
--------    @author  xiaobo
----        date 2022/08/27/13/51/11
-
 local skynet = require "skynet"
 CMD = {}
 SOCKET = {}

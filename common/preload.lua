@@ -1,7 +1,3 @@
----        filename preload
--------    @author  xiaobo
----        date 2023/05/28/18/06/39
-
 DOFILE_LIST = {
 	"../logic/base/import.lua",
 	"../logic/base/common_class.lua",

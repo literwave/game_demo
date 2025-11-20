@@ -1,8 +1,3 @@
----        filename main_start
--------    @author  xiaobo
----        date 2022/03/30/22/17/11
-
-
 local skynet = require "skynet"
 
 skynet.start(function()
