@@ -14,9 +14,7 @@ snax = skynetdir.."script/?.lua;"
 -- snax_interface_g = "snax_g"
 cpath = skynetdir.."cservice/?.so"
 
-host_id = "120"
-
--- preload = "./script/preload.lua"	-- run preload.lua before every lua service run
+host_id = "120" -- 服务器id
 thread = 8
 logger = nil
 logpath = "."

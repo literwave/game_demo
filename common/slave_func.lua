@@ -4,7 +4,7 @@ local protobuf = require "protobuf"
 CMD = {}
 
 local accType2Module = {
-	[1] = Import("../logic/module/login/pc.lua"),
+	[1] = Import("../logic/service/logind/module/login/pc.lua"),
 	-- [2] = Import("../logic/module/login/wechat.lua")
 }
 

@@ -33,3 +33,17 @@ function table.isEmpty(luaTable)
 	end
 	return true
 end
+
+if not table.maxn then
+	table.maxn = function (array)
+		local curMax
+		for idx in ipairs(array) do
+			if not curMax then
+				curMax = idx
+			else
+				curMax = math.max(idx, curMax)
+			end
+		end
+		return curMax
+	end
+end

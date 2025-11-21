@@ -144,6 +144,11 @@ function command.LAUNCHOK(address)
 	return NORET
 end
 
+function command.ISLAUNCHOK(address)
+	services[address] = nil
+	return NORET
+end
+
 function command.QUERY(_, request_session)
 	for address, session in pairs(launch_session) do
 		if session == request_session then

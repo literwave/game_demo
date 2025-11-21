@@ -1,6 +1,8 @@
+local skynet = require "skynet"
 local sharedata = require "skynet.sharedata"
-local DATA_REPORT = sharedata.query("ReportInfo")
-local DATA_SERVER_GROUP = sharedata.query("ServerGroup")
+local DATA_REPORT
+local DATA_SERVER_GROUP
+local DATA_HERO
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -8,6 +10,12 @@ local DATA_SERVER_GROUP = sharedata.query("ServerGroup")
 -- 		return DATA_NAME_CN
 -- 	end,
 -- }
+
+skynet.init(function()
+	DATA_HERO = sharedata.query("hero")
+	DATA_REPORT = sharedata.query("ReportInfo")
+	DATA_SERVER_GROUP = sharedata.query("ServerGroup")
+end)
 
 local function getReportInfo(reportId)
 	return DATA_REPORT[reportId]

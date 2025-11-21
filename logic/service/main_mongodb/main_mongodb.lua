@@ -27,7 +27,7 @@ function CMD.update(args)
 	MONGODB:update(args)
 end
 
-function CMD.save(data)
+function CMD.saveAgentData(data)
 	local dataBase = GAME.getDataBase()
 	local args = {
 		database = dataBase
@@ -49,10 +49,8 @@ function CMD.save(data)
 						current[splitList[i]] = {}
 						current = current[splitList[i]]
 					end
-					
 					-- 设置最终值
 					current[splitList[#splitList]] = cmd.value
-					
 					args.update = newValTbl
 					args.upsert = true
 					args.multi = false

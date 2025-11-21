@@ -37,7 +37,7 @@ local function loadDataFile()
 	for _, file in ipairs(DATA_FILE_LIST) do
 		local filename = file:match("([^/\\]+)%.lua$")
 		local loadData = require(filename)
-		sharedata.new(file, loadData)
+		sharedata.new(filename, loadData)
 		FILE_MODIFY_TIME_TBL[filename] = os.time()
         end
 end

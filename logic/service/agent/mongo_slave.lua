@@ -1,6 +1,6 @@
 local skynet = require "skynet"
 
-localEnvDoFile("../common/save_col.lua")
+localEnvDoFile("../logic/service/agent/save_col.lua")
 
 cmdCnt = 0
 flushCB = nil
@@ -27,6 +27,9 @@ cacheList = {
 	--]]
 }
 
+-- allCmdTbl设计思路，col刚好是枚举的idx，这样相同集合就能插入进数组
+-- 这样设计是为了防止如果出现操作统一集合，可能设置nil or value的时候，保证最后更新的肯定是数据的最后形式
+
 local function insertClearColCmd(colCmdList, value)
 	if type(value) ~= "table" then
 		assert(false)
@@ -43,12 +46,13 @@ function opMongoValue(flist, value, isMass)
 	local col = flist[1]
 	assert(col)
 	local colCmdList = allCmdTbl[col]
-	if not colCmdList then
-		colCmdList = {}
-		allCmdTbl[col] = colCmdList 
+	if not allCmdTbl[col] then
+		allCmdTbl[col] = {} 
 	end
+	colCmdList = allCmdTbl[col]
 	local key = flist[2]
 	if not key then
+		-- 这里如果是空table的，为什么不直接返回了，而是table.insert{}
 		insertClearColCmd(colCmdList, value)
 		return
 	end
@@ -94,10 +98,8 @@ function opMongoValue(flist, value, isMass)
 		table.insert(colCmdList, cmd)
 	end
 	cmdCnt = cmdCnt + 1
-	if cmdCnt >= maxCmdCnt or isMass then
-		table.insert(cacheList, allCmdTbl)
-		allCmdTbl = {}
-		cmdCnt = 0
+	if isMass then
+		flush()
 	end
 end
 
@@ -112,12 +114,7 @@ function flush()
 		cmdCnt = 0
 		allCmdTbl = {}
 		cacheList = {}
-
-		local maxIdx = #saveList
-		for idx, cmdTbl in ipairs(saveList) do
-			local isEnd = (idx == maxIdx)
-			skynet.send(".mongodb", "lua", "save", cmdTbl, isEnd)
-		end
+		skynet.send(".mongodb", "lua", "saveAgentData", saveList)
 	end
 end
 

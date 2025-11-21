@@ -1,1 +1,1 @@
-ACCOUNT		= Import("../logic/module/account/account.lua")
+ACCOUNT		= Import("../logic/service/logind/module/account/account.lua")

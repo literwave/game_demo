@@ -73,7 +73,7 @@ end
 function clsUser:saveToDB()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.update(info)
+	MONGO_SLAVE.opMongoValue(info)
 end
 
 function clsUser:setSdkParamTbl(paramTbl)
