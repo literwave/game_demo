@@ -100,6 +100,8 @@ function opMongoValue(flist, value, isMass)
 	cmdCnt = cmdCnt + 1
 	if isMass then
 		flush()
+	else
+		table.insert(cacheList, allCmdTbl)
 	end
 end
 
@@ -124,20 +126,20 @@ function systemStartup()
 	end
 end
 
-function loadSingleUserInfo(userId)
+function commonLoadSingle(col, key)
+	assert(key)
 	local ret = skynet.call(".mongodb", "lua", "findOne", {
 		database = GAME.getDataBase(),
-		collection = "userCol",
-		doc = {_id = userId}
+		collection = col,
+		doc = {_id = key}
 	})
-	return ret
+	if ret and ret.dat then
+		return ret.dat
+	else
+		return nil
+	end
 end
 
-function update(info)
-	local col = "userCol"
-	local key = info._userId
-	local opType = "$set"
-	local fieldStr = nil
-	local value = info
-	opMongoValue({col, key, opType, fieldStr}, value)
+function loadSingleUserInfo(userId)
+	return commonLoadSingle(userInfoCol, userId)
 end

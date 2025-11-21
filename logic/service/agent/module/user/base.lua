@@ -36,6 +36,10 @@ function clsUser:__init__(oci)
 	self._loginAddr = nil
 end
 
+function clsUser:saveField(keyList, val)
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.userInfoCol, self._userId, unpack(keyList)}, val)
+end
+
 function clsUser:getUserId()
 	return self._userId
 end
@@ -73,7 +77,7 @@ end
 function clsUser:saveToDB()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.opMongoValue(info)
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.userInfoCol, self._userId}, info)
 end
 
 function clsUser:setSdkParamTbl(paramTbl)
