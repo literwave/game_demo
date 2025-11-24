@@ -7,8 +7,8 @@ allColNameTbl = {}
 -- 
 local colDescTbl = {
 	{
-		colKey = "USER_INFO_COL",
-		colName = "userInfoCol",
+		colKey = "ACCOUNT_INFO_COL",
+		colName = "accountInfoCol",
 	},
 }
 
@@ -31,6 +31,6 @@ local function tryInitColList()
 	assert(next(allColList))
 end
 
-function initAgentMongo()
+function initLogindMongo()
 	tryInitColList()
 end

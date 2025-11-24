@@ -6,11 +6,8 @@ local SOCKET = {}
 local gate
 local agent_pools = {}
 local vfd_to_agent = {}
-local STOP_SERVICE_LIST ={
-	".watchdog",
-	".agent",
-	".load_xls",
-	".mongodb",
+local STOP_SERVICE_TBL ={
+	-- [SERVER_NAME] = sortId
 }
 
 local HTTP_AGENT_CNT = skynet.getenv("http_agent_cnt")
@@ -82,13 +79,6 @@ skynet.start(function()
 		end
 	end)
 	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
-		if cmd == "socket" then
-			local f = SOCKET[subcmd]
-			f(...)
-			-- socket api don't need return
-		else
-			local f = assert(CMD[cmd])
-			skynet.ret(skynet.pack(f(subcmd, ...)))
-		end
+
 	end)
 end)

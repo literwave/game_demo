@@ -66,6 +66,7 @@ function callOnce(modName, funcName, time, ...)
 end
 
 function callFre(modName, funcName, time, ...)
+	print(modName)
 	local m = _G[modName]
 	assert(m)
 	assert(m[funcName])

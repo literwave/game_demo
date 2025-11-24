@@ -4,12 +4,14 @@ local skynet = require "skynet"
 userIdToAccount = {
 	-- [userId] = account
 }
-accountToUserId = {
-	-- [account] = userId
+accountInfoTbl = {
+	-- {
+	-- 	[account][userId] = true
+	-- }
 }
 
 function loadData()
-	
+	accountInfoTbl = MONGO_SLAVE.loadAllAccountInfo()
 end
 
 function saveData()
@@ -17,47 +19,37 @@ function saveData()
 end
 
 -- 先全部从库里拿吧
-function queryUserId(account)
-	local ret = skynet.call(".mongodb", "lua", "findOne", {
-		database = "game",
-		collection = "login",
-		query = {_id = account},
-	})
-	return ret
+function queryUserId(account, userId)
+	local userIdTbl = accountInfoTbl[account]
+	if not userIdTbl then
+		return
+	end
+	return userIdTbl[userId]
 end
 
-function createAccount(account, userId)
-	skynet.call(".mongodb", "lua", "update", {
-		database = "game",
-		collection = "login",
-		selector = {_id = account},
-		update = {
-			["$setOnInsert"] = {_id = account, userTbl = {}},  -- 仅在插入时设置初始值
-			["$set"] = {["userTbl." .. userId] = true}  -- 添加或更新 userId
-		},
-		upsert = true,  -- 如果文档不存在则创建
-		multi = false   -- 只更新一个文档
-	})
+function createAccount(account)
+	local userId = MONGO_SLAVE.fetchUserId()
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.accountInfoCol, account, userId}, true)
 	return userId
 end
 
-function queryAccount(userId)
+function queryAccount(account)
 	skynet.call(".mongodb", "lua", "findOne", {
 		database = "game",
-		collection = "login",
-		doc = {userId = userId}
+		collection = MONGO_SLAVE.accountInfoCol,
 	})
-	return userId
+	return account
 end
 
 function sdkLoginOk(loginInfo)
 	local account = loginInfo.account
 	local userId = loginInfo.userId
 	if userId == "" then
+		createAccount(account)
 		skynet.error("user create", account)
 	else
 		skynet.error("user load")
-		local ret = queryUserId(account)
+		local ret = queryUserId(account, userId)
 		if not ret then
 			skynet.error("user load error1", account, userId)
 			return

@@ -13,8 +13,7 @@ local PROTO_FILE_LIST = {
 }
 
 local function systemStartUp()
-	-- MONGO_SLAVE.systemStartup()
-	-- ACCOUNT.systemStartup()
+	MONGO_SLAVE.systemStartup()
 end
 
 local function initDofile()

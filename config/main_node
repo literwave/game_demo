@@ -68,7 +68,7 @@ http_agent_cnt = 3
 https_port = 33023
 
 ------------ game相关 --------------
-game = "a1"
+game = "a"
 
 ------------ 配置路径相关 --------------
 config_path = "../read_config/"

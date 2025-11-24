@@ -27,7 +27,7 @@ function CMD.update(args)
 	MONGODB:update(args)
 end
 
-function CMD.saveAgentData(data)
+function CMD.saveData(data)
 	local dataBase = GAME.getDataBase()
 	local args = {
 		database = dataBase

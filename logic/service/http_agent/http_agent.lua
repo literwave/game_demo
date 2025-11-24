@@ -23,7 +23,12 @@ skynet.start(function()
 		if code ~= 200 then
 			response(fd, code)
 		else
+			local tmp = {}
+			if header.host then
+				table.insert(tmp, string.format("host: %s", header.host))
+			end
 			local path, query = urllib.parse(url)
+			table.insert(tmp, string.format("path: %s", path))
 			if query then
 				local paramsTbl = urllib.parse_query(query)
 				local methodTag = paramsTbl.methodTag

@@ -1,6 +1,6 @@
 local skynet = require "skynet"
 
-localEnvDoFile("../logic/service/agent/save_col.lua")
+localEnvDoFile("../logic/service/logind/save_col.lua")
 
 cmdCnt = 0
 flushCB = nil
@@ -124,7 +124,7 @@ function systemStartup()
 	if not flushCB then
 		flushCB = CALL_OUT.callFre("MONGO_SLAVE", "flush", flushCd)
 	end
-	initAgentMongo()
+	initLogindMongo()
 end
 
 function commonLoadSingle(col, key)
@@ -141,9 +141,32 @@ function commonLoadSingle(col, key)
 	end
 end
 
-function loadSingleUserInfo(userId)
-	return commonLoadSingle(userInfoCol, userId)
+function commonLoadSingle(col, key)
+	assert(key)
+	local ret = skynet.call(".mongodb", "lua", "findOne", {
+		database = GAME.getDataBase(),
+		collection = col,
+		doc = {_id = key}
+	})
+	if ret and ret.dat then
+		return ret.dat
+	else
+		return nil
+	end
 end
 
-function fetchUserId()
+function commonLoadTbl(col)
+	local ret = skynet.call(".mongodb", "lua", "findAll", {
+		database = GAME.getDataBase(),
+		collection = col,
+	})
+	return ret
+end
+
+function loadAllAccountInfo()
+	return commonLoadTbl(accountInfoCol)
+end
+
+function loadSingleAccountInfo(account)
+	return commonLoadSingle(accountInfoCol, account)
 end

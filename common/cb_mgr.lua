@@ -1,4 +1,4 @@
-local cbGlobalId
+local cbGlobalId = 0
 
 local callBackTbl = {}
 
