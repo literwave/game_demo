@@ -34,6 +34,7 @@ function clsUser:__init__(oci)
 	end
 	self._account = nil
 	self._loginAddr = nil
+	self._fd = nil
 end
 
 function clsUser:saveField(keyList, val)
@@ -107,4 +108,12 @@ end
 
 function clsUser:setLoginAddr(addr)
 	self._loginAddr = addr
+end
+
+function clsUser:getFd()
+	return self._fd
+end
+
+function clsUser:setFd(fd)
+	self._fd = fd
 end

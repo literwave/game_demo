@@ -39,7 +39,7 @@ local function loadDataFile()
 		local loadData = require(filename)
 		sharedata.new(filename, loadData)
 		FILE_MODIFY_TIME_TBL[filename] = os.time()
-        end
+	end
 end
 
 -- 待做，类似于协议初始化

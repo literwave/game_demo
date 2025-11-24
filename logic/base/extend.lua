@@ -47,3 +47,24 @@ if not table.maxn then
 		return curMax
 	end
 end
+
+local function keyToNumber(fixTbl, preString)
+	for k, v in pairs(fixTbl) do
+		if type(k) == "string" then
+			if k:sub(1, 2) == '@' then
+				fixTbl[k:sub(2, #k)] = v
+			end
+		end
+		if type(v) == "table" then
+			keyToNumber(v, preString)
+		end
+	end
+	return fixTbl
+end
+
+function table.removePreString(fixTbl, preString)
+	if not fixTbl then
+		return fixTbl
+	end
+	return keyToNumber(fixTbl, preString)
+end
