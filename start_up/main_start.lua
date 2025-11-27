@@ -8,12 +8,10 @@ skynet.start(function()
 	skynet.call(".mongodb", "lua", "start")
 	skynet.newservice("game_sid")
 	skynet.newservice("load_xls")
-	for _ = 1, tonumber(skynet.getenv("gate_cnt")) do
-		local gate = skynet.newservice("gated")
-		skynet.call(gate, "lua", "open", {
-			serverId = skynet.getenv("host_id")
-		})
-	end
+	local gate = skynet.newservice("gated")
+	skynet.call(gate, "lua", "open", {
+		serverId = skynet.getenv("host_id")
+	})
 	-- -- control hot update or stop srv
 	skynet.newservice("mcs") -- http服务
 	skynet.newservice("gameserver") -- game server can get all userId
