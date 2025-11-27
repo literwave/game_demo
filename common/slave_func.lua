@@ -8,6 +8,10 @@ local accType2Module = {
 	-- [2] = Import("../logic/module/login/wechat.lua")
 }
 
+function CMD.shutdown()
+	skynet.exit()
+end
+
 local function decodePack(fd)
 	socket.start(fd)
 	socket.limit(fd, 8192)

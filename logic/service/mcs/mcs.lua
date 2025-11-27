@@ -13,9 +13,16 @@ local STOP_SERVICE_TBL ={
 local HTTP_AGENT_CNT = skynet.getenv("http_agent_cnt")
 local http_agent_pools = {}
 
+local LISTEN_FD = nil
+
 local CAN_OP_ADDR_TBL = {
 	["172.21.192.1"] = true
 }
+
+function CMD.shutdown()
+	socket.close(LISTEN_FD)
+	skynet.exit()
+end
 
 function CMD.start(conf)
 	-- skynet.call(gate, "lua", "open" , conf)
@@ -40,8 +47,8 @@ skynet.start(function()
 		table.insert(http_agent_pools, skynet.newservice("http_agent"))
 	end
 	local balance = 1
-	local fd = socket.listen("0.0.0.0", skynet.getenv("http_port"))
-	socket.start(fd, function(fd, addr)
+	LISTEN_FD = socket.listen("0.0.0.0", skynet.getenv("http_port"))
+	socket.start(LISTEN_FD, function(fd, addr)
 		addr = string.split(addr, ":")[1]
 		skynet.error("mcs op addr", addr)
 		if not CAN_OP_ADDR_TBL[addr] then
@@ -54,16 +61,14 @@ skynet.start(function()
 			balance = 1
 		end
 	end)
-	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)	
-			local f = CMD[cmd]
-			if f then
-				if session ~= 0 then
-					skynet.ret(f(address, ...))
-				else
-					f(address, ...)
-				end
+	skynet.dispatch("lua", function (session, address, cmd, ...)
+		local f = CMD[cmd]
+		if f then
+			if session ~= 0 then
+				skynet.ret(skynet.pack(f(address, ...)))
 			else
-				skynet.ret()
+				f(address, ...)
 			end
+		end
 	end)
 end)

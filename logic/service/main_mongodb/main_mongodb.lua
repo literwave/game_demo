@@ -3,6 +3,12 @@ require "skynet.manager"
 
 local MONGODB = nil
 local CMD = {}
+
+function CMD.shutdown()
+	MONGODB:disconnect()
+	skynet.exit()
+end
+
 function CMD.start()
 	MONGODB = MONGO_OBJ.clsMongoDb:New()
 end

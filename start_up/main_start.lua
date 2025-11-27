@@ -15,12 +15,7 @@ skynet.start(function()
 		})
 	end
 	-- -- control hot update or stop srv
-	local mcs = skynet.newservice("mcs") -- http服务
-	skynet.call(mcs, "lua", "open", {
-		port = skynet.getenv("http_port"),
-		nodelay = true,
-		protocol = "http",
-	})
+	skynet.newservice("mcs") -- http服务
 	skynet.newservice("gameserver") -- game server can get all userId
 	-- 作为启动成功的logo
 	skynet.error("***       *******   *******   *******   ***********   ***     ***       ***     ***   ***    ********")

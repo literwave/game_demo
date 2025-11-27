@@ -64,12 +64,15 @@ function CMD.error(msg)
 	log(msg)
 end
 
+function CMD.shutdown()
+	skynet.exit()
+end
+
 skynet.start(function()
 	-- 日志服务
 	local function log_init()
 	    math.randomseed(os.time());
 	end
-	-- 日志初始�?    log_init();
 	skynet.dispatch("lua", function(_, _, cmd, ...)
 		local f = CMD[cmd]
 			if f then

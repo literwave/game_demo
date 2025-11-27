@@ -5,8 +5,7 @@ local sockethelper = require "http.sockethelper"
 local urllib = require "http.url"
 
 local methodTagTbl = {
-	["login"] = ".login",
-	["pay"] = ".gameserver"
+	[1] = Import("../logic/service/http_agent/shutdown.lua"),
 }
 
 local function response(fd, ...)
@@ -29,15 +28,13 @@ skynet.start(function()
 			end
 			local path, query = urllib.parse(url)
 			table.insert(tmp, string.format("path: %s", path))
+			local ret = "failed"
 			if query then
 				local paramsTbl = urllib.parse_query(query)
-				local methodTag = paramsTbl.methodTag
-				local server = methodTagTbl[methodTag]
-				if server then
-					skynet.send(server, "lua", "request", body)
-				end
+				local methodTag = tonumber(paramsTbl.methodTag)
+				local mod = methodTagTbl[methodTag]
+				mod.onHttpRequest(fd, paramsTbl, body)
 			end
-			response(fd, 200, "success")
 		end
 	end)
 end)

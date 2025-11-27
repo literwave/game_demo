@@ -14,6 +14,10 @@ DATA_FILE_LIST = {
 	"../read_config/ServerGroup.lua",
 }
 
+function CMD.shutdown()
+	skynet.exit()
+end
+
 function CMD.hotUpdate()
 	for file in lfs.dir (CONFIG_PATH) do
 		local filename = file:sub(1, -5)

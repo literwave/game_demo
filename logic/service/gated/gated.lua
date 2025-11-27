@@ -103,6 +103,10 @@ function CMD.kick(source, fd)
 
 end
 
+function CMD.shutdown()
+	skynet.exit()
+end
+
 skynet.start(function()
 	skynet.dispatch("lua", function (session, address, cmd, ...)
 		local f = CMD[cmd]

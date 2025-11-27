@@ -29,14 +29,7 @@ function CMD.fetchUserId()
 end
 
 function CMD.shutdown()
-	skynet.send(".mongodb", "lua", "update", {
-		database = GAME.getDataBase(),
-		collection = "game_sid",
-		selector = {
-			_id = 1,
-		},
-	})
-	return true
+	skynet.exit()
 end
 
 skynet.start(function()

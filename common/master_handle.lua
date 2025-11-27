@@ -11,6 +11,10 @@ local slave_cnt = tonumber(skynet.getenv("slave_cnt"))
 
 local address = skynet.getenv("address")
 
+function CMD.shutdown()
+	skynet.exit()
+end
+
 function startLogin()
 	for _ = 1, slave_cnt do
 	    table.insert(SLAVE_ADDRESS, skynet.newservice("logind"))
