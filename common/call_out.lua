@@ -52,6 +52,7 @@ function callOnce(modName, funcName, time, ...)
 	local m = _G[modName]
 	assert(m)
 	assert(m[funcName])
+	time = time * 100
 	if time <= 0 then
 		time = 0.1
 	end
@@ -60,7 +61,7 @@ function callOnce(modName, funcName, time, ...)
 		luaMultiCB(id, time)
 	end)
 
-	needRefCalloutTbl[id] = skynet.time() + time
+	needRefCalloutTbl[id] = os.time() + time
 
 	return id
 end
@@ -70,7 +71,7 @@ function callFre(modName, funcName, time, ...)
 	assert(m)
 	assert(m[funcName])
 	local id = CB_MGR.fetchCallbackId(modName, funcName, ...)
-	skynet.timeout(time, function ()
+	skynet.timeout(time * 100, function ()
 		luaOnceCB(id)
 	end)
 
