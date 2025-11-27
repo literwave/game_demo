@@ -52,7 +52,7 @@ end
 function CMD.login(source, fd, account, userId, addr)
 	assert(not CONNECTION[fd])
 	local agentInfo = getBalanceAgentInfo()
-	skynet.error("step3: gate login")
+	skynet.error("login step 3-gate", account, userId)
 	if not agentInfo then
 		skynet.error("get agent failed", account, userId)
 		return

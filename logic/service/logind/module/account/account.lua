@@ -34,18 +34,12 @@ function sdkLoginOk(loginInfo)
 	local account = loginInfo.account
 	local userId = loginInfo.userId
 	if userId == "" then
-		-- userId = createAccount(account)
 		skynet.error("user create", account)
 	else
 		skynet.error("user load")
 		local ret = queryUserId(account, userId)
 		if not ret then
-			skynet.error("user load error1", account, userId)
-			return
-		end
-		local userTbl = ret.userTbl
-		if not userTbl[userId] then
-			skynet.error("user load error2", account, userId)
+			skynet.error("user load error", account, userId)
 			return
 		end
 	end

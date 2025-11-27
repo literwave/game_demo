@@ -21,7 +21,7 @@ local function decodePack(fd)
 end
 
 function CMD.auth(fd, addr)
-	skynet.error(string.format("[slave] deal login addr=%s fd=%s", tostring(addr), fd))
+	skynet.error("login step 1-auth", fd, addr, fd)
 	local loginInfo = decodePack(fd)
 	local loginModule = accType2Module[loginInfo.accountType]
 	if loginModule then

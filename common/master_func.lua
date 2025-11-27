@@ -4,19 +4,22 @@ CMD = MASTER_HANDLE.CMD
 
 SERVER_TBL = {
 	-- [serverId] =
-	-- {gate = *}
+	-- 	{gate, ...}
 }
 
-local function getServerInfo(serverId)
-	return SERVER_TBL[serverId]
+local function tryGetGate(serverId)
+	local gateList = SERVER_TBL[serverId]
+	if not gateList then
+		return nil
+	end
+	return gateList[math.random(1, #gateList)]
 end
 
 function CMD.registerGate(gate, serverId)
-	assert(not SERVER_TBL[serverId])
-	local serverInfo = {
-		gate = gate
-	}
-	SERVER_TBL[serverId] = serverInfo
+	if not SERVER_TBL[serverId] then
+		SERVER_TBL[serverId] = {}
+	end
+	table.insert(SERVER_TBL[serverId], gate)
 end
 
 function createUserOk(slaveService, account, userId)
@@ -28,12 +31,12 @@ function accept(slaveService, fd, addr)
 	if not account then
 		return
 	end
-	local serverInfo = getServerInfo(serverId)
-	if not serverInfo then
+	local gate = tryGetGate(serverId)
+	if not gate then
 		skynet.error("serverInfo error", serverId)
 	end
-	skynet.error("login step 2", account)
+	skynet.error("login step 2-accept", account)
 	-- 然后网关服务玩家随机分配到agent，map[vfd] = {agent = agent, userId = userId, vfd = vfd}
 	-- gate发送到agent，拿到userId, 去查数据库，然后new一个user对象
-	skynet.send(serverInfo.gate, "lua", "login", fd, account, userId, addr)
+	skynet.send(gate, "lua", "login", fd, account, userId, addr)
 end

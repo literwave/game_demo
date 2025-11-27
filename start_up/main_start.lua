@@ -8,14 +8,12 @@ skynet.start(function()
 	skynet.call(".mongodb", "lua", "start")
 	skynet.newservice("game_sid")
 	skynet.newservice("load_xls")
-	local gate = skynet.newservice("gated")
-	skynet.call(gate, "lua", "open", {
-		port = skynet.getenv("gate_port") or 8888,
-		maxclient = tonumber(skynet.getenv("maxonline") or 2000),
-		nodelay = true,
-		serverId = skynet.getenv("host_id")
-	})
-
+	for _ = 1, tonumber(skynet.getenv("gate_cnt")) do
+		local gate = skynet.newservice("gated")
+		skynet.call(gate, "lua", "open", {
+			serverId = skynet.getenv("host_id")
+		})
+	end
 	-- -- control hot update or stop srv
 	local mcs = skynet.newservice("mcs") -- http服务
 	skynet.call(mcs, "lua", "open", {
