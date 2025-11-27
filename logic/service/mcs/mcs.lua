@@ -13,38 +13,9 @@ local STOP_SERVICE_TBL ={
 local HTTP_AGENT_CNT = skynet.getenv("http_agent_cnt")
 local http_agent_pools = {}
 
-function SOCKET.open(fd, addr)
-	LOG._debug("New client from : " .. addr)
-	-- 随机分配一个agent池子
-	local agent = agent_pools[1]
-	vfd_to_agent[fd] = agent
-	skynet.call(agent, "lua", "start", {gate = gate, client = fd, watchdog = skynet.self() })
-end
-
-local function send_vfd_agent_disconnect(fd)
-	-- 这里采取不关闭服务的做法
-	skynet.call(gate, "lua", "kick", fd)
-	-- disconnect never return
-	skynet.send(vfd_to_agent[fd], "lua", "disconnect", fd)
-end
-
-function SOCKET.close(fd)
-	print("socket close",fd)
-	send_vfd_agent_disconnect(fd)
-end
-
-function SOCKET.error(fd, msg)
-	print("socket error",fd, msg)
-	send_vfd_agent_disconnect(fd)
-end
-
-function SOCKET.warning(fd, size)
-	-- size K bytes havn't send out in fd
-	print("socket warning", fd, size)
-end
-
-function SOCKET.data(fd, msg)
-end
+local CAN_OP_ADDR_TBL = {
+	["172.21.192.1"] = true
+}
 
 function CMD.start(conf)
 	-- skynet.call(gate, "lua", "open" , conf)
@@ -71,6 +42,11 @@ skynet.start(function()
 	local balance = 1
 	local fd = socket.listen("0.0.0.0", skynet.getenv("http_port"))
 	socket.start(fd, function(fd, addr)
+		addr = string.split(addr, ":")[1]
+		skynet.error("mcs op addr", addr)
+		if not CAN_OP_ADDR_TBL[addr] then
+			return
+		end
 		local http_agent = http_agent_pools[balance]
 		skynet.send(http_agent, "lua", fd)
 		balance = balance + 1

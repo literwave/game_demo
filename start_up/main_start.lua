@@ -1,7 +1,7 @@
 local skynet = require "skynet"
 
 skynet.start(function()
-	skynet.error("Server start")
+	skynet.error("server start")
 	skynet.newservice("gamelog") -- save file not save db
 	skynet.newservice("logind") -- login service
 	skynet.newservice("main_mongodb")
