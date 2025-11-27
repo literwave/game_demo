@@ -9,7 +9,7 @@ message c2sheartbeat {
 
 // 请求心跳返回
 message s2cheartbeat {
-	int32 heartBeatTime = 1
+	int32 heartBeatTime = 1;
 }
 
 

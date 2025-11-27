@@ -1,7 +1,7 @@
 -- 全局变量文件
 
 RES_TYPE_MONEY = 1
-
+USER_HEART_BEAT_TIMEOUT = 60
 
 TEST_SERVER_GROUP_TBL = {
 	[99] = true,

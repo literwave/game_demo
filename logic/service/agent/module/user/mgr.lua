@@ -21,7 +21,7 @@ function delUserIdByVfd(fd)
 	fdToUserId[fd] = nil
 end
 
-function getVfdByUserId(userId)
+function getFdByUserId(userId)
 	return userIdToFd[userId]
 end
 
@@ -70,6 +70,22 @@ end
 
 function moduleOnUserLogin(user)
 	user:onLogin()
+end
+
+local function kickUser(fd, userId)
+	disconnect(fd)
+end
+
+function detectUserHeartBeat(userId)
+	local user = allUserTbl[userId]
+	if not user then
+		return
+	end
+	local lastHeartBeatTime = user:getHeartBeatTime()
+	if os.time() - lastHeartBeatTime > CONST.USER_HEART_BEAT_TIMEOUT then
+		local fd = getFdByUserId(userId)
+		kickUser(fd, userId)
+	end
 end
 
 local function onHeartBeat(fd)

@@ -25,12 +25,13 @@ namespace Heartbeat {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "CiBwcm90by9wcm90b19kZXNjL2hlYXJ0YmVhdC5wcm90bxIJSGVhcnRiZWF0",
-            "Ig4KDGMyc2hlYXJ0YmVhdCIOCgxzMmNoZWFydGJlYXRiBnByb3RvMw=="));
+            "Ig4KDGMyc2hlYXJ0YmVhdCIlCgxzMmNoZWFydGJlYXQSFQoNaGVhcnRCZWF0",
+            "VGltZRgBIAEoBWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Heartbeat.c2sheartbeat), global::Heartbeat.c2sheartbeat.Parser, null, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Heartbeat.s2cheartbeat), global::Heartbeat.s2cheartbeat.Parser, null, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Heartbeat.s2cheartbeat), global::Heartbeat.s2cheartbeat.Parser, new[]{ "HeartBeatTime" }, null, null, null, null)
           }));
     }
     #endregion
@@ -229,6 +230,7 @@ namespace Heartbeat {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public s2cheartbeat(s2cheartbeat other) : this() {
+      heartBeatTime_ = other.heartBeatTime_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -236,6 +238,18 @@ namespace Heartbeat {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public s2cheartbeat Clone() {
       return new s2cheartbeat(this);
+    }
+
+    /// <summary>Field number for the "heartBeatTime" field.</summary>
+    public const int HeartBeatTimeFieldNumber = 1;
+    private int heartBeatTime_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int HeartBeatTime {
+      get { return heartBeatTime_; }
+      set {
+        heartBeatTime_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -253,6 +267,7 @@ namespace Heartbeat {
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if (HeartBeatTime != other.HeartBeatTime) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -260,6 +275,7 @@ namespace Heartbeat {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
+      if (HeartBeatTime != 0) hash ^= HeartBeatTime.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -278,6 +294,10 @@ namespace Heartbeat {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
+      if (HeartBeatTime != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(HeartBeatTime);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -288,6 +308,10 @@ namespace Heartbeat {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (HeartBeatTime != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(HeartBeatTime);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -298,6 +322,9 @@ namespace Heartbeat {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
+      if (HeartBeatTime != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(HeartBeatTime);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -309,6 +336,9 @@ namespace Heartbeat {
     public void MergeFrom(s2cheartbeat other) {
       if (other == null) {
         return;
+      }
+      if (other.HeartBeatTime != 0) {
+        HeartBeatTime = other.HeartBeatTime;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -325,6 +355,10 @@ namespace Heartbeat {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
+          case 8: {
+            HeartBeatTime = input.ReadInt32();
+            break;
+          }
         }
       }
     #endif
@@ -340,6 +374,10 @@ namespace Heartbeat {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
+          case 8: {
+            HeartBeatTime = input.ReadInt32();
+            break;
+          }
         }
       }
     }

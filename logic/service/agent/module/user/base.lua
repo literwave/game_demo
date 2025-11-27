@@ -6,6 +6,9 @@ local saveFieldTbl = {
 	_birthTime = function()
 		return nil
 	end,
+	_logintime = function()
+		return nil
+	end,
 	_name = function()
 		return nil
 	end,
@@ -39,7 +42,7 @@ function clsUser:__init__(oci)
 end
 
 function clsUser:saveField(keyList, val)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.userInfoCol, self._userId, unpack(keyList)}, val)
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_INFO_COL, self._userId, table.unpack(keyList)}, val)
 end
 
 function clsUser:getUserId()
@@ -79,7 +82,7 @@ end
 function clsUser:saveToDB()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.userInfoCol, self._userId}, info)
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_INFO_COL, self._userId}, info)
 end
 
 function clsUser:setSdkParamTbl(paramTbl)
@@ -128,5 +131,13 @@ function clsUser:setAndSyncHeartBeatTime(time)
 	local ptoTbl = {
 		heartBeatTime = time
 	}
-	for_maker.s2cheartbeat(fd, ptoTbl)
+	for_caller.s2cheartbeat(fd, ptoTbl)
+end
+
+function clsUser:onLogin()
+	self:setLoginTime(os.time())
+end
+
+function clsUser:setLoginTime(time)
+	self:saveField({"_loginTime"}, time)
 end

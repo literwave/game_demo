@@ -22,7 +22,7 @@ local function tryInitColList()
 		table.insert(allColList, {
 			colName = colName,
 		})
-		env[info.colName] = info.colKey
+		env[info.colKey] = info.colName
 	end
 	for _, colInfo in pairs(allColList) do
 		local colName = colInfo.colName

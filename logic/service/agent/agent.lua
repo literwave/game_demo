@@ -21,12 +21,12 @@ function CMD.login(fd, account, userId, addr)
 	else
 		user = USER_MGR.tryInitUser(userId)
 	end
+	user:setFd(fd)
 	user:setAccount(account)
 	user:setLoginAddr(addr)
 	user:setAndSyncHeartBeatTime(os.time())
-	-- 定时心跳服务
-	CALL_OUT.callFre()
-	USER_MGR.moduleOnUserLogin()
+	CALL_OUT.callFre("USER_MGR", "detectUserHeartBeat", CONST.USER_HEART_BEAT_TIMEOUT, userId)
+	USER_MGR.moduleOnUserLogin(user)
 	return user:getUserId()
 end
 
@@ -51,23 +51,14 @@ skynet.start(function()
 			userQueues[userId] = queue()
 		end
 		local userQueue = userQueues[userId]
-		-- 分包
-		-- 取第一位  协议号
 		local id = string.unpack(">I2", packet, 1)
 		assert(fd)
-		-- 接下来就是对应数据
 		local decodeMsg = string.sub(packet, 3)
-
 		local ptoName = ID_TO_PTONAME[id]
-		if ptoName ~= "c2splaylogin" and USER_MGR.getUserIdByVfd(fd) then
-			-- 这里肯定是没校验过的玩家发过来的消息
-			return
-		end
 		if not for_maker[ptoName] then
 			LOG._debug("ptoName: %s not register", ptoName)
 			return
 		end
-
 		local packName = ID_TO_PACK_NAME[id]
 		local msg = protobuf.decode(packName, decodeMsg)
 		if not msg then

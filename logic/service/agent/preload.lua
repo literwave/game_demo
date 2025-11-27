@@ -2,14 +2,13 @@ local protobuf = require "protobuf"
 local socket = require "skynet.socket"
 local netpack = require "skynet.netpack"
 
-
 local DOFILE_LIST = {
 	"../logic/service/agent/global.lua",
-	-- "../logic/service/agent/load_xls.lua",
 }
 
 local PROTO_FILE_LIST = {
 	"../proto/pb/login.pb",
+	"../proto/pb/heartbeat.pb",
 }
 
 local function systemStartUp()
@@ -25,11 +24,10 @@ local function initDofile()
 	end
 	-- 这里要优化一下前端发给后端的协议不需要加载进table
 	local function createSendMessage(id, packName)
-		return function(vfd, data)
+		return function(fd, data)
 			local packData = protobuf.encode(packName,data)
-			LOG._debug(data)
 			packData = string.pack(">I2", id)..packData
-			socket.write(vfd, netpack.pack(packData, #packData))
+			socket.write(fd, netpack.pack(packData, #packData))
 		end
 	end
 	for ptoName, id in pairs(PTONAME_TO_ID) do

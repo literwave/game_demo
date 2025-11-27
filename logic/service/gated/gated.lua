@@ -19,15 +19,40 @@ local AGENT_POOLS = {
 }
 
 local function doRequest(fd)
-	socket.start(fd)
-	while true do
-		local sz = socket.read(fd, 2)
-		sz = string.unpack(">I2", sz)
-		local packMsg = socket.read(fd, sz)
-		local agent = CONNECTION[fd].agent
-		local userId = CONNECTION[fd].userId
-		skynet.send(agent, "client", fd, packMsg, userId)
+	local conn = CONNECTION[fd]
+	if not conn then
+		return
 	end
+	
+	local buffer = ""
+	local function onMessage(data)
+		if not data then
+			if CONNECTION[fd] then
+				CONNECTION[fd] = nil
+			end
+			return
+		end
+		buffer = buffer .. data
+		while true do
+			if #buffer < 2 then
+				break
+			end
+			local sz = string.unpack(">I2", buffer:sub(1, 2))
+			if #buffer < 2 + sz then
+				break
+			end
+			local packMsg = buffer:sub(3, 2 + sz)
+			buffer = buffer:sub(3 + sz)
+			conn = CONNECTION[fd]
+			if not conn then
+				return
+			end
+			local agent = conn.agent
+			local userId = conn.userId
+			skynet.send(agent, "client", fd, packMsg, userId)
+		end
+	end
+	socket.start(fd, onMessage)
 end
 
 local function getBalanceAgentInfo()
