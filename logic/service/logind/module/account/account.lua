@@ -26,7 +26,7 @@ function queryUserId(account, userId)
 	return userIdTbl[userId]
 end
 
-function createAccount(account)
+function createAccount(account, userId)
 	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.ACCOUNT_INFO_COL, account, userId}, true)
 end
 

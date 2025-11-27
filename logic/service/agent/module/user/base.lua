@@ -35,6 +35,7 @@ function clsUser:__init__(oci)
 	self._account = nil
 	self._loginAddr = nil
 	self._fd = nil
+	self._heartBeatTime = nil
 end
 
 function clsUser:saveField(keyList, val)
@@ -116,4 +117,16 @@ end
 
 function clsUser:setFd(fd)
 	self._fd = fd
+end
+
+function clsUser:getHeartBeatTime()
+	return self._heartBeatTime
+end
+
+function clsUser:setAndSyncHeartBeatTime(time)
+	local fd = self:getFd()
+	local ptoTbl = {
+		heartBeatTime = time
+	}
+	for_maker.s2cheartbeat(fd, ptoTbl)
 end

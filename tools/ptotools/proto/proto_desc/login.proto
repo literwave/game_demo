@@ -17,24 +17,25 @@ message c2splaylogin {
 
 // 登录账号验证返回
 message s2cplaylogin {
-	int32 accountType = 1;		//帐号类型
-	string appId = 2;				//应用id
-	string cchid = 3;				//渠道id
+	int32 accountType = 1;			//帐号类型
+	string appId = 2;			//应用id
+	string cchid = 3;			//渠道id
 	string account = 4;			//帐号
-	string passwd = 5;				//密码
+	string passwd = 5;			//密码
 }
 
 // 创建角色返回
 message s2cplaycreate {
-	string userId = 1;				//玩家id
-	string name = 2;				//玩家名字
+	string userId = 1;			//玩家id
+	string name = 2;			//玩家名字
 	int32 birthTime = 3;			//创号时间
 }
 
 // 登录成功返回
 message s2cplayloginok {
-	string userId = 1;				//玩家id
+	string userId = 1;			//玩家id
 	string serverId = 2;			//服务器id
 }
+
 
 

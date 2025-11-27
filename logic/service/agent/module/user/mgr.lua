@@ -52,7 +52,6 @@ end
 
 function createNewUser(fd)
 	local userId = getGameUserId()
-	skynet.error("userId: ", userId)
 	local oci = {
 		_userId = userId,
 		_birthTime = os.time(),
@@ -61,15 +60,23 @@ function createNewUser(fd)
 	-- local userName = RANDOM_NAME.genNewUserName()
 	-- user:setName(userName)
 	allUserTbl[userId] = user
-	fdToUserId[fd] = userId
+	refLogin(userId, fd)
 	user:saveToDB()
-
-	-- 这里送一个武将？
+	-- 这里送一个卡牌？
 	-- HERO_MGR.addHero(userId, , {CONST.FLOW_REASON.NEW_USER})
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
 	return user
 end
 
-local function moduleOnUserLogin(user)
+function moduleOnUserLogin(user)
 	user:onLogin()
+end
+
+local function onHeartBeat(fd)
+	local user = USER_MGR.getUserByFd(fd)
+	user:setHeartBeatTime(os.time())
+end
+
+function __init__()
+	for_maker.c2sheartbeat = onHeartBeat
 end

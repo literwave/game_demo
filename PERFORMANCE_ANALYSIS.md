@@ -1,6 +1,8 @@
-# 框架性能分析报告（2025 Q1）
+# 框架性能分析报告（2025 Q4）
 
 > 测试基于：Skynet 8 工作线程、`agent_init_cnt = 4`、单机部署、Agent 改为按 `userId` 队列串行。压测采用模拟登录 + 建筑操作 + 简单聊天指令，消息频率 1~10 条/秒范围。
+> 
+> **注意**: 测试结果受当前已知 Bug 影响（Agent 负载统计错误），实际生产环境需先修复相关 Bug。详细问题分析见 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)
 
 ## 1. 架构与配置概览
 
@@ -23,15 +25,18 @@
 
 ## 3. 性能瓶颈分析
 
-### 3.1 Gate 单点
-- 目前仍是单 Gate，`socket.read → skynet.send(agent, "client", fd, packet, userId)` 这一串操作完全在一个服务内串行执行。
-- 连接数和吞吐量都受限于单机 TCP 上限 / Gate 的单线程。
-- **建议**：登录服在 `SERVER_TBL[serverId].gates` 中维护多个 Gate，按负载或轮询分配（详见 `docs/GATE_SCALING.md`）。
+### 3.1 Gate 负载均衡策略
+- ✅ **多 Gate 已实现**：根据配置 `gate_cnt`（默认3个）启动多个 Gate 实例
+- ⚠️ **分配策略简单**：登录服使用随机分配（`master_func.lua:15`），未考虑 Gate 实际负载
+- 当某些 Gate 连接数较多时，仍会随机分配到该 Gate，可能导致负载不均
+- **建议**：实现基于连接数的负载均衡，选择连接数最少的 Gate（详见 `docs/GATE_SCALING.md`）
 
-### 3.2 Agent 负载统计缺失
-- 虽然队列已按 userId 分片，但 `gated.lua` 的 `getBalanceAgentInfo()` 仍旧是“找到第一个 `userCnt < 最大值` 的 Agent”，没有实时更新 `userCnt`。
-- 当玩家分布不均或某个 Agent 的队列耗时较久时，会出现“老玩家都挤在同一个 Agent” 的情况。
-- **建议**：Agent 登录/断线时回调 Gate 更新在线数，并暴露 `getOnlineCnt` 接口供 Gate 查询。
+### 3.2 Agent 负载统计 Bug（严重）
+- **问题代码**: `gated.lua:62` - `agent.userCnt = agentInfo.userCnt + 1`（赋值错误）
+- 虽然队列已按 userId 分片，但 `userCnt` 更新逻辑有误，导致所有新连接都分配到第一个 Agent。
+- 即使修复后，`getBalanceAgentInfo()` 也只是"找到第一个 `userCnt < 最大值` 的 Agent"，没有实时统计。
+- 当玩家分布不均或某个 Agent 的队列耗时较久时，会出现负载不均衡的情况。
+- **建议**：修复 `userCnt` 更新逻辑，并在 Agent 登录/断线时正确更新计数。详情见 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#71-agent-负载统计-bug严重)
 
 ### 3.3 MongoDB 同步调用
 - 登录、建筑、任务等都直接 `skynet.call(".mongodb", ...)`，慢查询会阻塞调用线程。
@@ -48,13 +53,15 @@
 
 ## 4. 优化优先级
 
-| 优先级 | 项目 | 说明 |
-|--------|------|------|
-| P0 | **多 Gate 负载均衡** | 直接参考 `docs/GATE_SCALING.md` 的“登录服负载均衡”方案，成本低收益大 |
-| P0 | **Agent 在线数上报 + 动态扩缩容** | 解决“Agent 负载不均”和“高峰期顶满”的问题 |
-| P1 | **Mongo 异步化 / 缓存层** | 热数据常驻内存，写入异步或批量提交 |
-| P1 | **指标采集与告警** | 为后续调优提供数据基础 |
-| P2 | **自动化压测/CI** | 保证改动后性能不回退，并支持迭代 |
+| 优先级 | 项目 | 代码位置 | 说明 |
+|--------|------|---------|------|
+| P0 | **修复 Agent 负载统计 Bug** | `gated.lua:62` | 修复 `userCnt` 更新错误，解决负载不均衡问题（见 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)） |
+| P0 | **优化 Gate 负载均衡策略** | `master_func.lua:15` | 从随机分配改为基于负载的分配，充分利用多 Gate 资源 |
+| P0 | **完善错误处理与日志** | `agent.lua:76` | 避免 `pcall` 吞掉错误，至少记录 error 级别日志 |
+| P1 | **Agent 在线数上报 + 动态扩缩容** | - | 解决"Agent 负载不均"和"高峰期顶满"的问题 |
+| P1 | **Mongo 异步化 / 缓存层** | `mongo_slave.lua` | 热数据常驻内存，写入异步或批量提交 |
+| P1 | **指标采集与告警** | - | 为后续调优提供数据基础 |
+| P2 | **自动化压测/CI** | - | 保证改动后性能不回退，并支持迭代 |
 
 ## 5. 适用与定位
 
@@ -70,5 +77,12 @@
 3. **对 Mongo 进行缓存与异步化改造**，减少同步阻塞。  
 4. **建设监控与压测体系**，让性能调优有据可依。
 
-完成以上步骤后，单服轻松可上 3k~5k 并发，架构也更适合商业化迭代。***
+完成以上步骤后，单服轻松可上 3k~5k 并发，架构也更适合商业化迭代。
+
+---
+
+**相关文档**:
+- [FRAMEWORK_REVIEW.md](../FRAMEWORK_REVIEW.md) - 框架综合评价与问题详解
+- [docs/GATE_SCALING.md](../docs/GATE_SCALING.md) - 多 Gate 扩展方案
+- [README.md](../README.md) - 项目文档与使用指南
 

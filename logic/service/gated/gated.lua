@@ -59,6 +59,7 @@ function CMD.login(source, fd, account, userId, addr)
 	end
 	local agent = agentInfo.agent
 	local agentUserId = skynet.call(agent, "lua", "login", fd, account, userId, addr)
+	agentInfo.userCnt = agentInfo.userCnt + 1
 	local c = {
 		agent = agent,
 		userId = userId,

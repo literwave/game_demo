@@ -23,6 +23,10 @@ function CMD.login(fd, account, userId, addr)
 	end
 	user:setAccount(account)
 	user:setLoginAddr(addr)
+	user:setAndSyncHeartBeatTime(os.time())
+	-- 定时心跳服务
+	CALL_OUT.callFre()
+	USER_MGR.moduleOnUserLogin()
 	return user:getUserId()
 end
 
@@ -73,6 +77,9 @@ skynet.start(function()
 			return
 		end
 		-- 分发数据
-		pcall(userQueue, for_maker[ptoName], userId, msg)
+		local ok, err = xpcall(userQueue, for_maker[ptoName], userId, msg)
+		if not ok then
+			LOG._error("userQueue error: %s", err)
+		end
 	end)
 end)

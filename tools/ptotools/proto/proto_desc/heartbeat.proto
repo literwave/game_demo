@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package Heartbeat;
+// 登录相关
+
+// 请求心跳
+message c2sheartbeat {
+}
+
+// 请求心跳返回
+message s2cheartbeat {
+	int32 heartBeatTime = 1
+}
+
+

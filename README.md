@@ -2,6 +2,8 @@
 
 基于 [Skynet](https://github.com/cloudwu/skynet) 开发的游戏服务器框架，采用 Actor 模型和 ECS 架构设计，支持高并发、分布式部署。
 
+> ⚠️ **重要提示**: 当前框架存在一些已知问题（见 [已知问题与限制](#-已知问题与限制)），用于生产环境前建议先修复 P0 级别的 Bug。详细的框架评估和改进建议请参考 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)。
+
 ## 📋 目录
 
 - [项目简介](#项目简介)
@@ -36,24 +38,24 @@ Game Demo 是一个基于 Skynet 框架的游戏服务器项目，具有以下�
 │   Client    │
 └──────┬──────┘
        │
-┌──────▼──────┐
-│    Gate     │ ← 网关服务，处理客户端连接
-└──────┬──────┘
+┌──────▼──────────┐
+│   Logind        │ ← 登录服务（Master/Slave 模式）
+│  (Master)       │   负载均衡：随机分配到 Gate
+└──────┬──────────┘
        │
-┌──────▼──────┐
-│    Agent    │ ← 游戏逻辑服务，处理玩家业务
-└──────┬──────┘
+┌──────▼──────────┐
+│    Gate         │ ← 网关服务（多实例，默认3个）
+│ Gate1 / Gate2   │   处理客户端连接和消息路由
+│ Gate3           │
+└──────┬──────────┘
+       │
+┌──────▼──────────┐
+│    Agent        │ ← 游戏逻辑服务（多实例，默认4个）
+│ Agent1-4        │   按 userId 队列处理玩家业务
+└──────┬──────────┘
        │
 ┌──────▼──────┐
 │  MongoDB    │ ← 数据持久化
-└─────────────┘
-
-┌─────────────┐
-│   Logind    │ ← 登录服务（Master/Slave 模式）
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│  MongoDB    │
 └─────────────┘
 ```
 
@@ -196,6 +198,10 @@ slave_cnt = 3              -- Slave 服务数量
 maxonline = 2000           -- 最大在线人数
 nodelay = true             -- TCP nodelay
 
+-- Gate 配置
+gate_port = 8888           -- 网关端口（已废弃，Gate 不再直接监听端口）
+gate_cnt = 3               -- Gate 实例数量（多 Gate 架构）
+
 -- Agent 配置
 agent_init_cnt = 4         -- 初始 Agent 数量
 agent_max_user_cnt = 500   -- 单个 Agent 最大用户数
@@ -215,9 +221,23 @@ mongodb_password = "123"
 
 **主要功能：**
 - 接受客户端 TCP 连接
-- 消息包解析和转发
+- 消息包解析和转发（`doRequest` 函数处理消息循环）
 - 连接状态管理
-- Agent 负载均衡（当前默认单 Gate，可按 `docs/GATE_SCALING.md` 扩展多 Gate）
+- Agent 负载均衡（通过 `getBalanceAgentInfo()` 选择负载最轻的 Agent）
+
+**多 Gate 架构（已实现）：**
+- ✅ **多实例支持**: 根据配置 `gate_cnt`（默认3个）启动多个 Gate 实例
+- ✅ **负载均衡**: 登录服使用随机策略分配连接到不同 Gate（`master_func.lua:15`）
+- ✅ **注册机制**: 每个 Gate 启动后自动注册到登录服（`gated.lua:49`）
+
+**当前限制：**
+- ⚠️ **负载统计 Bug**: `userCnt` 更新逻辑有误（见已知问题）
+- ⚠️ **连接管理**: `CMD.kick` 为空实现，无法主动踢人
+- ⚠️ **负载均衡策略**: 当前使用随机分配，未考虑实际负载
+
+**配置说明：**
+- `config/main_node` 中 `gate_cnt = 3` 控制 Gate 实例数量
+- 可在运行时调整数量以适配负载
 
 **关键代码：** `logic/service/gated/gated.lua`
 
@@ -226,10 +246,20 @@ mongodb_password = "123"
 游戏逻辑服务，处理玩家业务逻辑。
 
 **主要功能：**
-- 玩家登录和登出
-- 游戏消息处理
+- 玩家登录和登出（`CMD.login`）
+- 游戏消息处理（通过 `userQueues` 实现"单用户串行、跨用户并行"）
 - 用户状态管理
-- 数据缓存
+- 数据缓存（`USER_MGR.allUserTbl`）
+
+**并发模型（框架亮点）：**
+- 按 `userId` 创建独立队列（`agent.lua:46-48`）
+- 同一玩家串行处理，不同玩家并行处理
+- 相比全局串行，吞吐量提升 3~4 倍
+
+**当前限制：**
+- ⚠️ **错误处理**: 协议处理错误被 `pcall` 吞掉，只有 debug 日志
+- ⚠️ **协议验证**: 缺少包长度检查，可能被恶意客户端攻击
+- ⚠️ **静态配置**: Agent 数量固定，无法动态扩缩容
 
 **关键代码：** `logic/service/agent/agent.lua`
 
@@ -409,9 +439,63 @@ end)
 
 ## 📚 更多文档
 
-- [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)：框架综合评估与规划
-- [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md)：压测与性能分析记录
-- [docs/GATE_SCALING.md](docs/GATE_SCALING.md)：多 Gate 扩展方案
+### 框架评估与规划
+
+- **[FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)** - 框架综合评价报告
+  - 总体评分与各维度评估
+  - 亮点与关键问题详解（含代码位置）
+  - 改进路线与优先级
+  - 适用场景分析
+
+### 性能分析
+
+- **[PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md)** - 压测与性能分析
+  - 不同负载场景下的性能表现
+  - 瓶颈分析与优化建议
+  - 适用场景定位
+
+### 扩展方案
+
+- **[docs/GATE_SCALING.md](docs/GATE_SCALING.md)** - 多 Gate 水平扩展方案
+  - 当前架构分析
+  - 多种扩展方案对比
+  - 推荐实现与代码示例
+
+### 快速索引
+
+| 文档 | 内容 | 适合阅读人群 |
+|------|------|------------|
+| README.md | 项目简介、快速开始、使用指南 | 所有用户 |
+| FRAMEWORK_REVIEW.md | 框架评估、问题分析、改进路线 | 开发者、架构师 |
+| PERFORMANCE_ANALYSIS.md | 性能数据、瓶颈分析 | 性能优化工程师 |
+| docs/GATE_SCALING.md | Gate 扩展方案 | 需要扩展架构的开发者 |
+
+## ⚠️ 已知问题与限制
+
+> 详细的框架评估和问题分析请参考 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)
+
+### 当前已知问题
+
+1. **Agent 负载统计 Bug**（P0 - 严重）
+   - **位置**: `logic/service/gated/gated.lua:62`
+   - **问题**: `agent.userCnt = agentInfo.userCnt + 1` 赋值错误，应该是 `agentInfo.userCnt = agentInfo.userCnt + 1`
+   - **影响**: `userCnt` 未正确更新，导致负载不均衡，所有新连接可能分配到同一个 Agent
+   - **状态**: 待修复，详情见 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#七、关键代码问题详解)
+
+3. **错误处理不健壮**（P0 - 可维护性）
+   - **位置**: `logic/service/agent/agent.lua:76`
+   - **问题**: 协议处理错误被 `pcall` 吞掉，只有 debug 日志
+   - **影响**: 问题难以排查
+
+### 框架限制
+
+- **适用场景**: 适合学习、原型开发、中小型休闲游戏（在线 < 2k）
+- **不适合**: 大型 MMO、实时竞技、严格 SLA 的商业化项目
+- **性能瓶颈**: Agent 负载统计 Bug、MongoDB 同步调用、缺少缓存层
+- **工程化**: 缺少监控、压测、CI/CD 体系
+- **负载均衡**: Gate 多实例已实现，但使用随机分配策略，未考虑实际负载
+
+> 完整的问题列表和改进路线请参考 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)
 
 ## ❓ 常见问题
 
@@ -421,14 +505,28 @@ end)
 
 **解决**: 使用 `skynet.tostring(block, size)` 立即复制数据。
 
+**示例**:
+```lua
+-- ✅ 正确
+local block = socket.read(fd, 2)
+local data = skynet.tostring(block, 2)
+
+-- ❌ 错误 - 会导致段错误
+local block = socket.read(fd, 2)
+-- ... 其他操作 ...
+local data = skynet.tostring(block, 2)  -- block 可能已被复用
+```
+
 ### 2. 协议解析失败
 
 **原因**: 
 - 协议未注册
 - 协议名称不匹配（注意 package 前缀）
+- 协议文件未重新生成
 
 **解决**: 
-- 检查 `protobufinit.lua` 是否注册了协议文件
+- 检查 `logic/service/agent/preload.lua` 中是否注册了协议文件
+- 运行 `bash shell/gen_proto.sh` 重新生成协议
 - 确认使用完整的协议名称（如 `Login.c2splaylogin`）
 
 ### 3. MongoDB 连接失败
@@ -437,20 +535,49 @@ end)
 
 **解决**: 
 - 检查 `config/main_node` 中的 MongoDB 配置
-- 确认 MongoDB 服务已启动
+- 确认 MongoDB 服务已启动：`systemctl status mongod` 或 `mongosh --eval "db.adminCommand('ping')"`
 - 检查网络连接和防火墙设置
+- 查看日志文件 `log/skynet.log` 中的错误信息
 
 ### 4. 服务启动失败
 
 **原因**: 
 - 配置文件路径错误
 - 端口被占用
-- 依赖服务未启动
+- 依赖服务未启动（如 sharedatad 未就绪）
 
 **解决**: 
-- 检查配置文件路径
-- 使用 `netstat` 检查端口占用
-- 查看日志文件定位问题
+- 检查配置文件路径是否正确
+- 使用 `netstat -tlnp | grep <port>` 或 `lsof -i :<port>` 检查端口占用
+- 查看日志文件定位问题：`tail -f log/skynet.log`
+- 检查 sharedatad 是否正常启动（共享数据服务）
+
+### 5. 负载不均衡 / 所有连接分配到同一 Agent
+
+**原因**: Agent 负载统计 Bug（见已知问题 #1）
+
+**代码问题**: `gated.lua:62` 中 `agent.userCnt = agentInfo.userCnt + 1` 赋值错误
+
+**临时解决**: 重启服务，但问题会重现
+
+**彻底解决**: 修复为 `agentInfo.userCnt = agentInfo.userCnt + 1`（见 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#71-agent-负载统计-bug严重)）
+
+### 6. Gate 负载不均衡
+
+**原因**: 登录服使用随机策略分配连接（`master_func.lua:15`），未考虑 Gate 实际负载
+
+**当前实现**: 多 Gate 已实现，但分配策略较简单
+
+**优化建议**: 可参考 [docs/GATE_SCALING.md](docs/GATE_SCALING.md) 实现基于负载的分配策略
+
+### 7. sharedata.query 报错 "dest address type (nil)"
+
+**原因**: 在 `skynet.init` 之前调用 `sharedata.query`
+
+**解决**: 
+- 确保在 `skynet.init` 回调中加载共享数据
+- 使用 `logic/define/data.lua` 中的封装接口
+- 参考 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md) 中的共享数据访问守卫说明
 
 ## 📝 开发规范
 
@@ -466,8 +593,20 @@ end)
 
 3. **错误处理**
    - 使用 `pcall` 包装可能出错的操作
-   - 记录详细的错误日志
-   - 优雅处理异常情况
+   - **重要**: 不要只记录 debug 日志，错误应记录 error 级别
+   - 记录详细的错误日志（包含上下文信息）
+   - 优雅处理异常情况，避免服务崩溃
+
+4. **已知问题处理**
+   - Agent 负载统计 Bug：见 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md#71-agent-负载统计-bug严重)
+   - Gate 单实例：高并发场景需参考扩展方案
+   - 错误处理：避免 `pcall` 吞掉错误而不记录
+
+5. **性能优化建议**
+   - 避免在业务逻辑中频繁 `skynet.call` MongoDB
+   - 使用 `mongo_slave.lua` 的批量写入机制
+   - 热数据考虑内存缓存
+   - 参考 [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md) 了解性能瓶颈
 
 ## 📄 许可证
 

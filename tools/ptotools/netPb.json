@@ -1,18 +1,18 @@
 {
  "define": {
+  "Heartbeat": {
+   "c2sheartbeat": 256,
+   "s2cheartbeat": 257
+  },
   "Chat": {
-   "c2sChat": 256,
-   "s2cChat": 257
+   "c2sChat": 258,
+   "s2cChat": 259
   },
   "Login": {
-   "c2splaylogin": 258,
-   "s2cplaylogin": 259,
-   "s2cplaycreate": 260,
-   "s2cplayloginok": 261
-  },
-  "Test": {
-   "c2sTest": 262,
-   "s2cTest": 263
+   "c2splaylogin": 260,
+   "s2cplaylogin": 261,
+   "s2cplaycreate": 262,
+   "s2cplayloginok": 263
   }
  }
 }
