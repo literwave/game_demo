@@ -68,3 +68,55 @@ function table.removePreString(fixTbl, preString)
 	end
 	return keyToNumber(fixTbl, preString)
 end
+
+function table.addNumberKeyPreString(fixTbl, preString)
+	for key, value in pairs(fixTbl) do
+		local newKey = numberKeyAddPreString(key, preString)
+		if type(value) == "table" then
+			table.addNumberKeyPreString(value, preString)
+		end
+		fixTbl[newKey] = value
+	end
+end
+
+function numberKeyAddPreString(key, preString)
+	if type(key) == "number" then
+		return string.format("%s%d", preString, key)
+	else
+		return key
+	end
+end
+
+function string.split(input, delimiter)
+	input = tostring(input)
+	delimiter = tostring(delimiter)
+	if (delimiter=='') then return false end
+	local pos,arr = 0, {}
+	for st,sp in function() return string.find(input, delimiter, pos, true) end do
+	    table.insert(arr, string.sub(input, pos, st - 1))
+	    pos = sp + 1
+	end
+	table.insert(arr, string.sub(input, pos))
+	return arr
+end
+
+function table2str(obj, indent)
+	indent = indent or 0 
+	local str = ""
+	local indent_str = string.rep("\t", indent) 
+	if type(obj) ~= "table" then
+		return tostring(obj)
+	end
+	str = str .. "{\n"
+	for k, v in pairs(obj) do
+		str = str .. indent_str .. "\t[" .. tostring(k) .. "] = "
+		if type(v) == "table" then
+			str = str .. table2str(v, indent + 1) .. ",\n"
+		else
+			str = str .. tostring(v) .. ",\n"
+		end
+	end
+	str = str .. indent_str .. "}"
+	
+	return str
+end

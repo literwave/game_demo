@@ -20,15 +20,6 @@ allCmdTbl = {
 	},
 	--]]
 }
-cacheList = {
-	--[[
-	[1] = allCmdTbl,
-	[2] = allCmdTbl,
-	--]]
-}
-
--- allCmdTbl设计思路，col刚好是枚举的idx，这样相同集合就能插入进数组
--- 这样设计是为了防止如果出现操作统一集合，可能设置nil or value的时候，保证最后更新的肯定是数据的最后形式
 
 local function insertClearColCmd(colCmdList, value)
 	if type(value) ~= "table" then
@@ -98,25 +89,21 @@ function opMongoValue(flist, value, isMass)
 		table.insert(colCmdList, cmd)
 	end
 	cmdCnt = cmdCnt + 1
-	if isMass then
+	-- if cmdCnt >= maxCmdCnt or isMass then
+	-- 	flush()
+	-- end
+	if true then
 		flush()
-	else
-		table.insert(cacheList, allCmdTbl)
 	end
 end
 
-function saveMassData()
-	skynet.send(".mongodb", "lua", "save", allCmdTbl)
+function saveMassData(col, tbl)
+	LMDB.updateDocByTbl(col, tbl)
 end
 
 function flush()
-	if next(allCmdTbl) or next(cacheList) then
-		table.insert(cacheList, allCmdTbl)
-		local saveList = cacheList
-		cmdCnt = 0
-		allCmdTbl = {}
-		cacheList = {}
-		skynet.send(".mongodb", "lua", "saveData", saveList)
+	if next(allCmdTbl) then
+		skynet.send(".mongodb", "lua", "saveData", allCmdTbl)
 	end
 end
 
@@ -143,11 +130,7 @@ end
 
 function commonLoadSingle(col, key)
 	assert(key)
-	local ret = skynet.call(".mongodb", "lua", "findOne", {
-		database = GAME.getDataBase(),
-		collection = col,
-		doc = {_id = key}
-	})
+	local ret = LMDB.commonLoadSingle(col, key)
 	if ret and ret.dat then
 		return ret.dat
 	else
@@ -156,11 +139,7 @@ function commonLoadSingle(col, key)
 end
 
 function commonLoadTbl(col)
-	local ret = skynet.call(".mongodb", "lua", "findAll", {
-		database = GAME.getDataBase(),
-		collection = col,
-	})
-	return ret
+	return LMDB.commonLoadTbl(col)
 end
 
 function loadAllAccountInfo()
@@ -169,4 +148,8 @@ end
 
 function loadSingleAccountInfo(account)
 	return commonLoadSingle(accountInfoCol, account)
+end
+
+function saveAccountInfo(col, tbl)
+	saveMassData(col, tbl)
 end

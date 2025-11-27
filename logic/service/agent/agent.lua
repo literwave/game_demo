@@ -49,7 +49,6 @@ skynet.start(function()
 		local userQueue = userQueues[userId]
 		-- 分包
 		-- 取第一位  协议号
-		-- 这里应该用xpacll的，不然报错卡所有玩家
 		local id = string.unpack(">I2", packet, 1)
 		assert(fd)
 		-- 接下来就是对应数据

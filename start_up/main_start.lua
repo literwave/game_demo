@@ -15,9 +15,10 @@ skynet.start(function()
 		nodelay = true,
 		serverId = skynet.getenv("host_id")
 	})
+
 	-- -- control hot update or stop srv
 	local mcs = skynet.newservice("mcs") -- http服务
-	skynet.call(mcs, "lua", "start", {
+	skynet.call(mcs, "lua", "open", {
 		port = skynet.getenv("http_port"),
 		nodelay = true,
 		protocol = "http",

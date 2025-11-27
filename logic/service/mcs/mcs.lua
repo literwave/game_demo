@@ -78,7 +78,16 @@ skynet.start(function()
 			balance = 1
 		end
 	end)
-	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
-
+	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)	
+			local f = CMD[cmd]
+			if f then
+				if session ~= 0 then
+					skynet.ret(f(address, ...))
+				else
+					f(address, ...)
+				end
+			else
+				skynet.ret()
+			end
 	end)
 end)

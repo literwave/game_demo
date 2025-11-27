@@ -31,7 +31,7 @@ function getProfile()
 end
 
 function getDataBase()
-	return string.format("%s_%s", GAME, SERVER_ID)
+	return string.format("%s%s", GAME, SERVER_ID)
 end
 
 

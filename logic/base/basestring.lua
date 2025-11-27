@@ -12,7 +12,7 @@ function string.split(input, delimiter)
 	return arr
 end
 
-function string.splitkey(input, delimiter) --规则:自动识别Int�?Split第一个值如果为数值就为Int,Key嘛~
+function string.splitkey(input, delimiter) --规则:自动识别Int�?Split第一个值如果为数值就为Int,Key嘛~
 	input = tostring(input)
 	delimiter = tostring(delimiter)
 	if (delimiter=='') then return false end

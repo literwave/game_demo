@@ -13,7 +13,7 @@ JSON4LUA	= Import("../common/json.lua")
 MONGO_SLAVE	= Import("../logic/service/agent/mongo_slave.lua")
 
 
--- WHITE_LIST	= Import("../logic/module/white_list/white_list.lua")
+LMDB		= Import("../logic/service/agent/lua_mdb.lua")
 -- BLACK_LIST	= Import("../logic/module/black_list/black_list.lua")
 -- RANDOM_NAME	= Import("../logic/module/name/random_name.lua")
 -- CHAT_BASE     = Import("chat/base.lua")

@@ -82,7 +82,7 @@ skynet.start(function()
 		local f = CMD[cmd]
 		if f then
 			if session ~= 0 then
-				skynet.ret(skynet.pack(f(address, ...)))
+				skynet.ret(f(address, ...))
 			else
 				f(address, ...)
 			end

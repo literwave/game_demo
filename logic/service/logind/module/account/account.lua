@@ -15,10 +15,9 @@ function loadData()
 end
 
 function saveData()
-	
+	MONGO_SLAVE.saveAccountInfo()
 end
 
--- 先全部从库里拿吧
 function queryUserId(account, userId)
 	local userIdTbl = accountInfoTbl[account]
 	if not userIdTbl then
@@ -28,24 +27,14 @@ function queryUserId(account, userId)
 end
 
 function createAccount(account)
-	local userId = MONGO_SLAVE.fetchUserId()
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.accountInfoCol, account, userId}, true)
-	return userId
-end
-
-function queryAccount(account)
-	skynet.call(".mongodb", "lua", "findOne", {
-		database = "game",
-		collection = MONGO_SLAVE.accountInfoCol,
-	})
-	return account
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.ACCOUNT_INFO_COL, account, userId}, true)
 end
 
 function sdkLoginOk(loginInfo)
 	local account = loginInfo.account
 	local userId = loginInfo.userId
 	if userId == "" then
-		createAccount(account)
+		-- userId = createAccount(account)
 		skynet.error("user create", account)
 	else
 		skynet.error("user load")
@@ -57,6 +46,7 @@ function sdkLoginOk(loginInfo)
 		local userTbl = ret.userTbl
 		if not userTbl[userId] then
 			skynet.error("user load error2", account, userId)
+			return
 		end
 	end
 end

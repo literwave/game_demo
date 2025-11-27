@@ -34,7 +34,7 @@ end
 function tryInitUser(userId)
 	local user = allUserTbl[userId]
 	if not user then
-		local saveTbl = MONGO_SLAVE.loadSingleUserInfo(userId)
+		local saveTbl = MONGO_SLAVE.loadSingleUserInfo(userId) or {}
 		user = USER_BASE.clsUser:New(saveTbl)
 		allUserTbl[userId] = user
 	end
@@ -47,8 +47,7 @@ local function refLogin(userId, fd)
 end
 
 function getGameUserId()
-	local userId = skynet.call(".game_sid", "lua", "fetchUserId")
-	return userId
+	return MONGO_SLAVE.fetchUserId()
 end
 
 function createNewUser(fd)
