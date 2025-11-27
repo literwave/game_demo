@@ -1,6 +1,6 @@
 local skynet = require "skynet"
 
-localEnvDoFile("../logic/service/logind/save_col.lua")
+localEnvDoFile("../logic/service/game_sid/save_col.lua")
 
 cmdCnt = 0
 flushCB = nil
@@ -20,6 +20,8 @@ allCmdTbl = {
 	},
 	--]]
 }
+-- allCmdTbl设计思路，col刚好是枚举的idx，这样相同集合就能插入进数组
+-- 这样设计是为了防止如果出现操作统一集合，可能设置nil or value的时候，保证最后更新的肯定是数据的最后形式
 
 local function insertClearColCmd(colCmdList, value)
 	if type(value) ~= "table" then
@@ -97,8 +99,9 @@ function opMongoValue(flist, value, isMass)
 	end
 end
 
-function saveMassData(col, tbl)
-	LMDB.updateDocByTbl(col, tbl)
+function commonSaveMany(col, tbl)
+	assert(tbl)
+	assert(LMDB.updateDocByTbl(col, tbl, false, true))
 end
 
 function flush()
@@ -107,35 +110,18 @@ function flush()
 	end
 end
 
+function commonLoadSingle(col, key)
+	assert(key)
+	LMDB.commonLoadSingle(col, key)
+end
+
+function loadAllGameSidInfo(key)
+	return commonLoadSingle(GAME_SID, key)
+end
+
 function systemStartup()
 	if not flushCB then
 		flushCB = CALL_OUT.callFre("MONGO_SLAVE", "flush", flushCd)
 	end
-	initLogindMongo()
-end
-
-function commonLoadSingle(col, key)
-	assert(key)
-end
-
-function commonLoadSingle(col, key)
-	assert(key)
-	local ret = LMDB.commonLoadSingle(col, key)
-	if ret and ret.dat then
-		return ret.dat
-	else
-		return nil
-	end
-end
-
-function commonLoadTbl(col)
-	return LMDB.commonLoadTbl(col)
-end
-
-function loadAllAccountInfo()
-	return commonLoadTbl(accountInfoCol)
-end
-
-function saveAccountInfo(col, tbl)
-	saveMassData(col, tbl)
+	initGameSidMongo()
 end

@@ -9,13 +9,7 @@ local SID_VAR_NAME_LIST = {
 GAME_SID_TBL = {}
 
 local function loadGameData()
-	local gameSidTbl = skynet.call(".mongodb", "lua", "findOne", {
-		database = GAME.getDataBase(),
-		collection = "game_sid",
-		query = {
-			_id = 1,
-		},
-	}) or {}
+	local gameSidTbl = MONGO_SLAVE.loadAllGameSidInfo("1") or {}
 	for _, varName in pairs(SID_VAR_NAME_LIST) do
 		_G[varName] = gameSidTbl[varName] or 0
 	end
