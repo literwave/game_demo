@@ -9,6 +9,7 @@ local DOFILE_LIST = {
 local PROTO_FILE_LIST = {
 	"../proto/pb/login.pb",
 	"../proto/pb/heartbeat.pb",
+	"../proto/pb/hero.pb",
 }
 
 local function systemStartUp()

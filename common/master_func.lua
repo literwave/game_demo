@@ -1,6 +1,5 @@
 local skynet = require "skynet"
-local socket = require "skynet.socket"
-CMD = MASTER_HANDLE.CMD
+CMD = {}
 
 SERVER_TBL = {
 	-- [serverId] =
@@ -22,10 +21,6 @@ function CMD.registerGate(gate, serverId)
 	table.insert(SERVER_TBL[serverId], gate)
 end
 
-function createUserOk(slaveService, account, userId)
-	skynet.call(slaveService, "lua", "createUserOk", account, userId)
-end
-
 function accept(slaveService, fd, addr)
 	local account, userId, serverId = skynet.call(slaveService, "lua", "auth", fd, addr)
 	if not account then
@@ -33,7 +28,8 @@ function accept(slaveService, fd, addr)
 	end
 	local gate = tryGetGate(serverId)
 	if not gate then
-		skynet.error("serverInfo error", serverId)
+		skynet.error("get gate error", serverId)
+		return
 	end
 	skynet.error("login step 2-accept", account)
 	-- 然后网关服务玩家随机分配到agent，map[vfd] = {agent = agent, userId = userId, vfd = vfd}

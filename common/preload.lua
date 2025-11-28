@@ -5,6 +5,7 @@ DOFILE_LIST = {
 	"../logic/base/netPb.lua",
 	"../logic/base/extend.lua",
 	"../logic/base/global.lua",
+	"../logic/base/time.lua",
 	"../logic/game.lua",
 }
 

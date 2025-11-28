@@ -17,7 +17,7 @@ end
 
 function startLogin()
 	for _ = 1, slave_cnt do
-	    table.insert(SLAVE_ADDRESS, skynet.newservice("logind"))
+	    table.insert(SLAVE_ADDRESS, skynet.newservice(SERVICE_NAME))
 	end
 	skynet.error(string.format("login Listen on %s:%d", address, login_port))
 	local fd = socket.listen(address or "0.0.0.0", login_port)
@@ -31,12 +31,12 @@ function startLogin()
 		pcall(MASTER_FUNC.accept, slaveService, fd, addr)
 		
 	end)
-	skynet.dispatch("lua", function (_, address, cmd, ...)
-		local f = CMD[cmd]
+	skynet.dispatch("lua", function (session, address, cmd, ...)
+		local f = CMD[cmd] or MASTER_FUNC.CMD[cmd]
 		if f then
 			local ret = f(...)
-			if ret then
-				skynet.ret(skynet.pack(f(address, ...)))	
+			if session ~= 0 then
+				skynet.ret(skynet.pack(ret))
 			end
 		end
 	end)
@@ -45,6 +45,5 @@ end
 function CMD.createUserOk(account, userId)
 	local idx = tonumber(userId) % slave_cnt
 	local slaveService = SLAVE_ADDRESS[idx]
-	pcall(MASTER_FUNC.createUserOk, slaveService, account, tostring(userId))
+	skynet.call(slaveService, "lua", "createUserOk", account, tostring(userId))
 end
-

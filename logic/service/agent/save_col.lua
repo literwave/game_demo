@@ -10,6 +10,10 @@ local colDescTbl = {
 		colKey = "USER_INFO_COL",
 		colName = "userInfoCol",
 	},
+	{
+		colKey = "USER_HERO_COL",
+		colName = "userHeroCol",
+	},
 }
 
 local function tryInitColList()
@@ -27,6 +31,7 @@ local function tryInitColList()
 	for _, colInfo in pairs(allColList) do
 		local colName = colInfo.colName
 		assert(not allColNameTbl[colName])
+		allColNameTbl[colName] = true
 	end
 	assert(next(allColList))
 end

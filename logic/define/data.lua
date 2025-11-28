@@ -1,8 +1,8 @@
 local skynet = require "skynet"
 local sharedata = require "skynet.sharedata"
-local DATA_REPORT
-local DATA_SERVER_GROUP
-local DATA_HERO
+DATA_REPORT = nil
+DATA_SERVER_GROUP = nil
+DATA_HERO = nil
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -39,4 +39,8 @@ end
 local function getLastNameList(language)
 	local lastNameTbl = conf[language]()
 	return lastNameTbl[1]
+end
+
+function getHeroInfoByType(heroType)
+	return DATA_HERO[heroType]
 end

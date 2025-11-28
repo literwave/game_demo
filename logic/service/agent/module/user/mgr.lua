@@ -62,8 +62,7 @@ function createNewUser(fd)
 	allUserTbl[userId] = user
 	refLogin(userId, fd)
 	user:saveToDB()
-	-- 这里送一个卡牌？
-	-- HERO_MGR.addHero(userId, , {CONST.FLOW_REASON.NEW_USER})
+	HERO_MGR.addHero(userId, 2)
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
 	return user
 end

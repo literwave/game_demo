@@ -23,7 +23,7 @@ local _FILE_INFO_WITH_NAME_T = {
 	"nil",
 	">",
 }
-function _Info(...)
+function _info(...)
 	local debugInfo = debug.getinfo(2, 'nSl')
 	local t
 	
@@ -55,14 +55,10 @@ function _debug(...)
 	t[3] = debugInfo.short_src
 	t[5] = debugInfo.currentline
 	local pfile = os.date("[%Y-%m-%d %H:%M:%S]") .. " [DEBUG]" .. table.concat(t)
-	-- for i = 1, args.n do
-	-- 	args[i] = tostring(args[i])
-	-- end
-	
 	skynet.send(".gamelog", "lua", "writefile", "debug", pfile, ...)
 end
 
-function _Error(...)
+function _error(...)
 	local info = debug.getinfo(2)
 	local path = string.sub(info.source, 2, -1)
 	path = string.sub(path, 2, -1)

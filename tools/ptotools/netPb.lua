@@ -12,6 +12,9 @@ local define = {
         s2cplaylogin = 261,
         s2cplaycreate = 262,
         s2cplayloginok = 263
+    },
+    Hero = {
+        s2csyncherobaseinfo = 264
     }
 }
 ID_TO_PACK_NAME = {}

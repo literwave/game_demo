@@ -36,6 +36,3 @@ message s2cplayloginok {
 	string userId = 1;			//玩家id
 	string serverId = 2;			//服务器id
 }
-
-
-

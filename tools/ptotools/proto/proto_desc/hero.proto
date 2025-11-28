@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package Hero;
+// 登录相关
+
+// 请求英雄数据返回
+message s2csyncherobaseinfo {
+	int32 heroType = 1;
+	int32 lv = 2;
+	int32 star = 3;
+	bool newTag = 4;
+}

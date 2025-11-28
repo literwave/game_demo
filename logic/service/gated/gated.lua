@@ -56,11 +56,10 @@ local function doRequest(fd)
 end
 
 local function getBalanceAgentInfo()
-	for _, agentInfo in ipairs(AGENT_POOLS) do
-		if agentInfo.userCnt < AGENT_MAX_USER_CNT then
-			return agentInfo
-		end
-	end
+	table.sort(AGENT_POOLS, function(a, b)
+		return a.userCnt < b.userCnt
+	end)
+	return AGENT_POOLS[1]
 end
 
 function CMD.open(source, conf)

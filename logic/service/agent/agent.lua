@@ -1,6 +1,7 @@
 local skynet = require "skynet"
 local queue = require "skynet.queue"
 local protobuf = require "protobuf"
+local sharedata = require "skynet.sharedata"
 
 local CMD = {}
 
@@ -15,7 +16,9 @@ skynet.register_protocol {
 }
 
 function CMD.login(fd, account, userId, addr)
+	skynet.error("login step 4-agent", fd, account, userId, addr)
 	local user
+	skynet.error(userId == "")
 	if userId == "" then
 		user = USER_MGR.createNewUser(fd)
 	else
@@ -24,7 +27,7 @@ function CMD.login(fd, account, userId, addr)
 	user:setFd(fd)
 	user:setAccount(account)
 	user:setLoginAddr(addr)
-	user:setAndSyncHeartBeatTime(os.time())
+	user:setAndSyncHeartBeatTime(TIME.osBJSec())
 	CALL_OUT.callFre("USER_MGR", "detectUserHeartBeat", CONST.USER_HEART_BEAT_TIMEOUT, userId)
 	USER_MGR.moduleOnUserLogin(user)
 	return user:getUserId()
