@@ -41,7 +41,6 @@ end
 function getValueByKey(key)
 	redisClient = getRedisClient()
 	local val = redisClient:get(key)
-	print(val)
 	if val then
 		return JSON4LUA.decode(val)
 	end
