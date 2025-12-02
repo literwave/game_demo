@@ -9,7 +9,6 @@ local PROTO_FILE_LIST = {
 }
 
 local function systemStartUp()
-	MONGO_SLAVE.systemStartUp()
 	LREDIS.systemStartUp()
 end
 
