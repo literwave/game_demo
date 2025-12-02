@@ -20,7 +20,7 @@ local function decodePack(fd)
 	local packMsg = socket.read(fd, sz)
 	local _, pos = string.unpack(">I2", packMsg)
 	local payload_data = packMsg:sub(pos)
-	local loginInfo = protobuf.decode("Login.c2splaylogin", payload_data)
+	local loginInfo = protobuf.decode("Login.c2s_user_login", payload_data)
 	return loginInfo
 end
 

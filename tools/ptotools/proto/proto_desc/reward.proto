@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package Reward;
+// 奖励
+
+message s2c_show_reward {
+	int32 reward_type = 1;
+}
+
+

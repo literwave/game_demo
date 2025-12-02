@@ -9,9 +9,10 @@ FILE_MODIFY_TIME_TBL = {
 
 -- 这里先这样手动加载数据，后续优化成遍历dir目录下的文件，然后new
 DATA_FILE_LIST = {
-	"../read_config/hero.lua",
+	"../read_config/Hero.lua",
 	"../read_config/ReportInfo.lua",
 	"../read_config/ServerGroup.lua",
+	"../read_config/Global.lua",
 }
 
 function CMD.shutdown()

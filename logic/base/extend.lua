@@ -79,6 +79,29 @@ function table.addNumberKeyPreString(fixTbl, preString)
 	end
 end
 
+function table.hasElement(tbl)
+	if not tbl then
+		return
+	end
+	for _ in pairs(tbl) do
+		return true
+	end
+end
+
+function table.deepcopy(t, d)
+	local deep = d or 0
+	assert(deep <= 20)
+	local copy = {}
+	for k, v in pairs(t) do 
+		if type(v) ~= "table" then 
+			copy[k] = v
+		else 
+			copy[k] = table.deepcopy(v, deep + 1) 
+		end  
+	end  
+	return copy 
+end
+
 function numberKeyAddPreString(key, preString)
 	if type(key) == "number" then
 		return string.format("%s%d", preString, key)

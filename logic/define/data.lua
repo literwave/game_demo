@@ -12,9 +12,10 @@ DATA_HERO = nil
 -- }
 
 skynet.init(function()
-	DATA_HERO = sharedata.query("hero")
+	DATA_HERO = sharedata.query("Hero")
 	DATA_REPORT = sharedata.query("ReportInfo")
 	DATA_SERVER_GROUP = sharedata.query("ServerGroup")
+	DATA_GLOBAL = sharedata.query("Global")
 end)
 
 local function getReportInfo(reportId)
@@ -43,4 +44,8 @@ end
 
 function getHeroInfoByType(heroType)
 	return DATA_HERO[heroType]
+end
+
+function getUserCreateReward()
+	return DATA_GLOBAL.value2
 end

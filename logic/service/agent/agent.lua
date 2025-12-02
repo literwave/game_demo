@@ -18,7 +18,6 @@ skynet.register_protocol {
 function CMD.login(fd, account, userId, addr)
 	skynet.error("login step 4-agent", fd, account, userId, addr)
 	local user
-	skynet.error(userId == "")
 	if userId == "" then
 		user = USER_MGR.createNewUser(fd)
 	else

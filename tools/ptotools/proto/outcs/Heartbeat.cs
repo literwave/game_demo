@@ -25,13 +25,13 @@ namespace Heartbeat {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "CiBwcm90by9wcm90b19kZXNjL2hlYXJ0YmVhdC5wcm90bxIJSGVhcnRiZWF0",
-            "Ig4KDGMyc2hlYXJ0YmVhdCIlCgxzMmNoZWFydGJlYXQSFQoNaGVhcnRCZWF0",
-            "VGltZRgBIAEoBWIGcHJvdG8z"));
+            "IhAKDmMyc19oZWFydF9iZWF0IicKDnMyY19oZWFydF9iZWF0EhUKDWhlYXJ0",
+            "QmVhdFRpbWUYASABKAViBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Heartbeat.c2sheartbeat), global::Heartbeat.c2sheartbeat.Parser, null, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Heartbeat.s2cheartbeat), global::Heartbeat.s2cheartbeat.Parser, new[]{ "HeartBeatTime" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Heartbeat.c2s_heart_beat), global::Heartbeat.c2s_heart_beat.Parser, null, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Heartbeat.s2c_heart_beat), global::Heartbeat.s2c_heart_beat.Parser, new[]{ "HeartBeatTime" }, null, null, null, null)
           }));
     }
     #endregion
@@ -41,16 +41,16 @@ namespace Heartbeat {
   /// <summary>
   /// 请求心跳
   /// </summary>
-  public sealed partial class c2sheartbeat : pb::IMessage<c2sheartbeat>
+  public sealed partial class c2s_heart_beat : pb::IMessage<c2s_heart_beat>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<c2sheartbeat> _parser = new pb::MessageParser<c2sheartbeat>(() => new c2sheartbeat());
+    private static readonly pb::MessageParser<c2s_heart_beat> _parser = new pb::MessageParser<c2s_heart_beat>(() => new c2s_heart_beat());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<c2sheartbeat> Parser { get { return _parser; } }
+    public static pb::MessageParser<c2s_heart_beat> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -66,7 +66,7 @@ namespace Heartbeat {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public c2sheartbeat() {
+    public c2s_heart_beat() {
       OnConstruction();
     }
 
@@ -74,25 +74,25 @@ namespace Heartbeat {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public c2sheartbeat(c2sheartbeat other) : this() {
+    public c2s_heart_beat(c2s_heart_beat other) : this() {
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public c2sheartbeat Clone() {
-      return new c2sheartbeat(this);
+    public c2s_heart_beat Clone() {
+      return new c2s_heart_beat(this);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as c2sheartbeat);
+      return Equals(other as c2s_heart_beat);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(c2sheartbeat other) {
+    public bool Equals(c2s_heart_beat other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -152,7 +152,7 @@ namespace Heartbeat {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(c2sheartbeat other) {
+    public void MergeFrom(c2s_heart_beat other) {
       if (other == null) {
         return;
       }
@@ -196,16 +196,16 @@ namespace Heartbeat {
   /// <summary>
   /// 请求心跳返回
   /// </summary>
-  public sealed partial class s2cheartbeat : pb::IMessage<s2cheartbeat>
+  public sealed partial class s2c_heart_beat : pb::IMessage<s2c_heart_beat>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<s2cheartbeat> _parser = new pb::MessageParser<s2cheartbeat>(() => new s2cheartbeat());
+    private static readonly pb::MessageParser<s2c_heart_beat> _parser = new pb::MessageParser<s2c_heart_beat>(() => new s2c_heart_beat());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<s2cheartbeat> Parser { get { return _parser; } }
+    public static pb::MessageParser<s2c_heart_beat> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -221,7 +221,7 @@ namespace Heartbeat {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cheartbeat() {
+    public s2c_heart_beat() {
       OnConstruction();
     }
 
@@ -229,15 +229,15 @@ namespace Heartbeat {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cheartbeat(s2cheartbeat other) : this() {
+    public s2c_heart_beat(s2c_heart_beat other) : this() {
       heartBeatTime_ = other.heartBeatTime_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cheartbeat Clone() {
-      return new s2cheartbeat(this);
+    public s2c_heart_beat Clone() {
+      return new s2c_heart_beat(this);
     }
 
     /// <summary>Field number for the "heartBeatTime" field.</summary>
@@ -255,12 +255,12 @@ namespace Heartbeat {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as s2cheartbeat);
+      return Equals(other as s2c_heart_beat);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(s2cheartbeat other) {
+    public bool Equals(s2c_heart_beat other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -333,7 +333,7 @@ namespace Heartbeat {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(s2cheartbeat other) {
+    public void MergeFrom(s2c_heart_beat other) {
       if (other == null) {
         return;
       }

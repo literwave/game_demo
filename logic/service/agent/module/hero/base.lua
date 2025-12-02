@@ -91,5 +91,5 @@ end
 
 function clsHero:syncToClient()
 	local fd = USER_MGR.getFdByUserId(self._userId)
-	for_caller.s2csyncherobaseinfo(fd, self:getHeroPTOBaseInfo())
+	for_caller.s2c_sync_hero_base_info(fd, self:getHeroPTOBaseInfo())
 end

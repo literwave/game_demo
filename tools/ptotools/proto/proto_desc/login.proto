@@ -4,7 +4,7 @@ package Login;
 // 登录相关
 
 // 请求登录账号验证
-message c2splaylogin {
+message c2s_user_login {
 	int32 accountType = 1;			//帐号类型
 	string appId = 2;			//应用id
 	string cchid = 3;			//渠道id
@@ -16,7 +16,7 @@ message c2splaylogin {
 }
 
 // 登录账号验证返回
-message s2cplaylogin {
+message s2c_user_login {
 	int32 accountType = 1;			//帐号类型
 	string appId = 2;			//应用id
 	string cchid = 3;			//渠道id
@@ -25,14 +25,14 @@ message s2cplaylogin {
 }
 
 // 创建角色返回
-message s2cplaycreate {
+message s2c_user_create {
 	string userId = 1;			//玩家id
 	string name = 2;			//玩家名字
 	int32 birthTime = 3;			//创号时间
 }
 
 // 登录成功返回
-message s2cplayloginok {
+message s2c_user_login_ok {
 	string userId = 1;			//玩家id
 	string serverId = 2;			//服务器id
 }

@@ -131,7 +131,7 @@ function clsUser:setAndSyncHeartBeatTime(time)
 	local ptoTbl = {
 		heartBeatTime = time
 	}
-	for_caller.s2cheartbeat(fd, ptoTbl)
+	for_caller.s2c_heart_beat(fd, ptoTbl)
 end
 
 function clsUser:onLogin()

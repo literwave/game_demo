@@ -62,6 +62,7 @@ function createNewUser(fd)
 	allUserTbl[userId] = user
 	refLogin(userId, fd)
 	user:saveToDB()
+	-- REWARD_MGR.rewardUser(userId, DATA_COMMON.getUserCreateReward())
 	HERO_MGR.addHero(userId, 2)
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
 	return user
@@ -93,5 +94,5 @@ local function onHeartBeat(fd)
 end
 
 function __init__()
-	for_maker.c2sheartbeat = onHeartBeat
+	for_maker.c2s_heart_beat = onHeartBeat
 end

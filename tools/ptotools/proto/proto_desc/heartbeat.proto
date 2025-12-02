@@ -4,11 +4,11 @@ package Heartbeat;
 // 登录相关
 
 // 请求心跳
-message c2sheartbeat {
+message c2s_heart_beat {
 }
 
 // 请求心跳返回
-message s2cheartbeat {
+message s2c_heart_beat {
 	int32 heartBeatTime = 1;
 }
 

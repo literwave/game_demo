@@ -107,7 +107,7 @@ function flush()
 	end
 end
 
-function systemStartup()
+function systemStartUp()
 	if not flushCB then
 		flushCB = CALL_OUT.callFre("MONGO_SLAVE", "flush", flushCd)
 	end
@@ -133,7 +133,7 @@ function commonLoadTbl(col)
 end
 
 function loadAllAccountInfo()
-	return commonLoadTbl(accountInfoCol)
+	return commonLoadTbl(ACCOUNT_INFO_COL)
 end
 
 function saveAccountInfo(col, tbl)

@@ -24,22 +24,23 @@ namespace Login {
     static LoginReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Chxwcm90by9wcm90b19kZXNjL2xvZ2luLnByb3RvEgVMb2dpbiKEAQoMYzJz",
-            "cGxheWxvZ2luEhMKC2FjY291bnRUeXBlGAEgASgFEg0KBWFwcElkGAIgASgJ",
-            "Eg0KBWNjaGlkGAMgASgJEg8KB2FjY291bnQYBCABKAkSDgoGcGFzc3dkGAUg",
-            "ASgJEhAKCHNlcnZlcklkGAYgASgJEg4KBnVzZXJJZBgHIAEoCSJiCgxzMmNw",
-            "bGF5bG9naW4SEwoLYWNjb3VudFR5cGUYASABKAUSDQoFYXBwSWQYAiABKAkS",
-            "DQoFY2NoaWQYAyABKAkSDwoHYWNjb3VudBgEIAEoCRIOCgZwYXNzd2QYBSAB",
-            "KAkiQAoNczJjcGxheWNyZWF0ZRIOCgZ1c2VySWQYASABKAkSDAoEbmFtZRgC",
-            "IAEoCRIRCgliaXJ0aFRpbWUYAyABKAUiMgoOczJjcGxheWxvZ2lub2sSDgoG",
-            "dXNlcklkGAEgASgJEhAKCHNlcnZlcklkGAIgASgJYgZwcm90bzM="));
+            "Chxwcm90by9wcm90b19kZXNjL2xvZ2luLnByb3RvEgVMb2dpbiKGAQoOYzJz",
+            "X3VzZXJfbG9naW4SEwoLYWNjb3VudFR5cGUYASABKAUSDQoFYXBwSWQYAiAB",
+            "KAkSDQoFY2NoaWQYAyABKAkSDwoHYWNjb3VudBgEIAEoCRIOCgZwYXNzd2QY",
+            "BSABKAkSEAoIc2VydmVySWQYBiABKAkSDgoGdXNlcklkGAcgASgJImQKDnMy",
+            "Y191c2VyX2xvZ2luEhMKC2FjY291bnRUeXBlGAEgASgFEg0KBWFwcElkGAIg",
+            "ASgJEg0KBWNjaGlkGAMgASgJEg8KB2FjY291bnQYBCABKAkSDgoGcGFzc3dk",
+            "GAUgASgJIkIKD3MyY191c2VyX2NyZWF0ZRIOCgZ1c2VySWQYASABKAkSDAoE",
+            "bmFtZRgCIAEoCRIRCgliaXJ0aFRpbWUYAyABKAUiNQoRczJjX3VzZXJfbG9n",
+            "aW5fb2sSDgoGdXNlcklkGAEgASgJEhAKCHNlcnZlcklkGAIgASgJYgZwcm90",
+            "bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Login.c2splaylogin), global::Login.c2splaylogin.Parser, new[]{ "AccountType", "AppId", "Cchid", "Account", "Passwd", "ServerId", "UserId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2cplaylogin), global::Login.s2cplaylogin.Parser, new[]{ "AccountType", "AppId", "Cchid", "Account", "Passwd" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2cplaycreate), global::Login.s2cplaycreate.Parser, new[]{ "UserId", "Name", "BirthTime" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2cplayloginok), global::Login.s2cplayloginok.Parser, new[]{ "UserId", "ServerId" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Login.c2s_user_login), global::Login.c2s_user_login.Parser, new[]{ "AccountType", "AppId", "Cchid", "Account", "Passwd", "ServerId", "UserId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2c_user_login), global::Login.s2c_user_login.Parser, new[]{ "AccountType", "AppId", "Cchid", "Account", "Passwd" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2c_user_create), global::Login.s2c_user_create.Parser, new[]{ "UserId", "Name", "BirthTime" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2c_user_login_ok), global::Login.s2c_user_login_ok.Parser, new[]{ "UserId", "ServerId" }, null, null, null, null)
           }));
     }
     #endregion
@@ -49,16 +50,16 @@ namespace Login {
   /// <summary>
   /// 请求登录账号验证
   /// </summary>
-  public sealed partial class c2splaylogin : pb::IMessage<c2splaylogin>
+  public sealed partial class c2s_user_login : pb::IMessage<c2s_user_login>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<c2splaylogin> _parser = new pb::MessageParser<c2splaylogin>(() => new c2splaylogin());
+    private static readonly pb::MessageParser<c2s_user_login> _parser = new pb::MessageParser<c2s_user_login>(() => new c2s_user_login());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<c2splaylogin> Parser { get { return _parser; } }
+    public static pb::MessageParser<c2s_user_login> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -74,7 +75,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public c2splaylogin() {
+    public c2s_user_login() {
       OnConstruction();
     }
 
@@ -82,7 +83,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public c2splaylogin(c2splaylogin other) : this() {
+    public c2s_user_login(c2s_user_login other) : this() {
       accountType_ = other.accountType_;
       appId_ = other.appId_;
       cchid_ = other.cchid_;
@@ -95,8 +96,8 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public c2splaylogin Clone() {
-      return new c2splaylogin(this);
+    public c2s_user_login Clone() {
+      return new c2s_user_login(this);
     }
 
     /// <summary>Field number for the "accountType" field.</summary>
@@ -207,12 +208,12 @@ namespace Login {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as c2splaylogin);
+      return Equals(other as c2s_user_login);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(c2splaylogin other) {
+    public bool Equals(c2s_user_login other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -363,7 +364,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(c2splaylogin other) {
+    public void MergeFrom(c2s_user_login other) {
       if (other == null) {
         return;
       }
@@ -484,16 +485,16 @@ namespace Login {
   /// <summary>
   /// 登录账号验证返回
   /// </summary>
-  public sealed partial class s2cplaylogin : pb::IMessage<s2cplaylogin>
+  public sealed partial class s2c_user_login : pb::IMessage<s2c_user_login>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<s2cplaylogin> _parser = new pb::MessageParser<s2cplaylogin>(() => new s2cplaylogin());
+    private static readonly pb::MessageParser<s2c_user_login> _parser = new pb::MessageParser<s2c_user_login>(() => new s2c_user_login());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<s2cplaylogin> Parser { get { return _parser; } }
+    public static pb::MessageParser<s2c_user_login> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -509,7 +510,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplaylogin() {
+    public s2c_user_login() {
       OnConstruction();
     }
 
@@ -517,7 +518,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplaylogin(s2cplaylogin other) : this() {
+    public s2c_user_login(s2c_user_login other) : this() {
       accountType_ = other.accountType_;
       appId_ = other.appId_;
       cchid_ = other.cchid_;
@@ -528,8 +529,8 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplaylogin Clone() {
-      return new s2cplaylogin(this);
+    public s2c_user_login Clone() {
+      return new s2c_user_login(this);
     }
 
     /// <summary>Field number for the "accountType" field.</summary>
@@ -610,12 +611,12 @@ namespace Login {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as s2cplaylogin);
+      return Equals(other as s2c_user_login);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(s2cplaylogin other) {
+    public bool Equals(s2c_user_login other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -740,7 +741,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(s2cplaylogin other) {
+    public void MergeFrom(s2c_user_login other) {
       if (other == null) {
         return;
       }
@@ -839,16 +840,16 @@ namespace Login {
   /// <summary>
   /// 创建角色返回
   /// </summary>
-  public sealed partial class s2cplaycreate : pb::IMessage<s2cplaycreate>
+  public sealed partial class s2c_user_create : pb::IMessage<s2c_user_create>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<s2cplaycreate> _parser = new pb::MessageParser<s2cplaycreate>(() => new s2cplaycreate());
+    private static readonly pb::MessageParser<s2c_user_create> _parser = new pb::MessageParser<s2c_user_create>(() => new s2c_user_create());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<s2cplaycreate> Parser { get { return _parser; } }
+    public static pb::MessageParser<s2c_user_create> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -864,7 +865,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplaycreate() {
+    public s2c_user_create() {
       OnConstruction();
     }
 
@@ -872,7 +873,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplaycreate(s2cplaycreate other) : this() {
+    public s2c_user_create(s2c_user_create other) : this() {
       userId_ = other.userId_;
       name_ = other.name_;
       birthTime_ = other.birthTime_;
@@ -881,8 +882,8 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplaycreate Clone() {
-      return new s2cplaycreate(this);
+    public s2c_user_create Clone() {
+      return new s2c_user_create(this);
     }
 
     /// <summary>Field number for the "userId" field.</summary>
@@ -933,12 +934,12 @@ namespace Login {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as s2cplaycreate);
+      return Equals(other as s2c_user_create);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(s2cplaycreate other) {
+    public bool Equals(s2c_user_create other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -1037,7 +1038,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(s2cplaycreate other) {
+    public void MergeFrom(s2c_user_create other) {
       if (other == null) {
         return;
       }
@@ -1114,16 +1115,16 @@ namespace Login {
   /// <summary>
   /// 登录成功返回
   /// </summary>
-  public sealed partial class s2cplayloginok : pb::IMessage<s2cplayloginok>
+  public sealed partial class s2c_user_login_ok : pb::IMessage<s2c_user_login_ok>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<s2cplayloginok> _parser = new pb::MessageParser<s2cplayloginok>(() => new s2cplayloginok());
+    private static readonly pb::MessageParser<s2c_user_login_ok> _parser = new pb::MessageParser<s2c_user_login_ok>(() => new s2c_user_login_ok());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<s2cplayloginok> Parser { get { return _parser; } }
+    public static pb::MessageParser<s2c_user_login_ok> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -1139,7 +1140,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplayloginok() {
+    public s2c_user_login_ok() {
       OnConstruction();
     }
 
@@ -1147,7 +1148,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplayloginok(s2cplayloginok other) : this() {
+    public s2c_user_login_ok(s2c_user_login_ok other) : this() {
       userId_ = other.userId_;
       serverId_ = other.serverId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -1155,8 +1156,8 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public s2cplayloginok Clone() {
-      return new s2cplayloginok(this);
+    public s2c_user_login_ok Clone() {
+      return new s2c_user_login_ok(this);
     }
 
     /// <summary>Field number for the "userId" field.</summary>
@@ -1192,12 +1193,12 @@ namespace Login {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as s2cplayloginok);
+      return Equals(other as s2c_user_login_ok);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(s2cplayloginok other) {
+    public bool Equals(s2c_user_login_ok other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -1283,7 +1284,7 @@ namespace Login {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(s2cplayloginok other) {
+    public void MergeFrom(s2c_user_login_ok other) {
       if (other == null) {
         return;
       }

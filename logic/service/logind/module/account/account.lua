@@ -1,33 +1,14 @@
 local skynet = require "skynet"
 
--- 这里要加载userId -> account的映射
-userIdToAccount = {
-	-- [userId] = account
-}
-accountInfoTbl = {
-	-- {
-	-- 	[account][userId] = true
-	-- }
-}
-
-function loadData()
-	accountInfoTbl = MONGO_SLAVE.loadAllAccountInfo()
-end
-
-function saveData()
-	MONGO_SLAVE.saveAccountInfo()
-end
-
 function queryUserId(account, userId)
-	local userIdTbl = accountInfoTbl[account]
-	if not userIdTbl then
-		return
-	end
-	return userIdTbl[userId]
+	local userTbl = LREDIS.getValueByKey(account) or {}
+	return userTbl[userId]
 end
 
 function createAccount(account, userId)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.ACCOUNT_INFO_COL, account, userId}, true)
+	local userTbl = LREDIS.getValueByKey(account) or {}
+	userTbl[userId] = 1
+	LREDIS.setValueByKey(account, userTbl)
 end
 
 function sdkLoginOk(loginInfo)
@@ -38,9 +19,6 @@ function sdkLoginOk(loginInfo)
 	else
 		skynet.error("user load")
 		local ret = queryUserId(account, userId)
-		if not ret then
-			skynet.error("user load error", account, userId)
-			return
-		end
+		assert(ret, "user load error")
 	end
 end

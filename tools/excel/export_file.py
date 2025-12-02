@@ -1,11 +1,27 @@
+# -*- coding: utf-8 -*-
 '''
-xlsx 仅仅支持1.2.0 xlrd
-1.待做 第一行 数据不为空的时候生成空表就行了
-2.name 可能为会空的情况
-3.
+Note:
+- xlsx only supports xlrd 1.2.0
+- TODO: when first row is not empty, generate empty table
+- TODO: handle empty name field
 '''
 import sys
-from telnetlib import theNULL
+import io
+
+def _force_gbk(stream):
+    try:
+        stream.reconfigure(encoding='gbk', errors='ignore')
+        return stream
+    except AttributeError:
+        buffer = getattr(stream, "buffer", None)
+        if buffer:
+            return io.TextIOWrapper(buffer, encoding='gbk', errors='ignore', line_buffering=True)
+        return stream
+    except Exception:
+        return stream
+
+sys.stdout = _force_gbk(sys.stdout)
+sys.stderr = _force_gbk(sys.stderr)
 
 if sys.version_info < (3, 0):
     print('python version need more than 3.x')
@@ -115,31 +131,36 @@ def _NewLine(count):
 
 
 '''
--d 指定配置表excel目录
--f 指定生成file格式
--t 指定输出文件目录
+-d set excel config directory
+-f set output file type
+-t set output directory
 '''
 
 
-def Usage():
+def usage():
     """
     shell use
     :return:
     """
-    print("usefule")
+    print("""
+            -h help
+            -d set directory
+            -f set file type
+            -t set target directory
+            -o set only for client or server
+""")
 
 
 class excelFileInfo():
     """
-    文件信息
+    Excel file meta info
     """
-
     def __init__(self):
         """
-        -r 指定配置表excel文件
-        -f 指定生成file格式
-        -t 指定输出文件目录
-        -o 指定生成给客户端还是给服务端的 （作用是第三行的c/s类型）
+        -r excel config file
+        -f output file type
+        -t output directory
+        -o target side (c/s), used by 3rd row in excel
         """
         self.excelPathFile = None
         self.fileType = None
@@ -149,15 +170,33 @@ class excelFileInfo():
         self.excelBasename = None
         self.excelfileName = None
 
+    def canStart(self):
+        if not self.excelPathFile:
+            return
+        if not self.fileType:
+            return
+        if not self.targetDir:
+            return
+        if not self.sheets:
+            return
+        if not self.useType:
+            return
+        if not self.excelBasename:
+            return
+        if not self.excelfileName:
+            return
+        return True
+
+
     def setExcelFile(self, excelFile):
         """
-        设置读取的excel文件
-        :param excelFile: excel文件
+        Set excel file path
+        :param excelFile: excel file path
         :return:
         """
         _, extension = os.path.splitext(excelFile)
         if extension not in READ_FILE_TYPE:
-            print("读取的不是excel文件")
+            print("not excel file")
             sys.exit(1)
         excelFileDir, excelFilename = os.path.split(excelFile)
         self.excelPathFile = excelFile
@@ -168,18 +207,18 @@ class excelFileInfo():
 
     def setFileType(self, fileType="lua"):
         """
-        设置文件类型 默认参数为lua
-        :param FileType: 文件类型
+        Set output file type, default is lua
+        :param FileType: file type
         :return:
         """
         if fileType not in TARGET_FILE_TYPE:
-            print("不能转行成这种文件格式")
+            print("not support file type")
             sys.exit(1)
         self.fileType = fileType
 
     def setTargetDir(self, targetDir):
         """
-        设置生成文件目录
+        Set output directory
         :param excelFile:
         :return:
         """
@@ -189,31 +228,31 @@ class excelFileInfo():
 
     def getSheets(self):
         """
-        读取excel的sheets
+        Read sheets from excel
         :return:
         """
         excelObj = xlrd.open_workbook(self.excelPathFile)
         self.sheets = excelObj.sheets()
-        # 调试专用
+        # debug only
         self.debugSheet()
 
     def debugSheet(self):
         """
-        调式检查sheets
+        Debug: check sheets
         :return:
         """
-        # 检查sheetname
+        # check sheet name
         for sheet in self.sheets:
             print(sheet.name)
 
     def setOTargetUse(self, UseType):
         """
-        检查使用在客户端还是服务端
-        :param UseType: 使用类型
+        Check use type (client/server)
+        :param UseType: use type
         :return:
         """
         if UseType not in TARGET_FILE_USE:
-            print("请指定生成是给客户端使用还是服务端使用")
+            print("set for client or server or all")
             sys.exit(1)
         self.useType = UseType
 
@@ -231,7 +270,7 @@ class dealExcelInfo():
 
     def dealExcel(self):
         """
-        处理excel
+        Handle excel file
         :return:
         """
         for sheet in self.excelInfo.sheets:
@@ -242,21 +281,19 @@ class dealExcelInfo():
 
     def dealCol(self, sheet):
         """
-        处理excel表列的信息，比如值的类型 和 生成前端还是后端
-        :param sheet: excel表对象
+        Handle sheet columns, such as value type and target side
+        :param sheet: excel sheet object
         :return:
         """
-        # 第一行第一列是生成的文件名字 第二行是描述 第三行是数据类型 第四行是生成使用类型(c/s)
-        if sheet.nrows < 5:
-            print("生成子表出错:{0} 文件路径为：{1}".format(sheet.name, self.excelInfo.excelPathFile))
+        # row1: description, row2: data type, row3: field name, row4: use type (c/s)
+        if sheet.nrows < 4:
+            print("error:{0} directory:{1}".format(sheet.name, self.excelInfo.excelPathFile))
             sys.exit(1)
             # 第行就是文件描述
-        print(self.excelInfo.targetDir)
-        self.targetFile = self.excelInfo.targetDir + '/' + sheet.row_values(0)[0] + '.' + self.excelInfo.fileType
-        print(self.targetFile)
-        dataTypes = sheet.row_values(2)
-        names = sheet.row_values(3)
-        UseTypes = sheet.row_values(4)
+        self.targetFile = self.excelInfo.targetDir + '/' + sheet.name + '.' + self.excelInfo.fileType
+        dataTypes = sheet.row_values(1)
+        names = sheet.row_values(2)
+        UseTypes = sheet.row_values(3)
 
         for colIndex in range(sheet.ncols):
             dataType = str(dataTypes[colIndex]).strip()
@@ -264,7 +301,7 @@ class dealExcelInfo():
             IsUseType = self.IsUseType(str(UseTypes[colIndex]).strip(), self.excelInfo.useType.strip())
 
             if self.checkDataType(dataType):
-                print("文件路径为：{0} 在 {1}, 不存在数据类型为:{2},该列为:{3}".format(self.excelInfo.excelPathFile, sheet.name,
+                print("dir：{0} at {1}, not fileType:{2},column:{3}".format(self.excelInfo.excelPathFile, sheet.name,
                                                                      dataType, name))
                 sys.exit(1)
 
@@ -272,9 +309,9 @@ class dealExcelInfo():
 
     def IsUseType(self, useType, oUseType):
         """
-        检查是否生成特定使用类型的列
-        :param useType: 配置表的生成类型
-        :param oUseType: 指定生成类型
+        Check whether to generate specific useType columns
+        :param useType: use type of config
+        :param oUseType: target use type
         :return:
         """
         if oUseType in useType.split('/'):
@@ -283,8 +320,8 @@ class dealExcelInfo():
 
     def checkDataType(self, dataType):
         """
-        检查数据类型
-        :param dataType: 数据类型
+        Check data type
+        :param dataType: data type
         :return:
         """
         if dataType in FORMAT_FUNC:
@@ -293,15 +330,15 @@ class dealExcelInfo():
 
     def dealBody(self, sheet):
         """
-        需要处理不填数据 生成空文件，而不是终止
+        Handle empty data: generate empty file instead of exit
         :return:
         """
-        # 从第五行开始就是需要的数据了
-        for rowIndex in range(5, sheet.nrows):
+        # From row 5, we start to read data rows
+        for rowIndex in range(4, sheet.nrows):
             row = sheet.row_values(rowIndex)
             if not self.GetSheetValue(row, 0):
-                # 跳过一行，没填这行第一列
-                print("文件路径为：{0} 在 {1}, 跳过这一行 第{2}行 请检查这行第一列".format(self.excelInfo.excelPathFile, sheet.name,
+                # skip row when first column is empty
+                print("dir: {0} at {1}, skip row {2} (first column empty)".format(self.excelInfo.excelPathFile, sheet.name,
                                                                      rowIndex + 1))
                 continue
             for colIndex in range(1, sheet.ncols):
@@ -332,7 +369,7 @@ class dealExcelInfo():
         outStr = self.out_note(sheet) + transFunc(
             self.dealInfo)
         # save to file
-        print(self.targetFile)
+        print("test", self.targetFile)
         with open(self.targetFile, 'w') as f:
             f.write(outStr + "\n")
 
@@ -345,18 +382,18 @@ class dealExcelInfo():
 
 
 if __name__ == '__main__':
-    # exccel 文件信息
+    # excel file info
     excelFileInfo = excelFileInfo()
 
     try:
         opst, args = getopt.getopt(sys.argv[1:], 'r:f:t:h:o:')
     except:
-        Usage()
+        usage()
         sys.exit(1)
 
     for op, v in opst:
         if op == "-h":
-            Usage()
+            usage()
         elif op == "-r":
             # 设置excel配置路径
             excelFileInfo.setExcelFile(v)
@@ -367,7 +404,11 @@ if __name__ == '__main__':
             # 文件生成后的存的path
             excelFileInfo.setTargetDir(v)
         elif op == "-o":
-            # 指定生成的文件是客户端还是服务端
+            # target side: client or server
             excelFileInfo.setOTargetUse(v)
-    if excelFileInfo.excelPathFile and excelFileInfo.fileType and excelFileInfo.targetDir and excelFileInfo.sheets and excelFileInfo.useType and excelFileInfo.excelBasename and excelFileInfo.excelfileName:
-        dealExcel = dealExcelInfo(excelFileInfo)
+    if not excelFileInfo.canStart():
+        print("arg error")
+        usage()
+        sys.exit(1)
+    
+    dealExcel = dealExcelInfo(excelFileInfo)

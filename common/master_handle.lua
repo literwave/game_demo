@@ -43,7 +43,7 @@ function startLogin()
 end
 
 function CMD.createUserOk(account, userId)
-	local idx = tonumber(userId) % slave_cnt
+	local idx = tonumber(userId) % slave_cnt + 1
 	local slaveService = SLAVE_ADDRESS[idx]
 	skynet.call(slaveService, "lua", "createUserOk", account, tostring(userId))
 end

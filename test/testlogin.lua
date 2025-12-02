@@ -21,7 +21,7 @@ skynet.start(function()
 	    serverId = "120"
 	}
 	local fd = assert(socket.open("127.0.0.1", 33021))
-	local packData = string.pack(">I2", 258) .. protobuf.encode("Login.c2splaylogin",data)
+	local packData = string.pack(">I2", 258) .. protobuf.encode("Login.c2s_user_login",data)
 	print("size", #packData)
 	-- packData = string.pack(">H", #packData)..packData
 	-- print(packData)

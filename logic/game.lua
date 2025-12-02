@@ -34,6 +34,6 @@ function getDataBase()
 	return string.format("%s%s", GAME, SERVER_ID)
 end
 
-
-
-
+function getLoginLockKey()
+	return "loginLock"
+end

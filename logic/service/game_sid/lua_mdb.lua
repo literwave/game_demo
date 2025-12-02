@@ -36,15 +36,16 @@ end
 
 function commonLoadTbl(col)
 	mongoClient = getMongoClient()
-	local c = mongoClient:getCollection(col)
-	local result = {}
+	local db = mongoClient:getDB(GAME.getDataBase())
+	local c = db:getCollection(col)
+	local tbl = {}
 	local cursor = c:find()
 	while cursor:hasNext() do
 		local document = cursor:next()
-		table.insert(result, document)
+		tbl[document["_id"]] = document.dat
 	end
 	cursor:close()
-	if #result > 0 then
-		return table.removePreString(result, '@')
+	if table.hasElement(tbl) then
+		return table.removePreString(tbl, '@')
 	end
 end

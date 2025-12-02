@@ -112,11 +112,12 @@ end
 
 function commonLoadSingle(col, key)
 	assert(key)
-	LMDB.commonLoadSingle(col, key)
+	return LMDB.commonLoadSingle(col, key)
 end
 
 function loadAllGameSidInfo(key)
-	return commonLoadSingle(GAME_SID, key)
+	local gameSidInfo = commonLoadSingle(GAME_SID_COL, key)
+	return (gameSidInfo and gameSidInfo.dat)
 end
 
 function systemStartup()

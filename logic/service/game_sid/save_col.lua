@@ -7,8 +7,8 @@ allColNameTbl = {}
 -- 
 local colDescTbl = {
 	{
-		colKey = "GAME_SID",
-		colName = "gameSid",
+		colKey = "GAME_SID_COL",
+		colName = "gameSidCol",
 	},
 }
 

@@ -1,6 +1,6 @@
 -- author:   liter_wave 
 -- Automatic generation from -->>
--- excel file  name: ./excel/Report.xlsx
+-- excel file  name: ./excel/report.xlsx
 -- excel sheet name: ServerGroup
 return {
     [100] = {

@@ -1,20 +1,23 @@
 local define = {
+    Reward = {
+        s2c_show_reward = 256
+    },
     Heartbeat = {
-        c2sheartbeat = 256,
-        s2cheartbeat = 257
+        c2s_heart_beat = 257,
+        s2c_heart_beat = 258
     },
     Chat = {
-        c2sChat = 258,
-        s2cChat = 259
+        c2sChat = 259,
+        s2cChat = 260
     },
     Login = {
-        c2splaylogin = 260,
-        s2cplaylogin = 261,
-        s2cplaycreate = 262,
-        s2cplayloginok = 263
+        c2s_user_login = 261,
+        s2c_user_login = 262,
+        s2c_user_create = 263,
+        s2c_user_login_ok = 264
     },
     Hero = {
-        s2csyncherobaseinfo = 264
+        s2c_sync_hero_base_info = 265
     }
 }
 ID_TO_PACK_NAME = {}

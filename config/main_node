@@ -42,8 +42,12 @@ mongodb_port = "27017"
 mongodb_user = "root"
 mongodb_password = "123"
 
+-- redis etc
+redis_host = "192.168.24.185"
+redis_port = 6379
+
 -- 协议路径
-ppath = rootdir .. "proto/pb/"
+pbpath = rootdir .. "proto/pb/"
 
 -- 日志路径
 logpath = rootdir.."log"
