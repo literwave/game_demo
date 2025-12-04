@@ -1,0 +1,12 @@
+{
+    "1": {
+        "BuyDiamond": 10,
+        "CanUse": 1,
+        "Icon": 1
+    },
+    "2": {
+        "BuyDiamond": 10,
+        "CanUse": 1,
+        "Icon": 1
+    }
+}

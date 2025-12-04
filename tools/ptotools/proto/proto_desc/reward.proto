@@ -1,10 +1,16 @@
 syntax = "proto3";
 
 package Reward;
-// 奖励
 
+// import "common.proto";
+
+// 奖励
 message s2c_show_reward {
-	int32 reward_type = 1;
+//	repeated reward_info rewardList = 1;
+	repeated int32 showTypeList = 2;
 }
 
-
+// 晶钻
+message s2c_sync_user_diamond {
+	int32 diamond = 1;
+}

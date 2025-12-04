@@ -62,8 +62,7 @@ function createNewUser(fd)
 	allUserTbl[userId] = user
 	refLogin(userId, fd)
 	user:saveToDB()
-	-- REWARD_MGR.rewardUser(userId, DATA_COMMON.getUserCreateReward())
-	HERO_MGR.addHero(userId, 2)
+	REWARD_MGR.rewardUser(userId, DATA_COMMON.getUserCreateReward())
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
 	return user
 end

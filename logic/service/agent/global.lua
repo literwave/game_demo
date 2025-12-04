@@ -15,6 +15,8 @@ MONGO_SLAVE	= Import("../logic/service/agent/mongo_slave.lua")
 CLS_HERO	= Import("../logic/service/agent/module/hero/base.lua")
 HERO_MGR	= Import("../logic/service/agent/module/hero/mgr.lua")
 
+-- ITEM_MGR	= Import("../logic/service/agent/module/item/mgr.lua")
+
 LMDB		= Import("../logic/service/agent/lua_mdb.lua")
 -- BLACK_LIST	= Import("../logic/module/black_list/black_list.lua")
 -- RANDOM_NAME	= Import("../logic/module/name/random_name.lua")

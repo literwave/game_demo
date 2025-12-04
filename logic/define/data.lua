@@ -16,6 +16,7 @@ skynet.init(function()
 	DATA_REPORT = sharedata.query("ReportInfo")
 	DATA_SERVER_GROUP = sharedata.query("ServerGroup")
 	DATA_GLOBAL = sharedata.query("Global")
+	DATA_HERO_DEBRIS = sharedata.query("HeroDebris")
 end)
 
 local function getReportInfo(reportId)
@@ -47,5 +48,10 @@ function getHeroInfoByType(heroType)
 end
 
 function getUserCreateReward()
-	return DATA_GLOBAL.value2
+	return DATA_GLOBAL[1].value2
+end
+
+function getItemKindByType(itemType)
+	local itemKind = DATA_ITEM[itemType].itemKind
+	return itemKind
 end

@@ -1,7 +1,6 @@
 local skynet = require "skynet"
 local queue = require "skynet.queue"
 local protobuf = require "protobuf"
-local sharedata = require "skynet.sharedata"
 
 local CMD = {}
 

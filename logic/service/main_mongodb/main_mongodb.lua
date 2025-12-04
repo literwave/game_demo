@@ -55,7 +55,7 @@ function CMD.saveData(allCmdTbl)
 				end
 				-- 设置最终值
 				current[splitList[#splitList]] = cmd.value
-				args.update = newValTbl
+				args.update = { ["$set"] = { [cmd.fieldStr] = cmd.value} }
 				args.upsert = true
 				args.multi = false
 				MONGODB:update(args)

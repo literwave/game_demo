@@ -1,6 +1,6 @@
 
-­
-proto/proto_desc/login.protoLogin"Ä
+œ
+login.protoLogin"Ä
 c2s_user_login 
 accountType (RaccountType
 appId (	RappId

@@ -7,6 +7,7 @@ from tracemalloc import start
 import slpp
 import json
 
+COMMON_PTO_NAME = "common.proto"
 START_PTO_BASE_ID = 256
 MAX_PTO_ID = 65535
 ID_TO_NAME = {}
@@ -79,14 +80,17 @@ class parseFile():
 		self._dumpNameId = {}
 		self._dir = dir
 		self._startId = START_PTO_BASE_ID
+		self._commonPtoName = COMMON_PTO_NAME
 		self._reWrite = False
-		self._reMessage = re.compile("message\s\w+")
-		self._rePack = re.compile("(package)(\s\w+)")
+		self._reMessage = re.compile(r"message\s\w+")
+		self._rePack = re.compile(r"(package)(\s\w+)")
 		self._namePreFix = {"c2s", "s2c"}
 		self.startParse()
 		self.dumpFile()
 		
 	def isPtoFile(self, fileName):
+		if fileName == self._commonPtoName:
+			return False
 		filetype = fileName[-6:]
 		return (filetype == ".proto")
 	

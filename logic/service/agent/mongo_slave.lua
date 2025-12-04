@@ -109,6 +109,7 @@ function flush()
 	if next(allCmdTbl) then
 		skynet.send(".mongodb", "lua", "saveData", allCmdTbl)
 	end
+	allCmdTbl = {}
 end
 
 function systemStartup()

@@ -13,6 +13,8 @@ DATA_FILE_LIST = {
 	"../read_config/ReportInfo.lua",
 	"../read_config/ServerGroup.lua",
 	"../read_config/Global.lua",
+	"../read_config/HeroDebris.lua",
+	"../read_config/Resource.lua",
 }
 
 function CMD.shutdown()

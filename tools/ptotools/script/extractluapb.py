@@ -14,7 +14,7 @@ def main(dir):
 		if filetype == ".proto":
 			#f = open(dir + filename)
 			print(dir + filename)
-			os.system("protoc -o %s.pb %s"%(dir +'../outlua/' + filename[0:-6] ,dir  + filename))
+			os.system("protoc -o %s.pb %s -I=%s"%(dir +'../outlua/' + filename[0:-6] ,dir  + filename, dir))
 			os.system("protoc %s  --csharp_out=%s" %(dir  + filename,dir +'../outcs/'))
 
 if __name__ == "__main__":

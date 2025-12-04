@@ -22,6 +22,15 @@ local saveFieldTbl = {
 			]]
 		}
 	end,
+	_realDiamond = function ()
+		return 0
+	end,
+	_giftDiamond = function ()
+		return 0
+	end,
+	_sumRechargeDiamond = function ()
+		return 0
+	end,
 }
 
 clsUser = clsObject:Inherit()
@@ -59,9 +68,9 @@ end
 function clsUser:getName()
 	return self._name
 end
-function clsUser:getVfd()
+function clsUser:getFd()
 	local userId = self:getUserId()
-	return USER_MGR.getVfdByUserId(userId)
+	return USER_MGR.getFdByUserId(userId)
 end
 
 function clsUser:getResNum(resType)
@@ -140,4 +149,64 @@ end
 
 function clsUser:setLoginTime(time)
 	self:saveField({"_loginTime"}, time)
+end
+
+function clsUser:getDiamond()
+	return self._realDiamond + self._giftDiamond
+end
+
+function clsUser:getRealDiamond()
+	return self._realDiamond
+end
+
+function clsUser:getGiftDiamond()
+	return self._giftDiamond
+end
+
+function clsUser:addSumRechargeDiamond(addCnt)
+	self._sumRechargeDiamond = self._sumRechargeDiamond + addCnt
+	self:saveField({"_sumRechargeDiamond"}, self._sumRechargeDiamond)
+end
+
+function clsUser:getSumRechargeDiamond()
+	return self._sumRechargeDiamond
+end
+
+function clsUser:addRealDiamond(addCnt, reasonList)
+	assert(addCnt >= 0)
+	assert(reasonList[1] == CONST.FLOW_REASON.RECHARGE or reasonList[1] == CONST.FLOW_REASON.WIZ)
+	self._realDiamond = self._realDiamond + addCnt
+	self:saveField({"_realDiamond"}, self._realDiamond)
+end
+
+function clsUser:addGiftDiamond(addCnt, reasonList)
+	assert(addCnt >= 0)
+	self._giftDiamond = self._giftDiamond + addCnt
+	self:saveField({"_giftDiamond"}, self._giftDiamond)
+end
+
+function clsUser:addRealDiamondAndSync(addCnt, reasonList)
+	self:addRealDiamond(addCnt, reasonList)
+	self:syncDiamond()
+end
+
+function clsUser:addGiftDiamondAndSync(addCnt, reasonList)
+	self:addGiftDiamond(addCnt, reasonList)
+	self:syncDiamond()
+end
+
+function clsUser:syncDiamond()
+	local ptoTbl = {
+		diamond = self:getDiamond()
+	}
+	local fd = self:getFd()
+	if fd then
+		for_caller.s2c_sync_user_diamond(fd, ptoTbl)	
+	end
+end
+
+function clsUser:addDiamond(addCnt, reasonList)
+	assert(addCnt >= 0)
+	self._realDiamond = self._realDiamond + addCnt
+	self:saveField({"_realDiamond"}, self._realDiamond)
 end

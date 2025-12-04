@@ -30,28 +30,11 @@ local ITEM_KIND_REWARD_FUNC = {
 local function rewardItem(ret, userId, rewardInfoList, reasonList)
 end
 
-local function rewardHero(ret, userId, rewardInfoList, reasonList) 
-	local mailRewardList = {}
+local function rewardHero(ret, userId, rewardInfoList, reasonList)
 	for _, rewardInfo in pairs(rewardInfoList) do
 		local heroType = rewardInfo.item_type
-		if not DATA_COMMON.isHeroDisable(heroType) then
-			if HERO_MGR.getHeroByType(userId, heroType) then
-				local newRewardInfo = genRewardInfo()
-				rewardItem(ret, userId, newRewardInfo, reasonList)
-			else
-				if HERO_MGR.checkHeroNumLimit(userId) then
-					table.insert(mailRewardList, rewardInfo)
-				else
-					local hero = HERO_MGR.addHero(userId, heroType, reasonList)
-					table.insert(ret, rewardInfo)
-				end
-			end
-		else
-			LOG.mainError(string.format("rewardDisableHero Error,userId=%s,heroType=%s,reasonList=%s", userId, heroType, table.concat(reasonList, "-")))
-		end
-	end
-	if table.hasElement(mailRewardList) then
-		--MAIL_MGR.sendSystemMail(userId, senderName, content, detail, mailRewardList)
+		HERO_MGR.addHero(userId, heroType, reasonList)
+		table.insert(ret, rewardInfo)
 	end
 end
 

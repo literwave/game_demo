@@ -24,18 +24,23 @@ namespace Reward {
     static RewardReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Ch1wcm90by9wcm90b19kZXNjL3Jld2FyZC5wcm90bxIGUmV3YXJkIiYKD3My",
-            "Y19zaG93X3Jld2FyZBITCgtyZXdhcmRfdHlwZRgBIAEoBWIGcHJvdG8z"));
+            "Ch1wcm90by9wcm90b19kZXNjL3Jld2FyZC5wcm90bxIGUmV3YXJkIicKD3My",
+            "Y19zaG93X3Jld2FyZBIUCgxzaG93VHlwZUxpc3QYAiADKAUiKAoVczJjX3N5",
+            "bmNfdXNlcl9kaWFtb25kEg8KB2RpYW1vbmQYASABKAViBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Reward.s2c_show_reward), global::Reward.s2c_show_reward.Parser, new[]{ "RewardType" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Reward.s2c_show_reward), global::Reward.s2c_show_reward.Parser, new[]{ "ShowTypeList" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Reward.s2c_sync_user_diamond), global::Reward.s2c_sync_user_diamond.Parser, new[]{ "Diamond" }, null, null, null, null)
           }));
     }
     #endregion
 
   }
   #region Messages
+  /// <summary>
+  /// 奖励
+  /// </summary>
   public sealed partial class s2c_show_reward : pb::IMessage<s2c_show_reward>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
@@ -70,7 +75,7 @@ namespace Reward {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public s2c_show_reward(s2c_show_reward other) : this() {
-      rewardType_ = other.rewardType_;
+      showTypeList_ = other.showTypeList_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -80,16 +85,18 @@ namespace Reward {
       return new s2c_show_reward(this);
     }
 
-    /// <summary>Field number for the "reward_type" field.</summary>
-    public const int RewardTypeFieldNumber = 1;
-    private int rewardType_;
+    /// <summary>Field number for the "showTypeList" field.</summary>
+    public const int ShowTypeListFieldNumber = 2;
+    private static readonly pb::FieldCodec<int> _repeated_showTypeList_codec
+        = pb::FieldCodec.ForInt32(18);
+    private readonly pbc::RepeatedField<int> showTypeList_ = new pbc::RepeatedField<int>();
+    /// <summary>
+    ///	repeated reward_info rewardList = 1;
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int RewardType {
-      get { return rewardType_; }
-      set {
-        rewardType_ = value;
-      }
+    public pbc::RepeatedField<int> ShowTypeList {
+      get { return showTypeList_; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -107,7 +114,7 @@ namespace Reward {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (RewardType != other.RewardType) return false;
+      if(!showTypeList_.Equals(other.showTypeList_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -115,7 +122,7 @@ namespace Reward {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (RewardType != 0) hash ^= RewardType.GetHashCode();
+      hash ^= showTypeList_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -134,10 +141,7 @@ namespace Reward {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (RewardType != 0) {
-        output.WriteRawTag(8);
-        output.WriteInt32(RewardType);
-      }
+      showTypeList_.WriteTo(output, _repeated_showTypeList_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -148,10 +152,7 @@ namespace Reward {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (RewardType != 0) {
-        output.WriteRawTag(8);
-        output.WriteInt32(RewardType);
-      }
+      showTypeList_.WriteTo(ref output, _repeated_showTypeList_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -162,9 +163,7 @@ namespace Reward {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (RewardType != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(RewardType);
-      }
+      size += showTypeList_.CalculateSize(_repeated_showTypeList_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -177,8 +176,200 @@ namespace Reward {
       if (other == null) {
         return;
       }
-      if (other.RewardType != 0) {
-        RewardType = other.RewardType;
+      showTypeList_.Add(other.showTypeList_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 18:
+          case 16: {
+            showTypeList_.AddEntriesFrom(input, _repeated_showTypeList_codec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 18:
+          case 16: {
+            showTypeList_.AddEntriesFrom(ref input, _repeated_showTypeList_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// 晶钻
+  /// </summary>
+  public sealed partial class s2c_sync_user_diamond : pb::IMessage<s2c_sync_user_diamond>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<s2c_sync_user_diamond> _parser = new pb::MessageParser<s2c_sync_user_diamond>(() => new s2c_sync_user_diamond());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<s2c_sync_user_diamond> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Reward.RewardReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public s2c_sync_user_diamond() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public s2c_sync_user_diamond(s2c_sync_user_diamond other) : this() {
+      diamond_ = other.diamond_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public s2c_sync_user_diamond Clone() {
+      return new s2c_sync_user_diamond(this);
+    }
+
+    /// <summary>Field number for the "diamond" field.</summary>
+    public const int DiamondFieldNumber = 1;
+    private int diamond_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int Diamond {
+      get { return diamond_; }
+      set {
+        diamond_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as s2c_sync_user_diamond);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(s2c_sync_user_diamond other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Diamond != other.Diamond) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Diamond != 0) hash ^= Diamond.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Diamond != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(Diamond);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Diamond != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(Diamond);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Diamond != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Diamond);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(s2c_sync_user_diamond other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Diamond != 0) {
+        Diamond = other.Diamond;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -196,7 +387,7 @@ namespace Reward {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 8: {
-            RewardType = input.ReadInt32();
+            Diamond = input.ReadInt32();
             break;
           }
         }
@@ -215,7 +406,7 @@ namespace Reward {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 8: {
-            RewardType = input.ReadInt32();
+            Diamond = input.ReadInt32();
             break;
           }
         }

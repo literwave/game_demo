@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package common;
+
+message reward_info {
+	int32 rewardType = 1;
+	int32 itemType = 2;
+	int32 itemCount = 3;
+}

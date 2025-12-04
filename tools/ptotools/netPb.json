@@ -1,24 +1,25 @@
 {
  "define": {
   "Reward": {
-   "s2c_show_reward": 256
+   "s2c_show_reward": 256,
+   "s2c_sync_user_diamond": 257
   },
   "Heartbeat": {
-   "c2s_heart_beat": 257,
-   "s2c_heart_beat": 258
+   "c2s_heart_beat": 258,
+   "s2c_heart_beat": 259
   },
   "Chat": {
-   "c2sChat": 259,
-   "s2cChat": 260
+   "c2sChat": 260,
+   "s2cChat": 261
   },
   "Login": {
-   "c2s_user_login": 261,
-   "s2c_user_login": 262,
-   "s2c_user_create": 263,
-   "s2c_user_login_ok": 264
+   "c2s_user_login": 262,
+   "s2c_user_login": 263,
+   "s2c_user_create": 264,
+   "s2c_user_login_ok": 265
   },
   "Hero": {
-   "s2c_sync_hero_base_info": 265
+   "s2c_sync_hero_base_info": 266
   }
  }
 }
