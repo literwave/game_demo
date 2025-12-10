@@ -37,8 +37,8 @@ end
 
 function disconnect(fd, userId)
 	local user = getUserById(userId)
-	user:setGateSrv(nil)
-	user:setFd(nil)
+	user:saveToDB()
+	allUserTbl[userId] = nil
 	delUserIdByVfd(fd)
 	userIdToFd[userId] = nil
 end

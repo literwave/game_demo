@@ -29,6 +29,12 @@ Game Demo 是一个基于 Skynet 框架的游戏服务器项目，具有以下�
 - **可扩展**: 网关、Agent、登录服务等核心组件可独立扩展
 - **共享数据守卫**: 内置 `sharedatad` 服务与封装接口，确保在 Skynet 初始化后再访问配置数据，避免 `skynet.call` 空指针
 
+### 当前状态与主要风险
+- 多 Gate 已上线，但登录服仍随机分配，未结合连接数/负载
+- Agent 登录时会递增 `userCnt`，断开未递减，长期运行会误判满载
+- 协议层缺少包长/ID 校验，`CMD.kick` 为空实现
+- Mongo 调用多为同步，缺少监控与告警，排障成本高
+
 ## 🏗️ 架构设计
 
 ### 整体架构
@@ -231,9 +237,9 @@ mongodb_password = "123"
 - ✅ **注册机制**: 每个 Gate 启动后自动注册到登录服（`gated.lua:49`）
 
 **当前限制：**
-- ⚠️ **负载统计 Bug**: `userCnt` 更新逻辑有误（见已知问题）
+- ⚠️ **负载计数未递减**: 断线时未减少 `userCnt`，计数会一直累积，长时间运行后分配失真
 - ⚠️ **连接管理**: `CMD.kick` 为空实现，无法主动踢人
-- ⚠️ **负载均衡策略**: 当前使用随机分配，未考虑实际负载
+- ⚠️ **负载均衡策略**: 登录服随机分配，未结合 Gate/Agent 实际负载
 
 **配置说明：**
 - `config/main_node` 中 `gate_cnt = 3` 控制 Gate 实例数量
@@ -475,23 +481,28 @@ end)
 > 详细的框架评估和问题分析请参考 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)
 
 ### 当前已知问题
+1. **Agent 负载计数未递减**（P0）
+   - **位置**: `logic/service/gated/gated.lua:100`
+   - **问题**: 登录时会递增 `userCnt`，但断开连接时未递减，计数持续累积
+   - **影响**: 运行一段时间后所有 Agent 会被视为“满载”，新连接难以均衡分配
+   - **状态**: 待补充断线回收逻辑（参考 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#七、关键代码问题详解)）
 
-1. **Agent 负载统计 Bug**（P0 - 严重）
-   - **位置**: `logic/service/gated/gated.lua:62`
-   - **问题**: `agent.userCnt = agentInfo.userCnt + 1` 赋值错误，应该是 `agentInfo.userCnt = agentInfo.userCnt + 1`
-   - **影响**: `userCnt` 未正确更新，导致负载不均衡，所有新连接可能分配到同一个 Agent
-   - **状态**: 待修复，详情见 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#七、关键代码问题详解)
+2. **Gate 分配策略过于简单**（P0）
+   - **位置**: `common/slave_func.lua:15-21`
+   - **问题**: 登录服随机挑选 Gate，未基于连接数/负载
+   - **影响**: 可能出现个别 Gate 过载、其他 Gate 空闲
+   - **状态**: 待实现按连接数或轮询分配
 
-3. **错误处理不健壮**（P0 - 可维护性）
-   - **位置**: `logic/service/agent/agent.lua:76`
-   - **问题**: 协议处理错误被 `pcall` 吞掉，只有 debug 日志
-   - **影响**: 问题难以排查
+3. **错误处理仍需加强**（P0）
+   - **位置**: `logic/service/agent/agent.lua:80`
+   - **问题**: 已改用 `xpcall` 输出 error 日志，但上下文与告警链路缺失
+   - **影响**: 线上问题定位成本高
 
 ### 框架限制
 
 - **适用场景**: 适合学习、原型开发、中小型休闲游戏（在线 < 2k）
 - **不适合**: 大型 MMO、实时竞技、严格 SLA 的商业化项目
-- **性能瓶颈**: Agent 负载统计 Bug、MongoDB 同步调用、缺少缓存层
+- **性能瓶颈**: Agent 负载计数回收缺失、MongoDB 同步调用、缺少缓存层
 - **工程化**: 缺少监控、压测、CI/CD 体系
 - **负载均衡**: Gate 多实例已实现，但使用随机分配策略，未考虑实际负载
 
@@ -554,13 +565,13 @@ local data = skynet.tostring(block, 2)  -- block 可能已被复用
 
 ### 5. 负载不均衡 / 所有连接分配到同一 Agent
 
-**原因**: Agent 负载统计 Bug（见已知问题 #1）
+**原因**: Agent `userCnt` 断开时未递减，计数持续累积（见已知问题 #1）
 
-**代码问题**: `gated.lua:62` 中 `agent.userCnt = agentInfo.userCnt + 1` 赋值错误
+**当前状态**: 登录阶段已正确递增，断开未递减，运行一段时间后会被判定满载
 
-**临时解决**: 重启服务，但问题会重现
+**临时解决**: 重启 Gate 以重置计数，无法根治
 
-**彻底解决**: 修复为 `agentInfo.userCnt = agentInfo.userCnt + 1`（见 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#71-agent-负载统计-bug严重)）
+**彻底解决**: 在断线/踢出时递减 `userCnt`，并在 `CONNECTION[fd]` 中保存 `agentInfo` 便于回收（见 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#七、关键代码问题详解)）
 
 ### 6. Gate 负载不均衡
 
@@ -598,7 +609,7 @@ local data = skynet.tostring(block, 2)  -- block 可能已被复用
    - 优雅处理异常情况，避免服务崩溃
 
 4. **已知问题处理**
-   - Agent 负载统计 Bug：见 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md#71-agent-负载统计-bug严重)
+   - Agent 负载计数回收缺失：见 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md#71-agent-负载统计-bug严重)
    - Gate 单实例：高并发场景需参考扩展方案
    - 错误处理：避免 `pcall` 吞掉错误而不记录
 

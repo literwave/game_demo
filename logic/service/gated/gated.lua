@@ -100,7 +100,13 @@ end
 function handle.close(id, code, reason)
 	local conn = CONNECTION[id]
 	if conn then
-		skynet.send(conn.agent, "lua", "disconnect", id, conn.userId)
+		local agent = conn.agent
+		for _, agentInfo in pairs(AGENT_POOLS) do
+			if agentInfo.agent == agent then
+				agentInfo.userCnt = agentInfo.userCnt - 1
+			end
+		end
+		skynet.send(agent, "lua", "disconnect", id, conn.userId)
 	end
 	CONNECTION[id] = nil
 	print("gate ws close from: " .. tostring(id), code, reason)
@@ -109,7 +115,13 @@ end
 function handle.error(id)
 	local conn = CONNECTION[id]
 	if conn then
-		skynet.send(conn.agent, "lua", "disconnect", id, conn.userId)
+		local agent = conn.agent
+		for _, agentInfo in pairs(AGENT_POOLS) do
+			if agentInfo.agent == agent then
+				agentInfo.userCnt = agentInfo.userCnt - 1
+			end
+		end
+		skynet.send(agent, "lua", "disconnect", id, conn.userId)
 	end
 	CONNECTION[id] = nil
 	print("gate ws error from: " .. tostring(id))

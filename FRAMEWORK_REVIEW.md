@@ -8,14 +8,14 @@
 
 | 维度 | 评分 | 说明 |
 |------|------|------|
-| **架构设计** | ⭐⭐⭐⭐ (4/5) | 登录 → Gate（多实例）→ Agent → GameServer/DB 分层清晰，服务职责单一，多 Gate 已实现 |
-| **代码质量** | ⭐⭐✨ (2.5/5) | 模块拆分合理，但存在负载统计 bug、错误处理不健壮、全局变量过多等问题 |
-| **性能表现** | ⭐⭐⭐ (3/5) | Agent 并发模型优秀，多 Gate 已实现，但负载统计 Bug 和 Mongo 同步调用仍是瓶颈 |
-| **可扩展性** | ⭐⭐⭐ (3/5) | Skynet 天生支持横向扩展，但自动扩缩容与多 Gate 尚未实现 |
-| **可维护性** | ⭐⭐⭐ (3/5) | 文档与目录结构完整，但缺少监控、日志不规范、调试困难 |
-| **工程实践** | ⭐⭐ (2/5) | 启动/协议脚本齐全，但缺压测、监控、CI/CD、测试体系 |
+| **架构设计** | ⭐⭐⭐⭐ (4/5) | 登录 → Gate（多实例）→ Agent → GameServer/DB 分层清晰，服务职责单一 |
+| **代码质量** | ⭐⭐✨ (2.5/5) | 模块拆分合理，但存在负载计数回收缺失、错误处理和校验不足等问题 |
+| **性能表现** | ⭐⭐⭐ (3/5) | Agent 队列模型表现良好，Gate/Agent 负载感知缺失、Mongo 同步调用拖累高负载表现 |
+| **可扩展性** | ⭐⭐⭐ (3/5) | Skynet 可横向扩展，多 Gate 已有雏形，但缺少按负载分配和动态伸缩 |
+| **可维护性** | ⭐⭐⭐ (3/5) | 文档较全，但监控缺失、日志与告警不足，排障成本高 |
+| **工程实践** | ⭐⭐ (2/5) | 启动/协议脚本齐全，但缺压测、监控、CI/CD、自动化测试 |
 
-**综合评分：3.1 / 5 — 适合教学/原型及中小型上线项目（需修复关键 bug 后）**
+**综合评分：3.1 / 5 — 适合教学/原型及中小型休闲游戏（需先修复 P0）**
 
 ---
 
@@ -44,9 +44,9 @@
 
 | 问题 | 代码位置 | 影响 | 建议 |
 |------|---------|------|------|
-| **Agent 负载统计不完整** | `gated.lua:62,77` | 登录时递增已修复，但断开连接时未递减计数，导致计数累积不准确 | 在 `CONNECTION[fd]` 中保存 `agentInfo` 引用，实现 `CMD.disconnect` 时递减计数 |
-| **Gate 负载均衡策略简单** | `master_func.lua:15` | 使用随机分配，未考虑 Gate 实际负载和连接数 | 实现基于负载的分配策略（负载最轻、轮询等） |
-| **错误处理已改进** | `agent.lua:80` | 已使用 `xpcall` 替代 `pcall`，但仍需补充错误日志和监控 | 补充 error 级别日志记录，关键操作失败应通知客户端 |
+| **Agent 负载计数未回收** | `logic/service/gated/gated.lua` | 登录时递增 `userCnt`，断线未递减，计数只增不减导致分配失真 | 在 `CONNECTION[fd]` 保存 `agentInfo`，在 close/error/踢出时递减 |
+| **Gate 分配策略仅随机** | `common/slave_func.lua:15-21` | 登录服随机挑 Gate，无法按连接数均衡，易出现单 Gate 过载 | 为 Gate 维护连接数/心跳，上报后按最小连接或轮询分配 |
+| **协议校验与错误处理薄弱** | `logic/service/agent/agent.lua` | 缺包长/ID 校验，`xpcall` 日志缺上下文与告警，异常仍难追踪 | 增加长度/ID 校验，补充上下文日志，关键错误上报告警或断开客户端 |
 
 ### 3.2 重要问题（P1 - 建议尽快改进）
 
@@ -119,71 +119,20 @@
 
 ## 七、关键代码问题详解
 
-### 7.1 Agent 负载统计（部分修复）
+### 7.1 Agent 负载计数（未回收）
 
 **当前状态：**
-
-✅ **已修复** - 登录时递增计数（`gated.lua:62`）
-```lua
-function CMD.login(source, fd, account, userId, addr)
-    local agentInfo = getBalanceAgentInfo()
-    -- ...
-    local agent = agentInfo.agent
-    local agentUserId = skynet.call(agent, "lua", "login", fd, account, userId, addr)
-    agentInfo.userCnt = agentInfo.userCnt + 1  -- ✅ 已修复：正确递增计数
-    -- ...
-end
-```
-
-❌ **未实现** - 断开连接时递减计数
-- `gated.lua` 中没有 `CMD.disconnect` 实现
-- `CONNECTION[fd]` 中没有保存 `agentInfo` 引用
-- 断开连接时 `userCnt` 不会递减，导致计数不准确
+- 登录时会递增 `userCnt`
+- 断开/踢出未递减，`CONNECTION[fd]` 未保存 `agentInfo`
 
 **影响：**
-- 登录时计数正确，但断开时不递减
-- 随着时间推移，`userCnt` 会一直累积，导致负载均衡失效
-- 长期运行后，所有 Agent 都会显示 `userCnt >= MAX`，无法分配新连接
+- 运行一段时间后统计与真实在线数严重偏离
+- `getBalanceAgentInfo()` 将认为所有 Agent 已满，分配失真甚至拒绝新连接
 
-**完整修复方案：**
-```lua
--- gated.lua: 修改 CMD.login，保存 agentInfo 引用
-function CMD.login(source, fd, account, userId, addr)
-    local agentInfo = getBalanceAgentInfo()
-    if not agentInfo then
-        skynet.error("get agent failed", account, userId)
-        return
-    end
-    local agent = agentInfo.agent
-    local agentUserId = skynet.call(agent, "lua", "login", fd, account, userId, addr)
-    agentInfo.userCnt = agentInfo.userCnt + 1  -- ✅ 递增计数
-    
-    local c = {
-        agent = agent,
-        userId = userId,
-        source = source,
-        addr = addr,
-        agentInfo = agentInfo  -- ✅ 保存引用，用于断开时递减
-    }
-    CONNECTION[fd] = c
-    -- ...
-end
-
--- gated.lua: 添加 CMD.disconnect 实现
-function CMD.disconnect(fd, userId)
-    local conn = CONNECTION[fd]
-    if conn then
-        if conn.agentInfo then
-            conn.agentInfo.userCnt = conn.agentInfo.userCnt - 1  -- ✅ 递减计数
-        end
-        CONNECTION[fd] = nil
-    end
-    -- 调用 Agent 的 disconnect（如果需要）
-    if conn and conn.agent then
-        skynet.send(conn.agent, "lua", "disconnect", fd, userId)
-    end
-end
-```
+**修复建议：**
+- 在登录时把 `agentInfo` 放入 `CONNECTION[fd]`
+- 在 `handle.close/error`、踢出、Agent 主动断线时递减 `agentInfo.userCnt`
+- 若 Agent 内部维护在线表，断开时同步校验并回收
 
 ### 7.2 错误处理（已改进）
 
@@ -202,27 +151,16 @@ end
 - 考虑通知客户端或记录到监控系统
 - 对于关键操作失败，可以触发告警
 
-### 7.3 Gate 负载均衡策略简单
+### 7.3 Gate 负载分配策略
 
-**当前实现：** `master_func.lua:10-16`
-```lua
-local function tryGetGate(serverId)
-    local gateList = SERVER_TBL[serverId]
-    if not gateList then
-        return nil
-    end
-    return gateList[math.random(1, #gateList)]  -- 随机分配
-end
-```
+**当前实现：** `common/slave_func.lua:15-21` 使用 `math.random` 随机 Gate。
 
-**现状：** 多 Gate 已实现（`gate_cnt = 3`），但使用随机分配策略，未考虑 Gate 实际负载。
+**影响：** 无法基于连接数/健康度分配，可能出现单 Gate 过载。
 
-**影响：** 可能导致某些 Gate 负载过高，而其他 Gate 负载较低，无法充分利用资源。
-
-**优化建议：** 
-- 实现基于连接数的负载均衡（选择连接数最少的 Gate）
-- 或实现轮询策略（更均匀分配）
-- 参考 `docs/GATE_SCALING.md` 中的负载均衡方案
+**优化建议：**
+- Gate 周期性上报连接数/心跳，由登录服选择连接最少的 Gate
+- 轮询或按 userId hash 维持会话亲和（避免频繁跨 Gate）
+- 若部署外部 LB，可让 LB 只做 L4 直通，登录服仍需感知 Gate 负载做调度
 
 ---
 

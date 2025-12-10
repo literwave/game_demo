@@ -2,7 +2,12 @@
 
 > 测试基于：Skynet 8 工作线程、`agent_init_cnt = 4`、单机部署、Agent 改为按 `userId` 队列串行。压测采用模拟登录 + 建筑操作 + 简单聊天指令，消息频率 1~10 条/秒范围。
 > 
-> **注意**: 测试结果受当前已知 Bug 影响（Agent 负载统计错误），实际生产环境需先修复相关 Bug。详细问题分析见 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)
+> **注意**: 测试结果受当前已知问题影响（Agent 负载计数未递减、Gate 随机分配），生产环境需先修复。详细问题分析见 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)
+
+> **快速行动**：
+> - Gate 分配改为按连接数/轮询，避免随机导致单 Gate 过载
+> - 在 close/踢出时递减 Agent `userCnt`，恢复负载统计准确性
+> - 为 Mongo 高频调用加缓存或异步管线，给调用设置超时与监控
 
 ## 1. 架构与配置概览
 
@@ -31,12 +36,11 @@
 - 当某些 Gate 连接数较多时，仍会随机分配到该 Gate，可能导致负载不均
 - **建议**：实现基于连接数的负载均衡，选择连接数最少的 Gate（详见 `docs/GATE_SCALING.md`）
 
-### 3.2 Agent 负载统计 Bug（严重）
-- **问题代码**: `gated.lua:62` - `agent.userCnt = agentInfo.userCnt + 1`（赋值错误）
-- 虽然队列已按 userId 分片，但 `userCnt` 更新逻辑有误，导致所有新连接都分配到第一个 Agent。
-- 即使修复后，`getBalanceAgentInfo()` 也只是"找到第一个 `userCnt < 最大值` 的 Agent"，没有实时统计。
-- 当玩家分布不均或某个 Agent 的队列耗时较久时，会出现负载不均衡的情况。
-- **建议**：修复 `userCnt` 更新逻辑，并在 Agent 登录/断线时正确更新计数。详情见 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#71-agent-负载统计-bug严重)
+### 3.2 Agent 负载计数未递减（严重）
+- **问题代码**: `gated.lua` 登录时递增 `userCnt`，但断线时未递减
+- 运行一段时间后计数只增不减，导致 `getBalanceAgentInfo()` 认为所有 Agent 已满载，分配失真
+- 实际 Gate 侧按 `userCnt` 排序选择最小值，但计数失真后无法反映真实负载
+- **建议**：在断线/踢出时同步递减计数，并考虑上报实时在线数
 
 ### 3.3 MongoDB 同步调用
 - 登录、建筑、任务等都直接 `skynet.call(".mongodb", ...)`，慢查询会阻塞调用线程。
@@ -55,7 +59,7 @@
 
 | 优先级 | 项目 | 代码位置 | 说明 |
 |--------|------|---------|------|
-| P0 | **修复 Agent 负载统计 Bug** | `gated.lua:62` | 修复 `userCnt` 更新错误，解决负载不均衡问题（见 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)） |
+| P0 | **补全 Agent 负载计数回收** | `gated.lua` | 断开连接时递减 `userCnt`，避免计数累积导致分配失真 |
 | P0 | **优化 Gate 负载均衡策略** | `master_func.lua:15` | 从随机分配改为基于负载的分配，充分利用多 Gate 资源 |
 | P0 | **完善错误处理与日志** | `agent.lua:76` | 避免 `pcall` 吞掉错误，至少记录 error 级别日志 |
 | P1 | **Agent 在线数上报 + 动态扩缩容** | - | 解决"Agent 负载不均"和"高峰期顶满"的问题 |
