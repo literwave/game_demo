@@ -50,8 +50,6 @@ function isNewUser(userId)
 		if table.isEmpty(saveTbl) then
 			isNewUser = true
 		end
-		user = USER_BASE.clsUser:New(saveTbl)
-		allUserTbl[userId] = user
 	end
 	return isNewUser
 end
@@ -66,26 +64,34 @@ function tryInitUser(userId)
 	return user
 end
 
-function refLogin(userId, fd)
+function refLogin(userId, fd, user)
 	userIdToFd[userId] = fd
 	fdToUserId[fd] = userId
+	allUserTbl[userId] = user
 end
 
 function getGameUserId()
 	return MONGO_SLAVE.fetchUserId()
 end
 
-function createNewUser(fd, userId, serverId)
+function createNewUser(gateSrv, fd, userId, serverId)
 	local oci = {
 		_userId = userId,
 		_birthTime = os.time(),
 		_bornServerId = serverId,
 	}
 	local user = USER_BASE.clsUser:New(oci)
+	refLogin(userId, fd, user)
+	-- user:setFd(fd)
+	-- print("gateSrv", gateSrv)
+	-- user:setGateSrv(gateSrv)
 	-- local userName = RANDOM_NAME.genNewUserName()
 	-- user:setName(userName)
 	user:saveToDB()
+	user:setFd(fd)
+	user:setGateSrv(gateSrv)
 	REWARD_MGR.rewardUser(userId, DATA_COMMON.getUserCreateReward())
+	return user
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
 end
 

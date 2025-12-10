@@ -2,6 +2,7 @@ local skynet = require "skynet"
 local socket = require "skynet.socket"
 local websocket = require "http.websocket"
 local protobuf = require "protobuf"
+local crypt = require "client.crypt"
 local PROTOCOL = skynet.getenv("protocol")
 
 local CMD = {}
@@ -10,14 +11,6 @@ CONNECTION = {
 	-- [fd] = {
 
 	-- }
-}
-
-TKOEN_TBL = {
-	-- [token] = {
-	-- 	userId = *,
-	-- 	account = *,
-	-- 	serverId = *,
-	-- 	}
 }
 
 local AGENT_INIT_CNT = skynet.getenv("agent_init_cnt")
@@ -58,11 +51,13 @@ local function getBalanceAgentInfo()
 	return AGENT_POOLS[1]
 end
 
-local function firstLogin(token, fd)
-	local userInfo = TKOEN_TBL[token]
-	local userId = userInfo.userId
-	if not userInfo then
-		skynet.error("login step 3-gate", userId)
+local function firstLogin(packet, fd)
+	local token = packet.token
+	local userId = packet.userId
+	local passwd = packet.passwd
+	local userInfo = LREDIS.getValueByKey(token)
+	if userId ~= userInfo.userId or passwd ~= userInfo.passwd then
+		skynet.error("token error", token, userId, passwd, userInfo.userId, userInfo.passwd)
 		return
 	end
 	local agentInfo = getBalanceAgentInfo()
@@ -93,8 +88,7 @@ function handle.message(fd, msg)
 		if not packet then
 			return
 		end
-		local token = packet.token
-		firstLogin(token, fd)
+		firstLogin(packet, fd)
 		
 	else
 		local agent = conn.agent

@@ -27,21 +27,22 @@ namespace Login {
             "Chxwcm90by9wcm90b19kZXNjL2xvZ2luLnByb3RvEgVMb2dpbiKGAQoOYzJz",
             "X3VzZXJfbG9naW4SEwoLYWNjb3VudFR5cGUYASABKAUSDQoFYXBwSWQYAiAB",
             "KAkSDQoFY2NoaWQYAyABKAkSDwoHYWNjb3VudBgEIAEoCRIOCgZwYXNzd2QY",
-            "BSABKAkSEAoIc2VydmVySWQYBiABKAkSDgoGdXNlcklkGAcgASgJIoUBCg5z",
+            "BSABKAkSEAoIc2VydmVySWQYBiABKAkSDgoGdXNlcklkGAcgASgJIpUBCg5z",
             "MmNfdXNlcl9sb2dpbhITCgthY2NvdW50VHlwZRgBIAEoBRINCgVhcHBJZBgC",
             "IAEoCRINCgVjY2hpZBgDIAEoCRIPCgdhY2NvdW50GAQgASgJEg4KBnBhc3N3",
-            "ZBgFIAEoCRIQCghnYXRlQWRkchgGIAEoCRINCgV0b2tlbhgHIAEoCSIhChBj",
-            "MnNfdmVyaWZ5X2xvZ2luEg0KBXRva2VuGAEgASgJIiEKEHMyY192ZXJpZnlf",
-            "bG9naW4SDQoFdG9rZW4YASABKAkiQgoPczJjX3VzZXJfY3JlYXRlEg4KBnVz",
-            "ZXJJZBgBIAEoCRIMCgRuYW1lGAIgASgJEhEKCWJpcnRoVGltZRgDIAEoBSI1",
-            "ChFzMmNfdXNlcl9sb2dpbl9vaxIOCgZ1c2VySWQYASABKAkSEAoIc2VydmVy",
-            "SWQYAiABKAliBnByb3RvMw=="));
+            "ZBgFIAEoCRIQCghnYXRlQWRkchgGIAEoCRINCgV0b2tlbhgHIAEoCRIOCgZ1",
+            "c2VySWQYCCABKAkiQQoQYzJzX3ZlcmlmeV9sb2dpbhIOCgZ1c2VySWQYASAB",
+            "KAkSDgoGcGFzc3dkGAIgASgJEg0KBXRva2VuGAMgASgJIiEKEHMyY192ZXJp",
+            "ZnlfbG9naW4SDQoFdG9rZW4YASABKAkiQgoPczJjX3VzZXJfY3JlYXRlEg4K",
+            "BnVzZXJJZBgBIAEoCRIMCgRuYW1lGAIgASgJEhEKCWJpcnRoVGltZRgDIAEo",
+            "BSI1ChFzMmNfdXNlcl9sb2dpbl9vaxIOCgZ1c2VySWQYASABKAkSEAoIc2Vy",
+            "dmVySWQYAiABKAliBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Login.c2s_user_login), global::Login.c2s_user_login.Parser, new[]{ "AccountType", "AppId", "Cchid", "Account", "Passwd", "ServerId", "UserId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2c_user_login), global::Login.s2c_user_login.Parser, new[]{ "AccountType", "AppId", "Cchid", "Account", "Passwd", "GateAddr", "Token" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Login.c2s_verify_login), global::Login.c2s_verify_login.Parser, new[]{ "Token" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2c_user_login), global::Login.s2c_user_login.Parser, new[]{ "AccountType", "AppId", "Cchid", "Account", "Passwd", "GateAddr", "Token", "UserId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Login.c2s_verify_login), global::Login.c2s_verify_login.Parser, new[]{ "UserId", "Passwd", "Token" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2c_verify_login), global::Login.s2c_verify_login.Parser, new[]{ "Token" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2c_user_create), global::Login.s2c_user_create.Parser, new[]{ "UserId", "Name", "BirthTime" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Login.s2c_user_login_ok), global::Login.s2c_user_login_ok.Parser, new[]{ "UserId", "ServerId" }, null, null, null, null)
@@ -530,6 +531,7 @@ namespace Login {
       passwd_ = other.passwd_;
       gateAddr_ = other.gateAddr_;
       token_ = other.token_;
+      userId_ = other.userId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -644,6 +646,21 @@ namespace Login {
       }
     }
 
+    /// <summary>Field number for the "userId" field.</summary>
+    public const int UserIdFieldNumber = 8;
+    private string userId_ = "";
+    /// <summary>
+    ///玩家id
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string UserId {
+      get { return userId_; }
+      set {
+        userId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -666,6 +683,7 @@ namespace Login {
       if (Passwd != other.Passwd) return false;
       if (GateAddr != other.GateAddr) return false;
       if (Token != other.Token) return false;
+      if (UserId != other.UserId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -680,6 +698,7 @@ namespace Login {
       if (Passwd.Length != 0) hash ^= Passwd.GetHashCode();
       if (GateAddr.Length != 0) hash ^= GateAddr.GetHashCode();
       if (Token.Length != 0) hash ^= Token.GetHashCode();
+      if (UserId.Length != 0) hash ^= UserId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -726,6 +745,10 @@ namespace Login {
         output.WriteRawTag(58);
         output.WriteString(Token);
       }
+      if (UserId.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(UserId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -764,6 +787,10 @@ namespace Login {
         output.WriteRawTag(58);
         output.WriteString(Token);
       }
+      if (UserId.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(UserId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -794,6 +821,9 @@ namespace Login {
       }
       if (Token.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Token);
+      }
+      if (UserId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(UserId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -827,6 +857,9 @@ namespace Login {
       }
       if (other.Token.Length != 0) {
         Token = other.Token;
+      }
+      if (other.UserId.Length != 0) {
+        UserId = other.UserId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -871,6 +904,10 @@ namespace Login {
             Token = input.ReadString();
             break;
           }
+          case 66: {
+            UserId = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -912,6 +949,10 @@ namespace Login {
           }
           case 58: {
             Token = input.ReadString();
+            break;
+          }
+          case 66: {
+            UserId = input.ReadString();
             break;
           }
         }
@@ -958,6 +999,8 @@ namespace Login {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public c2s_verify_login(c2s_verify_login other) : this() {
+      userId_ = other.userId_;
+      passwd_ = other.passwd_;
       token_ = other.token_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
@@ -968,9 +1011,42 @@ namespace Login {
       return new c2s_verify_login(this);
     }
 
+    /// <summary>Field number for the "userId" field.</summary>
+    public const int UserIdFieldNumber = 1;
+    private string userId_ = "";
+    /// <summary>
+    ///玩家id
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string UserId {
+      get { return userId_; }
+      set {
+        userId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "passwd" field.</summary>
+    public const int PasswdFieldNumber = 2;
+    private string passwd_ = "";
+    /// <summary>
+    ///密码
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Passwd {
+      get { return passwd_; }
+      set {
+        passwd_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     /// <summary>Field number for the "token" field.</summary>
-    public const int TokenFieldNumber = 1;
+    public const int TokenFieldNumber = 3;
     private string token_ = "";
+    /// <summary>
+    ///令牌
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string Token {
@@ -995,6 +1071,8 @@ namespace Login {
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if (UserId != other.UserId) return false;
+      if (Passwd != other.Passwd) return false;
       if (Token != other.Token) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -1003,6 +1081,8 @@ namespace Login {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
+      if (UserId.Length != 0) hash ^= UserId.GetHashCode();
+      if (Passwd.Length != 0) hash ^= Passwd.GetHashCode();
       if (Token.Length != 0) hash ^= Token.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -1022,8 +1102,16 @@ namespace Login {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (Token.Length != 0) {
+      if (UserId.Length != 0) {
         output.WriteRawTag(10);
+        output.WriteString(UserId);
+      }
+      if (Passwd.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Passwd);
+      }
+      if (Token.Length != 0) {
+        output.WriteRawTag(26);
         output.WriteString(Token);
       }
       if (_unknownFields != null) {
@@ -1036,8 +1124,16 @@ namespace Login {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Token.Length != 0) {
+      if (UserId.Length != 0) {
         output.WriteRawTag(10);
+        output.WriteString(UserId);
+      }
+      if (Passwd.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Passwd);
+      }
+      if (Token.Length != 0) {
+        output.WriteRawTag(26);
         output.WriteString(Token);
       }
       if (_unknownFields != null) {
@@ -1050,6 +1146,12 @@ namespace Login {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
+      if (UserId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(UserId);
+      }
+      if (Passwd.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Passwd);
+      }
       if (Token.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Token);
       }
@@ -1064,6 +1166,12 @@ namespace Login {
     public void MergeFrom(c2s_verify_login other) {
       if (other == null) {
         return;
+      }
+      if (other.UserId.Length != 0) {
+        UserId = other.UserId;
+      }
+      if (other.Passwd.Length != 0) {
+        Passwd = other.Passwd;
       }
       if (other.Token.Length != 0) {
         Token = other.Token;
@@ -1084,6 +1192,14 @@ namespace Login {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
+            UserId = input.ReadString();
+            break;
+          }
+          case 18: {
+            Passwd = input.ReadString();
+            break;
+          }
+          case 26: {
             Token = input.ReadString();
             break;
           }
@@ -1103,6 +1219,14 @@ namespace Login {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
+            UserId = input.ReadString();
+            break;
+          }
+          case 18: {
+            Passwd = input.ReadString();
+            break;
+          }
+          case 26: {
             Token = input.ReadString();
             break;
           }

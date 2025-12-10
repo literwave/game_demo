@@ -3,6 +3,8 @@ local protobuf = require "protobuf"
 local websocket = require "http.websocket"
 local crypt = require "client.crypt"
 local PROTOCOL = skynet.getenv("protocol")
+
+local TOKEN_EXPIRED_TIME = 300
 CMD = {}
 
 SERVER_TBL = {
@@ -60,22 +62,26 @@ function handle.message(id, msg)
 	if not gateInfo then
 		skynet.error("auth error: ", loginInfo.serverId, loginInfo.userId)
 	end
-	local gateAddr = gateInfo.addr
-	local gateSrv = gateInfo.srv
-
 	local token = string.format("%s@%s:%s", crypt.base64encode(loginInfo.userId),
 		crypt.base64encode(loginInfo.serverId),
 		crypt.base64encode(loginInfo.passwd)
 	)
-	skynet.send(gateSrv, "lua", "login", token, loginInfo, addr)
+	local tokenTbl = {
+		userId = loginInfo.userId,
+		passwd = loginInfo.passwd,
+		serverId = loginInfo.serverId,
+		account = loginInfo.account,
+	}
+	LREDIS.setValueByKey(token, tokenTbl, TOKEN_EXPIRED_TIME)
 	local pack = {
 		accountType = loginInfo.accountType,
 		appId =  loginInfo.appId,
 		cchid = loginInfo.cchid,
 		account = loginInfo.account,
 		passwd = loginInfo.passwd,
-		gateAddr = gateAddr,
+		gateAddr = gateInfo.addr,
 		token = token,
+		userId = loginInfo.userId,
 	}
 	websocket.write(id, encodePack(pack))
 	websocket.close(id)

@@ -49,7 +49,7 @@ skynet.start(function()
 	    account = "123",
 	    passwd = "456",
 	    serverId = "120",
-	    userId = "990012059"
+	    userId = ""
 	}
 	local packData = encodePack(data, 258, "Login.c2s_user_login")
 	print("size1", #packData)
@@ -62,10 +62,12 @@ skynet.start(function()
 	local packet = decodePack(res, "Login.s2c_user_login")
 	-- websocket.close(fd)
 	print(table2str(packet))
-	-- local loginUrl = string.format("%s://%s", "ws", packet.gateAddr)
-	local loginUrl = string.format("%s://127.0.0.1:33022", "ws")
+	local loginUrl = string.format("%s://%s", "ws", packet.gateAddr)
+	-- local loginUrl = string.format("%s://127.0.0.1:33022", "ws")
 	data = {
-		token = packet.token
+		token = packet.token,
+		userId = packet.userId,
+		passwd = packet.passwd,
 	}
 	print(loginUrl)
 	-- xpcall(websocket.connect, debug.traceback, loginUrl)

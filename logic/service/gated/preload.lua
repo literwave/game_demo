@@ -1,5 +1,6 @@
 local protobuf = require "protobuf"
 local DOFILE_LIST = {
+	"../logic/service/gated/global.lua",
 }
 
 local PROTO_FILE_LIST = {

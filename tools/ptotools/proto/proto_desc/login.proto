@@ -24,11 +24,14 @@ message s2c_user_login {
 	string passwd = 5;			//密码
 	string gateAddr = 6;			//网关地址
 	string token = 7;			//令牌
+	string userId = 8;			//玩家id
 }
 
 // 请求登录账号验证
 message c2s_verify_login {
-	string token = 1;
+	string userId = 1;			//玩家id
+	string passwd = 2;			//密码
+	string token = 3;			//令牌
 
 }
 

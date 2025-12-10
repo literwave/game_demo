@@ -16,13 +16,15 @@ skynet.register_protocol {
 
 function CMD.login(gateSrv, fd, userId, addr, account, serverId)
 	skynet.error("login step 3-agent", fd, userId, addr, account)
+	local user = false
 	if USER_MGR.isNewUser(userId) then
-		USER_MGR.createNewUser(fd, userId, serverId)
+		user = USER_MGR.createNewUser(gateSrv, fd, userId, serverId)
+	else
+		user = USER_MGR.tryInitUser(userId)
+		USER_MGR.refLogin(userId, fd, user)
+		user:setFd(fd)
+		user:setGateSrv(gateSrv)
 	end
-	local user = USER_MGR.tryInitUser(userId)
-	USER_MGR.refLogin(userId, fd)
-	user:setFd(fd)
-	user:setGateSrv(gateSrv)
 	user:setAccount(account)
 	user:setLoginAddr(addr)
 	user:setAndSyncHeartBeatTime(TIME.osBJSec())
