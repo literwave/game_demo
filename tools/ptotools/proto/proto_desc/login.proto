@@ -22,6 +22,19 @@ message s2c_user_login {
 	string cchid = 3;			//渠道id
 	string account = 4;			//帐号
 	string passwd = 5;			//密码
+	string gateAddr = 6;			//网关地址
+	string token = 7;			//令牌
+}
+
+// 请求登录账号验证
+message c2s_verify_login {
+	string token = 1;
+
+}
+
+// 登录账号验证返回
+message s2c_verify_login {
+	string token = 1;
 }
 
 // 创建角色返回

@@ -137,10 +137,6 @@ function loadSingleUserInfo(userId)
 	return commonLoadSingle(USER_INFO_COL, userId)
 end
 
-function fetchUserId()
-	return skynet.call(".game_sid", "lua", "fetchUserId")
-end
-
 function loadSingleUserHero(userId)
 	return commonLoadSingle(USER_HERO_COL, userId)
 end

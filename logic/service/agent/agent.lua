@@ -14,15 +14,15 @@ skynet.register_protocol {
 	unpack = skynet.unpack
 }
 
-function CMD.login(fd, account, userId, addr)
-	skynet.error("login step 4-agent", fd, account, userId, addr)
-	local user
-	if userId == "" then
-		user = USER_MGR.createNewUser(fd)
-	else
-		user = USER_MGR.tryInitUser(userId)
+function CMD.login(gateSrv, fd, userId, addr, account, serverId)
+	skynet.error("login step 3-agent", fd, userId, addr, account)
+	if USER_MGR.isNewUser(userId) then
+		USER_MGR.createNewUser(fd, userId, serverId)
 	end
+	local user = USER_MGR.tryInitUser(userId)
+	USER_MGR.refLogin(userId, fd)
 	user:setFd(fd)
+	user:setGateSrv(gateSrv)
 	user:setAccount(account)
 	user:setLoginAddr(addr)
 	user:setAndSyncHeartBeatTime(TIME.osBJSec())

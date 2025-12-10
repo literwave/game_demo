@@ -115,8 +115,8 @@ local function writeall(writefunc, statuscode, bodyfunc, header)
 	if header then
 		for k,v in pairs(header) do
 			if type(v) == "table" then
-				for _,v in ipairs(v) do
-					writefunc(string.format("%s: %s\r\n", k,v))
+				for _, vv in ipairs(v) do
+					writefunc(string.format("%s: %s\r\n", k,vv))
 				end
 			else
 				writefunc(string.format("%s: %s\r\n", k,v))

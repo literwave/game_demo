@@ -1,6 +1,5 @@
+local skynet = require "skynet"
 local protobuf = require "protobuf"
-local socket = require "skynet.socket"
-local netpack = require "skynet.netpack"
 
 local DOFILE_LIST = {
 	"../logic/service/agent/global.lua",
@@ -17,6 +16,12 @@ local function systemStartUp()
 	MONGO_SLAVE.systemStartup()
 end
 
+local function encodePack(msg, id, name)
+	local packData = string.pack(">I2", id) .. protobuf.encode(name, msg)
+	packData = string.pack(">I2", #packData) .. packData
+	return packData
+end
+
 local function initDofile()
 	for _, fileInfo in ipairs(DOFILE_LIST) do
 		dofile(fileInfo)
@@ -27,9 +32,8 @@ local function initDofile()
 	-- 这里要优化一下前端发给后端的协议不需要加载进table
 	local function createSendMessage(id, packName)
 		return function(fd, data)
-			local packData = protobuf.encode(packName,data)
-			packData = string.pack(">I2", id)..packData
-			socket.write(fd, netpack.pack(packData, #packData))
+			local gateSrv = USER_MGR.getGateSrvByFd(fd)
+			skynet.send(gateSrv, "lua", "sendClientPack", fd, encodePack(data, id, packName))
 		end
 	end
 	for ptoName, id in pairs(PTONAME_TO_ID) do

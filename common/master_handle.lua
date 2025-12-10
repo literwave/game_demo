@@ -1,6 +1,5 @@
 local skynet = require "skynet"
 local netpack = require "skynet.netpack"
--- local socketdriver = require "skynet.socketdriver"
 local socket = require "skynet.socket"
 CMD = {}
 SOCKET = {}
@@ -42,8 +41,12 @@ function startLogin()
 	end)
 end
 
-function CMD.createUserOk(account, userId)
-	local idx = tonumber(userId) % slave_cnt + 1
-	local slaveService = SLAVE_ADDRESS[idx]
-	skynet.call(slaveService, "lua", "createUserOk", account, tostring(userId))
+function CMD.registerGate(gate, serverId, addr)
+	local gateInfo = {
+		addr = addr,
+		srv = gate,
+	}
+	for _, slaveService in pairs(SLAVE_ADDRESS) do
+		skynet.send(slaveService, "lua", "registerGate", serverId, gateInfo)
+	end
 end

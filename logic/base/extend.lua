@@ -28,6 +28,9 @@ if not setfenv then -- Lua 5.2 or 5.3
 end
 
 function table.isEmpty(luaTable)
+	if not luaTable then
+		return
+	end
 	for _ in pairs(luaTable) do
 		return false
 	end

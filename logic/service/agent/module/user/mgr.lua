@@ -14,7 +14,7 @@ function getUserById(UserId)
 end
 
 function getUserIdByVfd(fd)
-	return vfdToUserId[fd]
+	return fdToUserId[fd]
 end
 
 function delUserIdByVfd(fd)
@@ -25,10 +25,35 @@ function getFdByUserId(userId)
 	return userIdToFd[userId]
 end
 
+function getUserByFd(fd)
+	local userId = fdToUserId[fd]
+	return allUserTbl[userId]
+end
+
+function getGateSrvByFd(fd)
+	local user = getUserByFd(fd)
+	local gateSrv = user:getGateSrv()
+	return gateSrv
+end
+
 function disconnect(fd)
 	local userId = getUserIdByVfd(fd)
 	delUserIdByVfd(fd)
 	userIdToFd[userId] = nil
+end
+
+function isNewUser(userId)
+	local user = allUserTbl[userId]
+	local isNewUser = false
+	if not user then
+		local saveTbl = MONGO_SLAVE.loadSingleUserInfo(userId) or {}
+		if table.isEmpty(saveTbl) then
+			isNewUser = true
+		end
+		user = USER_BASE.clsUser:New(saveTbl)
+		allUserTbl[userId] = user
+	end
+	return isNewUser
 end
 
 function tryInitUser(userId)
@@ -41,7 +66,7 @@ function tryInitUser(userId)
 	return user
 end
 
-local function refLogin(userId, fd)
+function refLogin(userId, fd)
 	userIdToFd[userId] = fd
 	fdToUserId[fd] = userId
 end
@@ -50,21 +75,18 @@ function getGameUserId()
 	return MONGO_SLAVE.fetchUserId()
 end
 
-function createNewUser(fd)
-	local userId = getGameUserId()
+function createNewUser(fd, userId, serverId)
 	local oci = {
 		_userId = userId,
 		_birthTime = os.time(),
+		_bornServerId = serverId,
 	}
 	local user = USER_BASE.clsUser:New(oci)
 	-- local userName = RANDOM_NAME.genNewUserName()
 	-- user:setName(userName)
-	allUserTbl[userId] = user
-	refLogin(userId, fd)
 	user:saveToDB()
 	REWARD_MGR.rewardUser(userId, DATA_COMMON.getUserCreateReward())
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
-	return user
 end
 
 function moduleOnUserLogin(user)

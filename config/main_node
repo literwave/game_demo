@@ -53,7 +53,7 @@ pbpath = rootdir .. "proto/pb/"
 logpath = rootdir.."log"
 
 ------------ 网关相关 --------------
-gate_port = 8888
+gate_port = 33022
 gate_cnt = 3
 
 ------------ 登录相关 --------------
@@ -67,7 +67,7 @@ agent_init_cnt = 4    -- 一开始初始化agent的数量  前期就用一个age
 agent_max_user_cnt = 500
 
 ------------ http相关 --------------
-http_port = 33022
+http_port = 33023
 http_agent_cnt = 3
 ------------ https相关 --------------
 https_port = 33023
@@ -77,3 +77,5 @@ game = "a"
 
 ------------ 配置路径相关 --------------
 config_path = "../read_config/"
+
+protocol = "ws"

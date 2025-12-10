@@ -1,5 +1,5 @@
 
-ú
+¢
 login.protoLogin"ƒ
 c2s_user_login 
 accountType (RaccountType
@@ -8,13 +8,19 @@
 account (	Raccount
 passwd (	Rpasswd
 serverId (	RserverId
-userId (	RuserId"ê
+userId (	RuserId"¬
 s2c_user_login 
 accountType (RaccountType
 appId (	RappId
 cchid (	Rcchid
 account (	Raccount
-passwd (	Rpasswd"[
+passwd (	Rpasswd
+gateAddr (	RgateAddr
+token (	Rtoken"(
+c2s_verify_login
+token (	Rtoken"(
+s2c_verify_login
+token (	Rtoken"[
 s2c_user_create
 userId (	RuserId
 name (	Rname

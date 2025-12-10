@@ -11,11 +11,17 @@ function createAccount(account, userId)
 	LREDIS.setValueByKey(account, userTbl)
 end
 
+local function fetchUserId()
+	return skynet.call(".game_sid", "lua", "fetchUserId")
+end
+
 function sdkLoginOk(loginInfo)
 	local account = loginInfo.account
 	local userId = loginInfo.userId
 	if userId == "" then
-		skynet.error("user create", account)
+		userId = fetchUserId()
+		loginInfo.userId = userId
+		createAccount(account, userId)
 	else
 		skynet.error("user load")
 		local ret = queryUserId(account, userId)

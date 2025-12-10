@@ -9,6 +9,9 @@ local saveFieldTbl = {
 	_logintime = function()
 		return nil
 	end,
+	_bornServerId = function()
+		return nil
+	end,
 	_name = function()
 		return nil
 	end,
@@ -48,6 +51,7 @@ function clsUser:__init__(oci)
 	self._loginAddr = nil
 	self._fd = nil
 	self._heartBeatTime = nil
+	self._gateSrv = nil
 end
 
 function clsUser:saveField(keyList, val)
@@ -123,6 +127,14 @@ function clsUser:setLoginAddr(addr)
 	self._loginAddr = addr
 end
 
+function clsUser:getGateSrv()
+	return self._gateSrv
+end
+
+function clsUser:setGateSrv(gateSrv)
+	self._gateSrv = gateSrv
+end
+
 function clsUser:getFd()
 	return self._fd
 end
@@ -149,6 +161,10 @@ end
 
 function clsUser:setLoginTime(time)
 	self:saveField({"_loginTime"}, time)
+end
+
+function clsUser:setBornServerId(serverId)
+	self:saveField({"_bornServerId"}, serverId)
 end
 
 function clsUser:getDiamond()

@@ -10,7 +10,8 @@ skynet.start(function()
 	skynet.newservice("load_xls")
 	local gate = skynet.newservice("gated")
 	skynet.call(gate, "lua", "open", {
-		serverId = skynet.getenv("host_id")
+		serverId = skynet.getenv("host_id"),
+		port = skynet.getenv("gate_port"),
 	})
 	-- -- control hot update or stop srv
 	skynet.newservice("mcs") -- http服务
