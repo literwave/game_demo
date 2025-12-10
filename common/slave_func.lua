@@ -78,7 +78,7 @@ function handle.message(id, msg)
 		token = token,
 	}
 	websocket.write(id, encodePack(pack))
-	-- websocket.close(id)
+	websocket.close(id)
 end
 
 function handle.close(id, code, reason)
