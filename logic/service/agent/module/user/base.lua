@@ -47,7 +47,6 @@ function clsUser:__init__(oci)
 			self[k] = oci[k]
 		end
 	end
-	self._account = nil
 	self._loginAddr = nil
 	self._fd = nil
 	self._heartBeatTime = nil

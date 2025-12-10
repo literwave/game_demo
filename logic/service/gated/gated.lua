@@ -98,11 +98,19 @@ function handle.message(fd, msg)
 end
 
 function handle.close(id, code, reason)
+	local conn = CONNECTION[id]
+	if conn then
+		skynet.send(conn.agent, "lua", "disconnect", id, conn.userId)
+	end
 	CONNECTION[id] = nil
 	print("gate ws close from: " .. tostring(id), code, reason)
 end
 
 function handle.error(id)
+	local conn = CONNECTION[id]
+	if conn then
+		skynet.send(conn.agent, "lua", "disconnect", id, conn.userId)
+	end
 	CONNECTION[id] = nil
 	print("gate ws error from: " .. tostring(id))
 end

@@ -35,7 +35,7 @@ end
 
 function CMD.disconnect(fd, userId)
 	userQueues[userId] = nil
-	USER_MGR.disconnect(fd)
+	USER_MGR.disconnect(fd, userId)
 end
 
 skynet.start(function()
