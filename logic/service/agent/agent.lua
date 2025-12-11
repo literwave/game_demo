@@ -27,12 +27,16 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId)
 		user:setFd(fd)
 		user:setGateSrv(gateSrv)
 	end
+	skynet.error("123")
 	user:setAccount(account)
 	user:setLoginAddr(addr)
 	user:setAndSyncHeartBeatTime(TIME.osBJSec())
+	skynet.error("4")
 	CALL_OUT.callFre("USER_MGR", "detectUserHeartBeat", CONST.USER_HEART_BEAT_TIMEOUT, userId)
+	skynet.error("21")
 	USER_MGR.moduleOnUserLogin(user, isFirstLogin)
-	return user:getUserId()
+	skynet.error("231")
+	skynet.send(".gameserver", "lua", "onUserLogin", userId, gateSrv)
 end
 
 function CMD.disconnect(fd, userId)

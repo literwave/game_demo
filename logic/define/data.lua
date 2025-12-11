@@ -71,5 +71,10 @@ function getInitialBuildList()
 end
 
 function getBuildTypeById(bid)
+	print(table2str(DATA_BUILD_CONF))
 	return DATA_BUILD_CONF.builds[bid].buildType
+end
+
+function getInitialBuildFacilityList(bid)
+	return {}
 end

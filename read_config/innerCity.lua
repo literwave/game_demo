@@ -1,5 +1,4 @@
-local DataTable =
-{
+return {
 	id = 1003, --关卡ID
 	name = innerCity2_temp, --关卡名称
 	gridSize = {x = 1, y = 1}, --格子尺寸(米)
@@ -51,91 +50,5 @@ local DataTable =
 		[116001] = { buildType = 116, x = 85, y = 203, offset = {x = -0.4000015, y = -0.3999939}, xFlip = 1 },
 	},
 	collisions = {
-		
 	},
-
 }
-function GetTable() return DataTable end
-
---autogen-end
-
-
-local bType2BidTbl = {
---[[
-	[bType] = {
-		[bid] = true,
-	}
---]]
-}
-local collisionTbl = {}
-
-function genGridKey(x, y)
-	return x * 100 + y
-end
-
-function __init__()
-	local tbl = GetTable()
-	local bTbl = tbl.builds
-	for bid, info in pairs(bTbl) do
-		if not bType2BidTbl[info.buildType] then
-			bType2BidTbl[info.buildType] = {}
-		end
-		bType2BidTbl[info.buildType][bid] = true
-	end
-
-	for _, v in ipairs(DataTable.collisions) do
-		collisionTbl[genGridKey(v[1], v[2])] = true
-	end
-end
-
-function getAllBuildTbl()
-	return bType2BidTbl
-end
-
-function getBidTblByType(buildType)
-	return bType2BidTbl[buildType] or {}
-end
-
-function getFirstBidByType(buildType)
-	local bidTbl = getBidTblByType(buildType)
-	local bid, _ = table.first_keyvalue(bidTbl)
-	return bid
-end
-
-function getOfficeSrvPos()
-	local tbl = GetTable()
-	local info = tbl.builds[1001]
-	local cx, cz = COMMON_FUNC.gridToCenterClientPos(info.x, info.y)
-	cx, cz = cx + info.offset.x, cz + info.offset.y
-	return COMMON_FUNC.clientPosToSrvPos(cx, cz)
-end
-
-function getBuildTypeById(bid)
-	local tbl = GetTable()
-	return tbl.builds[bid].buildType
-end
-
-function getBuildIdByIdx(buildType, idx)
-	return buildType * 1000 + (idx or 1)
-end
-
-function getCollisionTbl()
-	return collisionTbl
-end
-
-function isPosCollision(x, y)
-	local key = genGridKey(x, y)
-	return collisionTbl[key]
-end
-
-function getBidTbl()
-	local tbl = GetTable()
-	return tbl.builds
-end
-
-function getBuildSrvPosByBid(bid)
-	local info = getBidTbl()[bid]
-	local cx, cz = COMMON_FUNC.gridToCenterClientPos(info.x, info.y)
-	cx, cz = cx + info.offset.x, cz + info.offset.y
-	return COMMON_FUNC.clientPosToSrvPos(cx, cz)	
-end

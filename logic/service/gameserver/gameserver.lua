@@ -1,4 +1,5 @@
 local skynet = require "skynet"
+require "skynet.manager"
 
 local CMD = {}
 
@@ -6,8 +7,8 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
-function CMD.onUserLogin()
-	
+function CMD.onUserLogin(userId, gateSrv)
+	skynet.error("sync gameserver success", userId, gateSrv)
 end
 
 skynet.start(function()
@@ -22,4 +23,5 @@ skynet.start(function()
 			end
 		end
 	end)
+	skynet.register(".gameserver")
 end)

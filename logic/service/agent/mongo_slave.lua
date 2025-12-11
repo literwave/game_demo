@@ -140,3 +140,7 @@ end
 function loadSingleUserHero(userId)
 	return commonLoadSingle(USER_HERO_COL, userId)
 end
+
+function loadSingleUserBuild(userId)
+	return commonLoadSingle(USER_BUILD_COL, userId)
+end
