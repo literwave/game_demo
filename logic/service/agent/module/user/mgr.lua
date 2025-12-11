@@ -35,12 +35,17 @@ function getGateSrvByFd(fd)
 	return gateSrv
 end
 
+local function moduleOnUserLogout(userId)
+	BUILD_MGR.onUserLogout(userId)
+end
+
 function disconnect(fd, userId)
 	local user = getUserById(userId)
 	user:saveToDB()
 	allUserTbl[userId] = nil
 	delUserIdByVfd(fd)
 	userIdToFd[userId] = nil
+	moduleOnUserLogout(userId)
 end
 
 function isNewUser(userId)
@@ -96,7 +101,7 @@ function createNewUser(gateSrv, fd, userId, serverId)
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
 end
 
-function moduleOnUserLogin(user)
+function moduleOnUserLogin(user, isFirstLogin)
 	user:onLogin()
 end
 

@@ -17,8 +17,10 @@ skynet.register_protocol {
 function CMD.login(gateSrv, fd, userId, addr, account, serverId)
 	skynet.error("login step 3-agent", fd, userId, addr, account)
 	local user = false
+	local isFirstLogin = false
 	if USER_MGR.isNewUser(userId) then
 		user = USER_MGR.createNewUser(gateSrv, fd, userId, serverId)
+		isFirstLogin = true
 	else
 		user = USER_MGR.tryInitUser(userId)
 		USER_MGR.refLogin(userId, fd, user)
@@ -29,7 +31,7 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId)
 	user:setLoginAddr(addr)
 	user:setAndSyncHeartBeatTime(TIME.osBJSec())
 	CALL_OUT.callFre("USER_MGR", "detectUserHeartBeat", CONST.USER_HEART_BEAT_TIMEOUT, userId)
-	USER_MGR.moduleOnUserLogin(user)
+	USER_MGR.moduleOnUserLogin(user, isFirstLogin)
 	return user:getUserId()
 end
 

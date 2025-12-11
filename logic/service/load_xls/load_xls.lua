@@ -15,6 +15,9 @@ DATA_FILE_LIST = {
 	"../read_config/Global.lua",
 	"../read_config/HeroDebris.lua",
 	"../read_config/Resource.lua",
+	"../read_config/BuildingDetail.lua",
+	"../read_config/BuildingLv.lua",
+	"../read_config/innerCity.lua",
 }
 
 function CMD.shutdown()

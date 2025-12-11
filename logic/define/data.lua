@@ -3,6 +3,9 @@ local sharedata = require "skynet.sharedata"
 DATA_REPORT = nil
 DATA_SERVER_GROUP = nil
 DATA_HERO = nil
+DATA_BUILD_DETAIL = nil
+DATA_BUILD_LEVEL = nil
+DATA_BUILD_CONF = nil
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -11,12 +14,24 @@ DATA_HERO = nil
 -- 	end,
 -- }
 
+-- 二次处理配置表的内容
+initBuildList = {}
+local function initConfigData()
+	for _, conf in pairs(DATA_BUILD_DETAIL) do
+		table.insert(initBuildList, conf.InitLev)
+	end
+end
+
 skynet.init(function()
 	DATA_HERO = sharedata.query("Hero")
 	DATA_REPORT = sharedata.query("ReportInfo")
 	DATA_SERVER_GROUP = sharedata.query("ServerGroup")
 	DATA_GLOBAL = sharedata.query("Global")
 	DATA_HERO_DEBRIS = sharedata.query("HeroDebris")
+	DATA_BUILD_DETAIL = sharedata.query("BuildingDetail")
+	DATA_BUILD_LEVEL = sharedata.query("BuildingLv")
+	DATA_BUILD_CONF = sharedata.query("innerCity")
+	initConfigData()
 end)
 
 local function getReportInfo(reportId)
@@ -38,11 +53,6 @@ function getFirstNameList(language)
 	return nameTbl[1]
 end
 
-local function getLastNameList(language)
-	local lastNameTbl = conf[language]()
-	return lastNameTbl[1]
-end
-
 function getHeroInfoByType(heroType)
 	return DATA_HERO[heroType]
 end
@@ -54,4 +64,12 @@ end
 function getItemKindByType(itemType)
 	local itemKind = DATA_ITEM[itemType].itemKind
 	return itemKind
+end
+
+function getInitialBuildList()
+	return initBuildList
+end
+
+function getBuildTypeById(bid)
+	return DATA_BUILD_CONF.builds[bid].buildType
 end

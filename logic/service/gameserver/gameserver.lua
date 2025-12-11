@@ -6,6 +6,10 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
+function CMD.onUserLogin()
+	
+end
+
 skynet.start(function()
 	skynet.error("boot gameserver success")
 	skynet.dispatch("lua", function (session, address, cmd, ...)

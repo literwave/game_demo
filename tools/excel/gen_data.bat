@@ -17,13 +17,9 @@ echo Config output directory: %READ_CONFIG_DIR%
 
 for /f "delims=" %%a in ('dir /b /a-d "excel\*.xlsx" 2^>nul ^| findstr /v /c:"~$"') do (
   echo Processing file: %%a
-  python export_file.py -r ./excel/%%a -f lua -t "%READ_CONFIG_DIR%" -o s
+  python export_file.py -r ./excel/%%a -f l -t "%READ_CONFIG_DIR%" -o s
   if errorlevel 1 (
     echo Failed to export %%a to lua format
-  )
-  python export_file.py -r ./excel/%%a -f json -t client -o c
-  if errorlevel 1 (
-    echo Failed to export %%a to json format
   )
   echo %%a export done
 )

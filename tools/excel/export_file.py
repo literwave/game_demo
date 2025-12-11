@@ -37,7 +37,11 @@ KIND_GLOBAL = "global"
 
 READ_FILE_TYPE = {".xlsx"}
 
-TARGET_FILE_TYPE = {"py", "json", "lua"}
+TARGET_FILE_TYPE = {
+    "j": ["json"],
+    "l": ["lua"],
+    "jl":["json", "lua"],
+}
 TARGET_FILE_USE = {"c", "s"}
 TAGET_FILE_HEADN_INFO = {
     "lua": [
@@ -72,16 +76,15 @@ FORMAT_DEFAULT_VALUE = {
 }
 
 
-def toLua(dealInfo):
+def toLua(dealInfoMap):
     out = []
-    _ToLua(out, dealInfo)
+    _ToLua(out, dealInfoMap)
     luaStr = "".join(out)
     outStr = 'return %s' % luaStr
     return outStr
 
-
-def toJson(dealInfo):
-    return json.dumps(dealInfo, sort_keys=True, indent=4, ensure_ascii=False)
+def toJson(dealInfoMap):
+    return json.dumps(dealInfoMap, sort_keys=True, indent=4, ensure_ascii=False)
 
 
 SUPPORT_TARGET_TYPE = {
@@ -151,7 +154,7 @@ def usage():
 """)
 
 
-class excelFileInfo():
+class genConfig():
     """
     Excel file meta info
     """
@@ -169,6 +172,7 @@ class excelFileInfo():
         self.useType = None
         self.excelBasename = None
         self.excelfileName = None
+        self.useDefaultVal = None
 
     def canStart(self):
         if not self.excelPathFile:
@@ -211,7 +215,7 @@ class excelFileInfo():
         :param FileType: file type
         :return:
         """
-        if fileType not in TARGET_FILE_TYPE:
+        if not TARGET_FILE_TYPE[fileType]:
             print("not support file type")
             sys.exit(1)
         self.fileType = fileType
@@ -259,21 +263,22 @@ class excelFileInfo():
 
 class dealExcelInfo():
 
-    def __init__(self, excelInfo):
-        self.excelInfo = excelInfo
-
-        self.dealInfo = dict()
-        self.saveColInfo = list()
-        self.targetInfo = dict()
-        self.targetFile = ""
+    def __init__(self, genConfig):
+        self.genConfig = genConfig
         self.dealExcel()
+
+    def initData(self):
+        self.dealInfoMap = dict()
+        self.saveColInfoList = list()
+        self.targetInfoMap = dict()
 
     def dealExcel(self):
         """
         Handle excel file
         :return:
         """
-        for sheet in self.excelInfo.sheets:
+        for sheet in self.genConfig.sheets:
+            self.initData()
             self.dealCol(sheet)
             self.dealBody(sheet)
             self.debugDealExcel()
@@ -287,27 +292,28 @@ class dealExcelInfo():
         """
         # row1: description, row2: data type, row3: field name, row4: use type (c/s)
         if sheet.nrows < 4:
-            print("error:{0} directory:{1}".format(sheet.name, self.excelInfo.excelPathFile))
+            print("error:{0} directory:{1}".format(sheet.name, self.genConfig.excelPathFile))
             sys.exit(1)
-            # 第行就是文件描述
-        self.targetFile = self.excelInfo.targetDir + '/' + sheet.name + '.' + self.excelInfo.fileType
+        # dataType such as int table ...
         dataTypes = sheet.row_values(1)
+        # field name
         names = sheet.row_values(2)
-        UseTypes = sheet.row_values(3)
+        # output file such as for client or server
+        useTypes = sheet.row_values(3)
 
         for colIndex in range(sheet.ncols):
             dataType = str(dataTypes[colIndex]).strip()
             name = str(names[colIndex]).strip()
-            IsUseType = self.IsUseType(str(UseTypes[colIndex]).strip(), self.excelInfo.useType.strip())
+            isUseType = self.isUseType(str(useTypes[colIndex]).strip(), self.genConfig.useType.strip())
 
             if self.checkDataType(dataType):
-                print("dir：{0} at {1}, not fileType:{2},column:{3}".format(self.excelInfo.excelPathFile, sheet.name,
+                print("dir：{0} at {1}, not fileType:{2},column:{3}".format(self.genConfig.excelPathFile, sheet.name,
                                                                      dataType, name))
                 sys.exit(1)
 
-            self.saveColInfo.append((dataType, name, IsUseType))
+            self.saveColInfoList.append((dataType, name, isUseType))
 
-    def IsUseType(self, useType, oUseType):
+    def isUseType(self, useType, oUseType):
         """
         Check whether to generate specific useType columns
         :param useType: use type of config
@@ -335,56 +341,69 @@ class dealExcelInfo():
         """
         # From row 5, we start to read data rows
         for rowIndex in range(4, sheet.nrows):
-            row = sheet.row_values(rowIndex)
-            if not self.GetSheetValue(row, 0):
+            row = sheet.row_values(rowIndex, 0, sheet.ncols)
+            if not self.getValue(row, 0):
                 # skip row when first column is empty
-                print("dir: {0} at {1}, skip row {2} (first column empty)".format(self.excelInfo.excelPathFile, sheet.name,
+                print("dir: {0} at {1}, skip row {2} (first column empty)".format(self.genConfig.excelPathFile, sheet.name,
                                                                      rowIndex + 1))
                 continue
+            print("sheet.ncols", sheet.ncols)
+            print(self.saveColInfoList)
             for colIndex in range(1, sheet.ncols):
-                if not self.saveColInfo[colIndex][2]:
+                print("colIndex: ", colIndex)
+                print("self.saveColInfoList[colIndex][2]", self.saveColInfoList[colIndex][2])
+                if not self.saveColInfoList[colIndex][2]:
                     continue
-                value = self.GetSheetValue(row, colIndex)
-                name = self.saveColInfo[colIndex][1]
-                if not self.dealInfo.get(self.GetSheetValue(row, 0)):
-                    self.dealInfo[self.GetSheetValue(row, 0)] = dict()
+                value = self.getValue(row, colIndex)
+                name = self.saveColInfoList[colIndex][1]
+                if not self.dealInfoMap.get(self.getValue(row, 0)):
+                    self.dealInfoMap[self.getValue(row, 0)] = dict()
+                print("value = self.getValue(row, colIndex)", value)
+                print("name", name)
+                if value:
+                    self.dealInfoMap[self.getValue(row, 0)][name] = value
 
-                self.dealInfo[self.GetSheetValue(row, 0)][name] = value
-
-    def GetSheetValue(self, row, colIndex):
-        DataType = self.saveColInfo[colIndex][0]
-        name = self.saveColInfo[colIndex][1]
+    def getValue(self, row, colIndex):
+        dataType = self.saveColInfoList[colIndex][0]
+        name = self.saveColInfoList[colIndex][1]
         value = str(row[colIndex]).strip()
         if name and value:
             if name =="num":
-                print(FORMAT_FUNC[DataType](value))
-            formatFunc = FORMAT_FUNC[DataType]
+                print(FORMAT_FUNC[dataType](value))
+            print(colIndex, row, dataType, name, value)
+            formatFunc = FORMAT_FUNC[dataType]
             return formatFunc(value)
         if colIndex == 0:
             return None
-        return FORMAT_DEFAULT_VALUE[DataType]
+        if self.genConfig.useDefaultVal:
+            return FORMAT_DEFAULT_VALUE[dataType]
 
     def export(self, sheet):
-        transFunc = SUPPORT_TARGET_TYPE[self.excelInfo.fileType]
-        outStr = self.out_note(sheet) + transFunc(
-            self.dealInfo)
-        # save to file
-        print("test", self.targetFile)
-        with open(self.targetFile, 'w') as f:
-            f.write(outStr + "\n")
+        fileTypeList = TARGET_FILE_TYPE[self.genConfig.fileType]
+        for fileType in fileTypeList:
+            transFunc = SUPPORT_TARGET_TYPE[fileType]
+            outStr = self.outNote(sheet, fileType) + transFunc(
+            self.dealInfoMap)
+            # save to file
+            targetFile = self.genConfig.targetDir + '/' + sheet.name + '.' + fileType
+            print("test", targetFile)
+            print("outStr: ", outStr)
+            print("self.dealInfoMap: ", self.dealInfoMap)
+            with open(targetFile, 'w') as f:
+                f.write(outStr + "\n")
 
-    def out_note(self, sheet):
-        return "".join(TAGET_FILE_HEADN_INFO[self.excelInfo.fileType]).format(self.excelInfo.excelPathFile, sheet.name)
+    def outNote(self, sheet, fileType):
+        return "".join(TAGET_FILE_HEADN_INFO[fileType]).format(self.genConfig.excelPathFile, sheet.name)
 
     def debugDealExcel(self):
-        print(self.saveColInfo)
-        print(self.dealInfo)
+        print(self.saveColInfoList)
+        print(self.dealInfoMap)
 
 
 if __name__ == '__main__':
     # excel file info
-    excelFileInfo = excelFileInfo()
-
+    genConfig = genConfig()
+    print("gen_data start")
     try:
         opst, args = getopt.getopt(sys.argv[1:], 'r:f:t:h:o:')
     except:
@@ -396,19 +415,19 @@ if __name__ == '__main__':
             usage()
         elif op == "-r":
             # 设置excel配置路径
-            excelFileInfo.setExcelFile(v)
+            genConfig.setExcelFile(v)
         elif op == "-f":
             # 指定输出的文件类型
-            excelFileInfo.setFileType(v)
+            genConfig.setFileType(v)
         elif op == "-t":
             # 文件生成后的存的path
-            excelFileInfo.setTargetDir(v)
+            genConfig.setTargetDir(v)
         elif op == "-o":
             # target side: client or server
-            excelFileInfo.setOTargetUse(v)
-    if not excelFileInfo.canStart():
+            genConfig.setOTargetUse(v)
+    if not genConfig.canStart():
         print("arg error")
         usage()
         sys.exit(1)
     
-    dealExcel = dealExcelInfo(excelFileInfo)
+    dealExcel = dealExcelInfo(genConfig)
