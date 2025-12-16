@@ -1,0 +1,3 @@
+[submodule "3rd"]
+	path = 3rd
+	url = git@github.com:literwave/tools.git
