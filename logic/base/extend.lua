@@ -105,6 +105,14 @@ function table.deepcopy(t, d)
 	return copy 
 end
 
+function table.size(tbl)
+	local tblLen = 0
+	for _ in pairs(tbl) do
+		tblLen = tblLen + 1
+	end
+	return tblLen
+end
+
 function numberKeyAddPreString(key, preString)
 	if type(key) == "number" then
 		return string.format("%s%d", preString, key)

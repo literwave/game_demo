@@ -19,8 +19,14 @@ local define = {
         s2c_user_create = 266,
         s2c_user_login_ok = 267
     },
+    Build = {
+        s2c_req_all_build_end = 268,
+        s2c_sync_build = 269,
+        c2s_create_build = 270,
+        c2s_up_build = 271
+    },
     Hero = {
-        s2c_sync_hero_base_info = 268
+        s2c_sync_hero_base_info = 272
     }
 }
 ID_TO_PACK_NAME = {}

@@ -1,0 +1,20 @@
+syntax="proto3";
+
+package Build;
+// 聊天相关
+
+message s2c_req_all_build_end {
+}
+
+message s2c_sync_build {
+}
+
+message c2s_create_build {
+	int32 bid = 1;
+	bool isInstant = 2;
+}
+
+message c2s_up_build {
+	int32 bid = 1;
+	bool isInstant = 2;
+}

@@ -10,6 +10,7 @@ local PROTO_FILE_LIST = {
 	"../proto/pb/heartbeat.pb",
 	"../proto/pb/hero.pb",
 	"../proto/pb/reward.pb",
+	"../proto/pb/build.pb",
 }
 
 local function systemStartUp()
