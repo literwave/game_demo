@@ -44,7 +44,6 @@ function CMD.hotUpdate()
 end
 
 local function loadDataFile()
-	print(package.path)
 	for _, file in ipairs(DATA_FILE_LIST) do
 		local filename = file:match("([^/\\]+)%.lua$")
 		local loadData = require(filename)
