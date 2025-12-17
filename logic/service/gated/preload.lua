@@ -4,7 +4,7 @@ local DOFILE_LIST = {
 }
 
 local PROTO_FILE_LIST = {
-	"../proto/pb/login.pb",
+	"../3rd/server/proto/pb/login.pb",
 }
 
 local function systemStartUp()	

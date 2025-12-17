@@ -2,7 +2,7 @@ DOFILE_LIST = {
 	"../logic/base/import.lua",
 	"../logic/base/common_class.lua",
 	"../logic/base/class.lua",
-	"../proto/netPb.lua",
+	"../3rd/server/proto/netPb.lua",
 	"../logic/base/extend.lua",
 	"../logic/base/global.lua",
 	"../logic/base/time.lua",

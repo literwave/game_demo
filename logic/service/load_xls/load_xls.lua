@@ -9,15 +9,15 @@ FILE_MODIFY_TIME_TBL = {
 
 -- 这里先这样手动加载数据，后续优化成遍历dir目录下的文件，然后new
 DATA_FILE_LIST = {
-	"../read_config/Hero.lua",
-	"../read_config/ReportInfo.lua",
-	"../read_config/ServerGroup.lua",
-	"../read_config/Global.lua",
-	"../read_config/HeroDebris.lua",
-	"../read_config/Resource.lua",
-	"../read_config/BuildingDetail.lua",
-	"../read_config/BuildingLv.lua",
-	"../read_config/innerCity.lua",
+	"../3rd/server/read_config/Hero.lua",
+	"../3rd/server/read_config/ReportInfo.lua",
+	"../3rd/server/read_config/ServerGroup.lua",
+	"../3rd/server/read_config/Global.lua",
+	"../3rd/server/read_config/HeroDebris.lua",
+	"../3rd/server/read_config/Resource.lua",
+	"../3rd/server/read_config/BuildingDetail.lua",
+	"../3rd/server/read_config/BuildingLv.lua",
+	"../3rd/server/read_config/innerCity.lua",
 }
 
 function CMD.shutdown()
@@ -25,17 +25,17 @@ function CMD.shutdown()
 end
 
 function CMD.hotUpdate()
-	for file in lfs.dir (CONFIG_PATH) do
+	for file in lfs.dir(CONFIG_PATH) do
 		local filename = file:sub(1, -5)
 		local fileAttr = lfs.attributes(CONFIG_PATH .. file)
 		if not FILE_MODIFY_TIME_TBL[filename] then
-			local temdata = require (CONFIG_PATH .. file)
+			local temdata = require(CONFIG_PATH .. file)
 			sharedata.new(filename, temdata)
 			FILE_MODIFY_TIME_TBL[filename] = fileAttr.modification
 		else
 			local oldModification = FILE_MODIFY_TIME_TBL[filename]
 			if oldModification ~= fileAttr.modification then
-				local temdata = require (CONFIG_PATH .. file)
+				local temdata = require(CONFIG_PATH .. file)
 				sharedata.update(filename, temdata)
 				FILE_MODIFY_TIME_TBL[filename] = fileAttr.modification
 			end
@@ -44,6 +44,7 @@ function CMD.hotUpdate()
 end
 
 local function loadDataFile()
+	print(package.path)
 	for _, file in ipairs(DATA_FILE_LIST) do
 		local filename = file:match("([^/\\]+)%.lua$")
 		local loadData = require(filename)

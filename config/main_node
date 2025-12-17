@@ -1,7 +1,7 @@
 skynetdir = "./"   -- skynet目录
 rootdir = "../"    -- 根目录
 workdir = "../logic/"
-datadir = "../read_config/"
+datadir = "../3rd/server/read_config/"
 
 preload = "../common/preload.lua"
 

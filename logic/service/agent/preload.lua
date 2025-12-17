@@ -6,11 +6,11 @@ local DOFILE_LIST = {
 }
 
 local PROTO_FILE_LIST = {
-	"../proto/pb/login.pb",
-	"../proto/pb/heartbeat.pb",
-	"../proto/pb/hero.pb",
-	"../proto/pb/reward.pb",
-	"../proto/pb/build.pb",
+	"../3rd/server/proto/pb/login.pb",
+	"../3rd/server/proto/pb/heartbeat.pb",
+	"../3rd/server/proto/pb/hero.pb",
+	"../3rd/server/proto/pb/reward.pb",
+	"../3rd/server/proto/pb/build.pb",
 }
 
 local function systemStartUp()
