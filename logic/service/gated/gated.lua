@@ -22,6 +22,12 @@ local AGENT_POOLS = {
 	-- }
 }
 
+skynet.register_protocol {
+	name = "client",
+	id = skynet.PTYPE_CLIENT,
+	pack = skynet.pack
+}
+
 local handle = {}
 
 local function decodePack(msg)
@@ -30,7 +36,8 @@ local function decodePack(msg)
 end
 
 local function encodePack(msg)
-	local packData = string.pack(">I2", 258) .. protobuf.encode("Login.s2c_user_login_ok", msg)
+	local packName = "Login.s2c_user_login_ok"
+	local packData = string.pack(">I2", PACK_NAME_TO_ID[packName]) .. protobuf.encode(packName, msg)
 	packData = string.pack(">I2", #packData) .. packData
 	return packData
 end
@@ -55,7 +62,7 @@ local function firstLogin(packet, fd)
 	local token = packet.token
 	local userId = packet.userId
 	local passwd = packet.passwd
-	local userInfo = LREDIS.getValueByKey(token)
+	local userInfo = LREDIS.getValueByKey(token) or EMPTY_TABLE
 	if userId ~= userInfo.userId or passwd ~= userInfo.passwd then
 		skynet.error("token error", token, userId, passwd, userInfo.userId, userInfo.passwd)
 		return
@@ -66,7 +73,7 @@ local function firstLogin(packet, fd)
 		return
 	end
 	local agent = agentInfo.agent
-	skynet.send(agent, "lua", "login", skynet.self(), fd, userId, addr, userInfo.account, userInfo.serverId)
+	skynet.call(agent, "lua", "login", skynet.self(), fd, userId, addr, userInfo.account, userInfo.serverId, token)
 	agentInfo.userCnt = agentInfo.userCnt + 1
 	local c = {
 		agent = agent,
@@ -78,22 +85,36 @@ local function firstLogin(packet, fd)
 		userId = userId,
 		serverId = userInfo.serverId,
 	}
-	websocket.write(fd, encodePack(ptoTbl))
+	local sendPacket = encodePack(ptoTbl)
+	websocket.write(fd, sendPacket, "binary")
+	skynet.error("login ok")
 end
 
 function handle.message(fd, msg)
-	local conn = CONNECTION[fd]
-	if not conn then
-		local packet = decodePack(msg)
-		if not packet then
-			return
+	local function errorHandler(err)
+		skynet.error("handle.message 执行出错：", err)
+		skynet.error("错误调用栈：", debug.traceback())
+		return err
+	end
+	local ok, ret = xpcall(function ()
+		local conn = CONNECTION[fd]
+		skynet.error("conn", conn)
+		if not conn then
+			local packet = decodePack(msg)
+			if not packet then
+				return
+			end
+			firstLogin(packet, fd)
+			
+		else
+			skynet.error("conn", conn.agent)
+			local agent = conn.agent
+			local userId = conn.userId
+			skynet.send(agent, "client", fd, msg, userId)
 		end
-		firstLogin(packet, fd)
-		
-	else
-		local agent = conn.agent
-		local userId = conn.userId
-		skynet.send(agent, "client", fd, msg, userId)
+	end, errorHandler)
+	if not ok then
+		skynet.error("handle.message ", fd, "mistake：", ret)
 	end
 end
 
@@ -155,7 +176,7 @@ function CMD.login(source, token, loginInfo, addr)
 end
 
 function CMD.sendClientPack(source, fd, packet)
-	websocket.write(fd, packet)
+	websocket.write(fd, packet, "binary")
 end
 
 function CMD.kick(source, fd)

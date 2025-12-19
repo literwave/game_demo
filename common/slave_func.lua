@@ -36,8 +36,8 @@ local function decodePack(msg)
 end
 
 local function encodePack(msg)
-	local ptoName = "Login.s2c_user_login"
-	local packData = string.pack(">I2", PTONAME_TO_ID[ptoName]) .. protobuf.encode(ptoName, msg)
+	local packName = "Login.s2c_user_login"
+	local packData = string.pack(">I2", PACK_NAME_TO_ID[packName]) .. protobuf.encode(packName, msg)
 	packData = string.pack(">I2", #packData) .. packData
 	return packData
 end
@@ -85,7 +85,7 @@ function handle.message(id, msg)
 		userId = loginInfo.userId,
 	}
 	websocket.write(id, encodePack(pack), "binary")
-	skynet.error("login succ")
+	skynet.error("login succ", loginInfo.userId, token)
 	websocket.close(id)
 end
 

@@ -31,6 +31,7 @@ skynet.init(function()
 	DATA_BUILD_DETAIL = sharedata.query("BuildingDetail")
 	DATA_BUILD_LEVEL = sharedata.query("BuildingLv")
 	DATA_BUILD_CONF = sharedata.query("innerCity")
+	DATA_HEAD_ICON = sharedata.query("HeadIcon")
 	initConfigData()
 end)
 
@@ -76,4 +77,8 @@ end
 
 function getInitialBuildFacilityList(bid)
 	return {}
+end
+
+function getDefaultHeadIcon()
+	return DATA_GLOBAL[2].value1
 end

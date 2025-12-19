@@ -14,7 +14,15 @@ skynet.register_protocol {
 	unpack = skynet.unpack
 }
 
-function CMD.login(gateSrv, fd, userId, addr, account, serverId)
+local function decodePack(packet)
+	local id, pos = string.unpack(">I2", packet, 3)
+	skynet.error(id, pos)
+	local ptoName = ID_TO_PTONAME[id]
+	local packName = ID_TO_PACK_NAME[id]
+	return protobuf.decode(packName, packet:sub(pos)), ptoName
+end
+
+function CMD.login(gateSrv, fd, userId, addr, account, serverId, token)
 	skynet.error("login step 3-agent", fd, userId, addr, account)
 	local user = false
 	local isFirstLogin = false
@@ -27,6 +35,7 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId)
 		user:setFd(fd)
 		user:setGateSrv(gateSrv)
 	end
+	user:setAndSyncVerifyLogin(token)
 	user:setAccount(account)
 	user:setLoginAddr(addr)
 	user:setAndSyncHeartBeatTime(TIME.osBJSec())
@@ -40,6 +49,12 @@ function CMD.disconnect(fd, userId)
 	USER_MGR.disconnect(fd, userId)
 end
 
+local function errorHandler(err)
+	skynet.error("agent error：", err)
+	skynet.error("stack: ", debug.traceback())
+	return err
+end
+
 skynet.start(function()
 	dofile "../logic/service/agent/preload.lua"
 	skynet.dispatch("lua", function(seesion, _ , command, ...)
@@ -51,29 +66,28 @@ skynet.start(function()
 		end
 	end)
 
-	skynet.dispatch("client", function(fd, addr, packet, userId)
+	skynet.dispatch("client", function(seesion, address, fd, packet, userId)
 		if not userQueues[userId] then
 			userQueues[userId] = queue()
 		end
 		local userQueue = userQueues[userId]
-		local id = string.unpack(">I2", packet, 1)
+		local msg, ptoName = decodePack(packet)
+		skynet.error("fd", fd, ptoName, userId)
 		assert(fd)
-		local decodeMsg = string.sub(packet, 3)
-		local ptoName = ID_TO_PTONAME[id]
 		if not for_maker[ptoName] then
 			LOG._debug("ptoName: %s not register", ptoName)
 			return
 		end
-		local packName = ID_TO_PACK_NAME[id]
-		local msg = protobuf.decode(packName, decodeMsg)
+
+		skynet.error(table2str(msg))
 		if not msg then
 			if not msg then
-				LOG._debug("packName: %s not exist", packName)
+				LOG._debug("packName: %s not exist", ptoName)
 			end
 			return
 		end
 		-- 分发数据
-		local ok, err = xpcall(userQueue, for_maker[ptoName], userId, msg)
+		local ok, err = xpcall(userQueue, errorHandler, for_maker[ptoName], fd, msg)
 		if not ok then
 			LOG._error("userQueue error: %s", err)
 		end

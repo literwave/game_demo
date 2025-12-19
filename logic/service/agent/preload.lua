@@ -6,11 +6,13 @@ local DOFILE_LIST = {
 }
 
 local PROTO_FILE_LIST = {
+	"../3rd/server/proto/pb/common.pb",
 	"../3rd/server/proto/pb/login.pb",
 	"../3rd/server/proto/pb/heartbeat.pb",
 	"../3rd/server/proto/pb/hero.pb",
 	"../3rd/server/proto/pb/reward.pb",
 	"../3rd/server/proto/pb/build.pb",
+	"../3rd/server/proto/pb/user.pb",
 }
 
 local function systemStartUp()
@@ -41,7 +43,6 @@ local function initDofile()
 		for_caller[ptoName] = createSendMessage(id, ID_TO_PACK_NAME[id])
 	end
 	math.randomseed(os.time())
-	-- 这里预加载数据，比如登录的时候拉取账号对应的tbl
 	systemStartUp()
 end
 

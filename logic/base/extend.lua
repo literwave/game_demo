@@ -154,3 +154,9 @@ function table2str(obj, indent)
 	
 	return str
 end
+
+function makeCommonPtoTbl(k, v)
+	return { k = k, v = v}
+end
+
+EMPTY_TABLE = {}

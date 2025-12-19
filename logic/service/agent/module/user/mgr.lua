@@ -128,6 +128,27 @@ local function onHeartBeat(fd)
 	user:setHeartBeatTime(os.time())
 end
 
+local function onUserBaseinfo(fd)
+	local user = USER_MGR.getUserByFd(fd)
+	user:syncUserBaseInfo()
+end
+
+local function onChangeUserSex(fd, packet)
+	local changeSex = packet.sex
+	if changeSex < CONST.SEX_MAN or changeSex > CONST.SEX_WOMAN then
+		return
+	end
+	local user = USER_MGR.getUserByFd(fd)
+	local sex = user:getSex()
+	if sex ~= CONST.SEX_NONE then
+		return
+	end
+	user:setSex(changeSex)
+	for_caller.c2s_change_user_sex(fd, {sex = changeSex})
+end
+
 function __init__()
 	for_maker.c2s_heart_beat = onHeartBeat
+	for_maker.c2s_user_base_info = onUserBaseinfo
+	for_maker.c2s_change_user_sex = onChangeUserSex
 end

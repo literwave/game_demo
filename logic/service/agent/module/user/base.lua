@@ -1,19 +1,22 @@
 
 local saveFieldTbl = {
-	_userId = function()
+	_userId = function ()
 		return nil
 	end,
-	_birthTime = function()
+	_birthTime = function ()
 		return nil
 	end,
-	_logintime = function()
+	_logintime = function ()
 		return nil
 	end,
-	_bornServerId = function()
+	_bornServerId = function ()
 		return nil
 	end,
-	_name = function()
+	_name = function ()
 		return nil
+	end,
+	_sex = function ()
+		return CONST.SEX_NONE
 	end,
 	_sdkParamTbl = function ()
 		return nil
@@ -34,6 +37,9 @@ local saveFieldTbl = {
 	_sumRechargeDiamond = function ()
 		return 0
 	end,
+	_headIcon = function ()
+		return DATA_COMMON.getDefaultHeadIcon()
+	end
 }
 
 clsUser = clsObject:Inherit()
@@ -51,6 +57,7 @@ function clsUser:__init__(oci)
 	self._fd = nil
 	self._heartBeatTime = nil
 	self._gateSrv = nil
+	self._token = nil
 end
 
 function clsUser:saveField(keyList, val)
@@ -71,9 +78,14 @@ end
 function clsUser:getName()
 	return self._name
 end
-function clsUser:getFd()
-	local userId = self:getUserId()
-	return USER_MGR.getFdByUserId(userId)
+
+function clsUser:getSex()
+	return self._sex
+end
+
+function clsUser:setSex(sex)
+	self._sex = sex
+	self:saveField({"_sex"}, sex)
 end
 
 function clsUser:getResNum(resType)
@@ -225,3 +237,36 @@ function clsUser:addDiamond(addCnt, reasonList)
 	self._realDiamond = self._realDiamond + addCnt
 	self:saveField({"_realDiamond"}, self._realDiamond)
 end
+
+function clsUser:setAndSyncVerifyLogin(token)
+	self._token = token
+	local fd = self:getFd()
+	local ptoTbl = {
+		token = token
+	}
+	for_caller.s2c_verify_login(fd, ptoTbl)	
+end
+
+function clsUser:getHeadIcon()
+	return self._headIcon
+end
+
+function clsUser:setHeadIcon(headIcon)
+	self._headIcon = headIcon
+	self:saveField({"_headIcon"}, headIcon)
+end
+
+function clsUser:getClientPTOInfo()
+	return {
+		name = self:getName(),
+		headIcon = self:getHeadIcon(),
+		sex = self:getSex(),
+		birthTime = self:getBirthTime(),
+	}
+end
+
+function clsUser:syncUserBaseInfo()
+	local ptoTbl = self:getClientPTOInfo()
+	for_caller.s2c_user_base_info(self:getFd(), ptoTbl)
+end
+
