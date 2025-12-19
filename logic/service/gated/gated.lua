@@ -92,8 +92,8 @@ end
 
 function handle.message(fd, msg)
 	local function errorHandler(err)
-		skynet.error("handle.message 执行出错：", err)
-		skynet.error("错误调用栈：", debug.traceback())
+		skynet.error("handle.message mistake", err)
+		skynet.error("stack", debug.traceback())
 		return err
 	end
 	local ok, ret = xpcall(function ()
