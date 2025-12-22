@@ -79,6 +79,11 @@ function clsUser:getName()
 	return self._name
 end
 
+function clsUser:setName(name)
+	self._name = name
+	self:saveField({"_name"}, name)
+end
+
 function clsUser:getSex()
 	return self._sex
 end

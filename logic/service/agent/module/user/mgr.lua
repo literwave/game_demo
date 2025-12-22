@@ -96,7 +96,7 @@ function createNewUser(gateSrv, fd, userId, serverId)
 	user:saveToDB()
 	user:setFd(fd)
 	user:setGateSrv(gateSrv)
-	WORK_QUEUE_MGR.initUserWorkQueue(userId)
+	-- WORK_QUEUE_MGR.initUserWorkQueue(userId)
 	REWARD_MGR.rewardUser(userId, DATA_COMMON.getUserCreateReward())
 	return user
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
@@ -133,22 +133,23 @@ local function onUserBaseinfo(fd)
 	user:syncUserBaseInfo()
 end
 
-local function onChangeUserSex(fd, packet)
-	local changeSex = packet.sex
-	if changeSex < CONST.SEX_MAN or changeSex > CONST.SEX_WOMAN then
+local function OnUserCreate(fd, packet)
+	local sex = packet.sex
+	local name = packet.name
+	if sex < CONST.SEX_MAN or sex > CONST.SEX_WOMAN then
 		return
 	end
 	local user = USER_MGR.getUserByFd(fd)
-	local sex = user:getSex()
-	if sex ~= CONST.SEX_NONE then
+	if user:getSex() ~= CONST.SEX_NONE then
 		return
 	end
-	user:setSex(changeSex)
-	for_caller.c2s_change_user_sex(fd, {sex = changeSex})
+	user:setSex(sex)
+	user:setName(name)
+	for_caller.s2c_user_create(fd, packet)
 end
 
 function __init__()
 	for_maker.c2s_heart_beat = onHeartBeat
 	for_maker.c2s_user_base_info = onUserBaseinfo
-	for_maker.c2s_change_user_sex = onChangeUserSex
+	for_maker.c2s_user_create = OnUserCreate
 end

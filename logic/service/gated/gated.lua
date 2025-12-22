@@ -98,7 +98,6 @@ function handle.message(fd, msg)
 	end
 	local ok, ret = xpcall(function ()
 		local conn = CONNECTION[fd]
-		skynet.error("conn", conn)
 		if not conn then
 			local packet = decodePack(msg)
 			if not packet then
@@ -107,7 +106,6 @@ function handle.message(fd, msg)
 			firstLogin(packet, fd)
 			
 		else
-			skynet.error("conn", conn.agent)
 			local agent = conn.agent
 			local userId = conn.userId
 			skynet.send(agent, "client", fd, msg, userId)

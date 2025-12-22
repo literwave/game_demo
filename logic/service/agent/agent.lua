@@ -26,6 +26,7 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId, token)
 	skynet.error("login step 3-agent", fd, userId, addr, account)
 	local user = false
 	local isFirstLogin = false
+	print("USER_MGR.isNewUser(userId)0", USER_MGR.isNewUser(userId))
 	if USER_MGR.isNewUser(userId) then
 		user = USER_MGR.createNewUser(gateSrv, fd, userId, serverId)
 		isFirstLogin = true
@@ -78,12 +79,8 @@ skynet.start(function()
 			LOG._debug("ptoName: %s not register", ptoName)
 			return
 		end
-
 		skynet.error(table2str(msg))
 		if not msg then
-			if not msg then
-				LOG._debug("packName: %s not exist", ptoName)
-			end
 			return
 		end
 		-- 分发数据

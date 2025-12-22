@@ -35,6 +35,7 @@ local function initDofile()
 	-- 这里要优化一下前端发给后端的协议不需要加载进table
 	local function createSendMessage(id, packName)
 		return function(fd, data)
+			skynet.error(id, packName)
 			local gateSrv = USER_MGR.getGateSrvByFd(fd)
 			skynet.send(gateSrv, "lua", "sendClientPack", fd, encodePack(data, id, packName))
 		end
