@@ -70,3 +70,16 @@ function addHero(userId, heroType, reasonList)
 	hero:syncToClient()
 	return hero
 end
+
+local function OnReqAllHeroBaseInfo(fd)
+	local heroTbl = getHeroTblByUserId(USER_MGR.getUserByFd(fd))
+	local heroInfoList
+	for _, hero in pairs(heroTbl) do
+		table.insert(heroInfoList, hero:getHeroPTOBaseInfo())
+	end
+	for_caller.s2c_req_all_hero_base_info(fd, {heroInfoList = heroInfoList})
+end
+
+function __init__()
+	for_maker.c2s_req_all_hero_base_info = OnReqAllHeroBaseInfo
+end

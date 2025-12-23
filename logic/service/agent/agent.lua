@@ -26,7 +26,6 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId, token)
 	skynet.error("login step 3-agent", fd, userId, addr, account)
 	local user = false
 	local isFirstLogin = false
-	print("USER_MGR.isNewUser(userId)0", USER_MGR.isNewUser(userId))
 	if USER_MGR.isNewUser(userId) then
 		user = USER_MGR.createNewUser(gateSrv, fd, userId, serverId)
 		isFirstLogin = true

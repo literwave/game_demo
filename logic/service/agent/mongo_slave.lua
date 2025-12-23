@@ -124,7 +124,7 @@ function commonLoadSingle(col, key)
 	local ret = skynet.call(".mongodb", "lua", "findOne", {
 		database = GAME.getDataBase(),
 		collection = col,
-		query = {_id = "9900120173"},
+		query = {_id = key},
 		selector = {dat = 1},
 	})
 	if ret and ret.dat then
