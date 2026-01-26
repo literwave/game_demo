@@ -13,6 +13,7 @@ local PROTO_FILE_LIST = {
 	"../3rd/server/proto/pb/reward.pb",
 	"../3rd/server/proto/pb/build.pb",
 	"../3rd/server/proto/pb/user.pb",
+	"../3rd/server/proto/pb/lottery.pb"
 }
 
 local function systemStartUp()

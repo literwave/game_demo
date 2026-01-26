@@ -29,6 +29,10 @@ function getUserByFd(fd)
 	return allUserTbl[userId]
 end
 
+function getUserIdByFd(fd)
+	return fdToUserId[fd]
+end
+
 function getGateSrvByFd(fd)
 	local user = getUserByFd(fd)
 	local gateSrv = user:getGateSrv()

@@ -412,8 +412,7 @@ static int luaB_assert (lua_State *L) {
   }
 }
 
-
-static int luaB_select (lua_State *L) {
+ static int luaB_select (lua_State *L) {
   int n = lua_gettop(L);
   if (lua_type(L, 1) == LUA_TSTRING && *lua_tostring(L, 1) == '#') {
     lua_pushinteger(L, n-1);

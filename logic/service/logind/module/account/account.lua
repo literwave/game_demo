@@ -29,6 +29,8 @@ function sdkLoginOk(loginInfo)
 		userId = fetchUserId()
 		loginInfo.userId = userId
 		createAccount(account, userId)
+	else
+		loginInfo.userId = userId
 	end
 	-- 先不支持一个账号多个用户，先预留功能吧
 	-- if userId == "" then

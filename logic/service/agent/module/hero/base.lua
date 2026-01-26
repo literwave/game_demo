@@ -6,6 +6,9 @@ local saveFieldTbl = {
 	_userId = function ()
 		return nil
 	end,
+	_exp = function ()
+		return 0
+	end,
 	_level = function ()
 		return 1
 	end,
@@ -27,6 +30,9 @@ local saveFieldTbl = {
 	end,
 	_newTag = function ()
 		return false
+	end,
+	_state = function ()
+		return nil
 	end,
 }
 
@@ -81,15 +87,34 @@ function clsHero:getStar()
 end
 
 function clsHero:getHeroPTOBaseInfo()
+	local skillList = {}
+	for skillId, skillLv in pairs(self._skillTbl) do
+		table.insert(skillList, {
+			k = skillId,
+			v = skillLv,
+		})
+	end
 	return {
 		heroType = self._heroType,
-		lv = self._lv,
+		exp = self._exp,
+		lv = self._level,
 		star = self:getStar(),
+		state = self._state or 0,
+		skillList = skillList,
 		newTag = self:getNewTag(),
 	}
 end
 
 function clsHero:syncToClient()
 	local fd = USER_MGR.getFdByUserId(self._userId)
-	for_caller.s2c_sync_hero_base_info(fd, self:getHeroPTOBaseInfo())
+	for_caller.s2c_sync_hero_base_info(fd, {heroInfo = self:getHeroPTOBaseInfo()})
+end
+
+function clsHero:getSkillTbl()
+	return self._skillTbl
+end
+
+function clsHero:setSkillLv(skillId, skillLv)
+	self._skillTbl[skillId] = skillLv
+	self:saveField({"_skillTbl", skillId}, skillLv)
 end

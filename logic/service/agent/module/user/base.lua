@@ -39,6 +39,9 @@ local saveFieldTbl = {
 	end,
 	_headIcon = function ()
 		return DATA_COMMON.getDefaultHeadIcon()
+	end,
+	_lotteryTimes = function ()
+		return nil
 	end
 }
 
@@ -243,6 +246,28 @@ function clsUser:addDiamond(addCnt, reasonList)
 	self:saveField({"_realDiamond"}, self._realDiamond)
 end
 
+function clsUser:subDiamond(sumSubCnt, reasonList)
+	assert(sumSubCnt > 0)
+	assert(self:getDiamond() >= sumSubCnt)
+	local subReal, subGift = 0, 0
+	if self._realDiamond >= sumSubCnt then
+		subReal = sumSubCnt
+		self._realDiamond = self._realDiamond - sumSubCnt
+	else
+		subReal = self._realDiamond
+		self._realDiamond = 0
+		subGift = sumSubCnt - subReal
+		self._giftDiamond = self._giftDiamond - subGift
+	end
+	if subReal > 0 then
+		self:saveField({"_realDiamond"}, self._realDiamond)
+	end
+	if subGift > 0 then
+		self:saveField({"_giftDiamond"}, self._giftDiamond)
+	end
+	-- afterSubDiamond(self, subReal, subGift, extTbl, reasonList)
+end
+
 function clsUser:setAndSyncVerifyLogin(token)
 	self._token = token
 	local fd = self:getFd()
@@ -275,3 +300,11 @@ function clsUser:syncUserBaseInfo()
 	for_caller.s2c_user_base_info(self:getFd(), ptoTbl)
 end
 
+function clsUser:getLotteryTimes()
+	return self._lotteryTimes
+end
+
+function clsUser:setLotteryTimes(lotteryTimes)
+	self._lotteryTimes = lotteryTimes
+	self:saveField({"_lotteryTimes"}, lotteryTimes)
+end

@@ -726,7 +726,7 @@ static void createsearcherstable (lua_State *L) {
 */
 static void createclibstable (lua_State *L) {
   luaL_getsubtable(L, LUA_REGISTRYINDEX, CLIBS);  /* create CLIBS table */
-  lua_createtable(L, 0, 1);  /* create metatable for CLIBS */
+  lua_createtable(L, 0, 1);  /* create metatable for CLIBS */ 
   lua_pushcfunction(L, gctm);
   lua_setfield(L, -2, "__gc");  /* set finalizer for CLIBS table */
   lua_setmetatable(L, -2);

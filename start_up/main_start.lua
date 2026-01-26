@@ -16,6 +16,8 @@ skynet.start(function()
 	-- -- control hot update or stop srv
 	skynet.newservice("mcs") -- http服务
 	skynet.newservice("gameserver") -- game server can get all userId
+	-- skynet.newservice("mapserver")
+	-- skynet.newservice("battleserver")
 	-- 作为启动成功的logo
 	skynet.error("***       *******   *******   *******   *******     ***     ***       ***     ***   ***    ********")
 	skynet.error("***         ***       ***     ***       ***   **    ***     ***      *****    ***   ***    ***     ")

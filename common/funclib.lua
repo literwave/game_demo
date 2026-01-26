@@ -43,7 +43,7 @@ end
 -- }
 
 function genSdkLoginAccount(accountType, account)
-	if accountType == COMMON_CONST.LOGIN_ACCOUNT_TYPE.NONE then
+	if accountType == CONST.LOGIN_ACCOUNT_TYPE.NONE then
 		return account
 	end
 	local preFix = accType2Prefix[accountType]
@@ -98,14 +98,5 @@ function checkTblEqual(tbl1, tbl2, depth)
 		end
 	end
 	return true
-end
-
-function calFormationPower(userId, formation)
-	local formationPower = 0
-	for slot, heroType in pairs(formation) do
-		local hero = HERO_MGR.getHeroByType(userId, heroType)
-		formationPower = formationPower + hero:getHeroPower()
-	end
-	return formationPower
 end
 

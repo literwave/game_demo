@@ -1,5 +1,4 @@
 local skynet = require "skynet"
-local websocket = require "http.websocket"
 CMD = {}
 
 function CMD.registerGate(gate, serverId, slaveServiceList)

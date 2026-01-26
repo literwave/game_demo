@@ -159,4 +159,22 @@ function makeCommonPtoTbl(k, v)
 	return { k = k, v = v}
 end
 
+function randItemByWeight(tbl)
+	local sum = 0
+	for _, v in pairs(tbl) do
+		sum = sum + v[2]
+	end
+	if sum <= 0 then
+		return
+	end
+	local rand = math.random(sum)
+	local curSum = 0
+	for _, v in pairs(tbl) do
+		curSum = curSum + v[2]
+		if curSum >= rand then
+			return v[1]
+		end
+	end
+end
+
 EMPTY_TABLE = {}

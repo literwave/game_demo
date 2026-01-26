@@ -74,6 +74,7 @@ local function firstLogin(packet, fd)
 	end
 	local agent = agentInfo.agent
 	skynet.call(agent, "lua", "login", skynet.self(), fd, userId, addr, userInfo.account, userInfo.serverId, token)
+	print("userId: ", userId)
 	agentInfo.userCnt = agentInfo.userCnt + 1
 	local c = {
 		agent = agent,
@@ -104,7 +105,6 @@ function handle.message(fd, msg)
 				return
 			end
 			firstLogin(packet, fd)
-			
 		else
 			local agent = conn.agent
 			local userId = conn.userId
@@ -146,7 +146,7 @@ function handle.error(id)
 	print("gate ws error from: " .. tostring(id))
 end
 
-function CMD.open(source, conf)
+function CMD.open(conf)
 	skynet.error(string.format("gate Listen on %s:%d", conf.address or "0.0.0.0", conf.port))
 	local fd = socket.listen(conf.address or "0.0.0.0", conf.port)
 	local addr = string.format("%s:%s", conf.address or "127.0.0.1", conf.port)
@@ -163,7 +163,7 @@ function CMD.open(source, conf)
 	skynet.send(".logind", "lua", "registerGate", skynet.self(), conf.serverId, addr)
 end
 
-function CMD.login(source, token, loginInfo, addr)
+function CMD.login(token, loginInfo, addr)
 	skynet.error("login step 2-gate", token)
 	assert(not TKOEN_TBL[token])
 	TKOEN_TBL[token] = {
@@ -173,11 +173,11 @@ function CMD.login(source, token, loginInfo, addr)
 	}
 end
 
-function CMD.sendClientPack(source, fd, packet)
+function CMD.sendClientPack(fd, packet)
 	websocket.write(fd, packet, "binary")
 end
 
-function CMD.kick(source, fd)
+function CMD.kick(fd)
 
 end
 
@@ -192,9 +192,9 @@ skynet.start(function()
 		local f = CMD[cmd]
 		if f then
 			if session ~= 0 then
-				skynet.ret(f(address, ...))
+				skynet.ret(f(...))
 			else
-				f(address, ...)
+				f(...)
 			end
 		end
 	end)

@@ -67,6 +67,7 @@ function handle.message(id, msg)
 		crypt.base64encode(loginInfo.serverId),
 		crypt.base64encode(loginInfo.passwd)
 	)
+	print("loginInfo: ", loginInfo.userId)
 	local tokenTbl = {
 		userId = loginInfo.userId,
 		passwd = loginInfo.passwd,

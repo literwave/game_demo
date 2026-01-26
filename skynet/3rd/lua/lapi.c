@@ -818,7 +818,7 @@ LUA_API void lua_setglobal (lua_State *L, const char *name) {
 }
 
 
-LUA_API void lua_settable (lua_State *L, int idx) {
+LUA_API void lua_settable (lua_State *L, int idx) { 
   TValue *t;
   const TValue *slot;
   lua_lock(L);

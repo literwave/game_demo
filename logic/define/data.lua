@@ -82,3 +82,15 @@ end
 function getDefaultHeadIcon()
 	return DATA_GLOBAL[2].value1
 end
+
+function getLotteryCommonPools(useLotteryTimes)
+end
+
+function getLotteryHeroPools(useLotteryTimes)
+end
+
+function getUpHeroItemLotteryTimes(useLotteryTimes)
+end
+
+function getLotteryCost(useLotteryTimes)
+end

@@ -1,4 +1,3 @@
-local skynet = require "skynet"
 userHeroTbl = {}
 --[[
 	[userId] = {
@@ -72,8 +71,8 @@ function addHero(userId, heroType, reasonList)
 end
 
 local function OnReqAllHeroBaseInfo(fd)
-	local heroTbl = getHeroTblByUserId(USER_MGR.getUserByFd(fd))
-	local heroInfoList
+	local heroTbl = getHeroTblByUserId(USER_MGR.getUserIdByFd(fd))
+	local heroInfoList = {}
 	for _, hero in pairs(heroTbl) do
 		table.insert(heroInfoList, hero:getHeroPTOBaseInfo())
 	end
