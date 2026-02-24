@@ -99,8 +99,11 @@ function handle.error(id)
 end
 
 function CMD.auth(fd, addr)
-	skynet.error("login step 1-auth", fd, addr, fd)
-	websocket.accept(fd, handle, PROTOCOL, addr)
+	skynet.error("login step 1-auth", fd, addr)
+	local ok, err = websocket.accept(fd, handle, PROTOCOL, addr)
+	if not ok then
+		skynet.error("login error ", fd, addr, err)
+	end
 end
 
 function CMD.createUserOk(account, userId)
