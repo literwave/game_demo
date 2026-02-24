@@ -9,7 +9,7 @@ luaservice = skynetdir.."service/?.lua;"..workdir.."service/?.lua;"..skynetdir..
 
 lualoader = skynetdir .. "lualib/loader.lua"
 lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua;"..workdir.."base/?.lua;"..datadir.."?.lua;";
-lua_cpath = skynetdir .. "luaclib/?.so;"..skynetdir .. "luaclib/?.dll"
+lua_cpath = skynetdir .. "luaclib/?.so;"
 snax = skynetdir.."script/?.lua;"
 -- snax_interface_g = "snax_g"
 cpath = skynetdir.."cservice/?.so"

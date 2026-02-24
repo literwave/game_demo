@@ -41,7 +41,7 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId, token)
 	user:setAndSyncHeartBeatTime(TIME.osBJSec())
 	CALL_OUT.callFre("USER_MGR", "detectUserHeartBeat", CONST.USER_HEART_BEAT_TIMEOUT, userId)
 	USER_MGR.moduleOnUserLogin(user, isFirstLogin)
-	skynet.send(".gameserver", "lua", "onUserLogin", userId, gateSrv)
+	skynet.send(".gameserver", "lua", "onUserLogin", userId, fd, gateSrv)
 end
 
 function CMD.disconnect(fd, userId)
