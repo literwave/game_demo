@@ -22,6 +22,7 @@ local function writefile(pfile, mod, args)
 	local fileName = logPath .. "/" .. "common_error_"..os.date("%Y%m%d")..".txt"
 	local file = io.open(fileName, mod);
 	local writeStr = pfile..argsStr
+	print(writeStr)
 	file:write(writeStr .. "\n");
 	file:close();
 end
@@ -43,10 +44,6 @@ function CMD.shutdown()
 end
 
 skynet.start(function()
-	-- 日志服务
-	local function log_init()
-		math.randomseed(os.time());
-	end
 	skynet.dispatch("lua", function(_, _, cmd, ...)
 		local f = CMD[cmd]
 			if f then

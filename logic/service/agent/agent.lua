@@ -41,12 +41,13 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId, token)
 	user:setAndSyncHeartBeatTime(TIME.osBJSec())
 	CALL_OUT.callFre("USER_MGR", "detectUserHeartBeat", CONST.USER_HEART_BEAT_TIMEOUT, userId)
 	USER_MGR.moduleOnUserLogin(user, isFirstLogin)
-	skynet.send(".gameserver", "lua", "onUserLogin", userId, fd, gateSrv)
+	skynet.send(".gameserver", "lua", "onUserLogin", userId, fd, gateSrv, isFirstLogin)
 end
 
 function CMD.disconnect(fd, userId)
 	userQueues[userId] = nil
 	USER_MGR.disconnect(fd, userId)
+	skynet.send(".gameserver", "lua", "onUserLogout", userId, fd)
 end
 
 local function errorHandler(err)

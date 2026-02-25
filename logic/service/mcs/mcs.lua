@@ -38,7 +38,7 @@ end
 function CMD.hotUpdate()
 	-- 先更新配置，不然逻辑服更新取新配置会报错
 	skynet.call(".load_xls", "lua", "hotUpdate")
-	-- todo agent热更
+	-- 这里应该要看更新文件的引用服务，如果不这样的话，就要更新单个文件
 	skynet.call(".agent", "lua", "hotUpdate")
 end
 

@@ -7,9 +7,14 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
-function CMD.onUserLogin(userId, fd, gateSrv)
-	skynet.error("sync gameserver success", userId, gateSrv)
+function CMD.onUserLogin(userId, fd, gateSrv, isFirstLogin)
+	skynet.error("gameserver login success", userId, gateSrv, isFirstLogin)
 	USER_MGR.refLogin(userId, fd, gateSrv)
+end
+
+function CMD.onUserLogout(userId, fd)
+	skynet.error("gameserver logout success", userId, fd)
+	USER_MGR.disconnect(userId, fd)
 end
 
 skynet.start(function()
