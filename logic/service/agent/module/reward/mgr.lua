@@ -1,32 +1,4 @@
-
-local function rewardResource(ret, userId, rewardInfoList, reasonList)
-	for _, rewardInfo in pairs(rewardInfoList) do
-		local resType = rewardInfo.item_type 
-		local cnt = rewardInfo.item_count
-		USER_RESOURCE.addResAndSync(userId, resType, cnt, reasonList)
-		table.insert(ret, rewardInfo)
-	end
-end
-
-local function rewardAccItem(ret, userId, rewardInfo, reasonList) 
-end
-
-local function rewardHeroChip(ret, userId, rewardInfo, reasonList)
-end
-
-local function rewardActivityItem(ret, userId, rewardInfo, reasonList)
-end
-
-local function rewardResourceItem(ret, userId, rewardInfo, reasonList)
-end
-
-local ITEM_KIND_REWARD_FUNC = {
-	[CONST.ITEM_KIND.RES] = rewardResourceItem,
-	[CONST.ITEM_KIND.HERO_CHIP] = rewardHeroChip,
-}
-
 local function rewardItem(ret, userId, rewardInfoList, reasonList)
-	-- 这是溢出的要发邮件
 	local overLimitItemTbl = {}
 	for _, rewardInfo in ipairs(rewardInfoList) do
 		local itemType = rewardInfo.item_type
@@ -39,7 +11,18 @@ local function rewardItem(ret, userId, rewardInfoList, reasonList)
 		local newItemCount = rewardInfo.item_count
 		if newItemCount > 0 then
 			ITEM_MGR.addItem(userId, itemType, newItemCount, reasonList)
+			table.insert(ret, genRewardInfo(rewardInfo.reward_type, itemType, newItemCount))
 		end
+		-- todo -- 这是溢出的要发邮件
+	end
+end
+
+local function rewardResource(ret, userId, rewardInfoList, reasonList)
+	for _, rewardInfo in pairs(rewardInfoList) do
+		local resType = rewardInfo.item_type 
+		local cnt = rewardInfo.item_count
+		USER_RESOURCE.addResAndSync(userId, resType, cnt, reasonList)
+		table.insert(ret, rewardInfo)
 	end
 end
 
@@ -60,21 +43,11 @@ local function rewardDiamond(ret, userId, rewardInfoList, reasonList)
 	end
 end
 
-local function rewardTreasureBoxExp(ret, userId, rewardInfoList, reasonList)
-	local user = USER_MGR.tryInitUser(userId)
-	for _, rewardInfo in pairs(rewardInfoList) do
-		local cnt = rewardInfo.item_count
-		user:addTreasureBoxExp(cnt, reasonList)
-		table.insert(ret, rewardInfo)
-	end
-end
-
 local GIVE_REWARD_FUNC = {
 	[CONST.REWARD_TYPE_ITEM] = rewardItem,
 	[CONST.REWARD_TYPE_RES] = rewardResource,
 	[CONST.REWARD_TYPE_HERO] = rewardHero,
 	[CONST.REWARD_TYPE_DIAMOND] = rewardDiamond,
-	[CONST.REWARD_TYPE_TREASUREBOX_EXP] = rewardTreasureBoxExp,
 }
 
 local function giveReward(ret, userId, rewardType, rewardInfoList, reasonList)

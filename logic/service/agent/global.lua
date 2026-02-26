@@ -31,6 +31,8 @@ BUILD_MGR	= Import("../logic/service/agent/module/build/mgr.lua")
 RESOURCE	= Import("../logic/service/agent/module/resource/resource.lua")
 LOTTERY		= Import("../logic/service/agent/module/lottery/lottery.lua")
 
+CLS_BASE_ITEM = Import("./logic/service/agent/module/item/base.lua")
+
 -- WORK_QUEUE_BASE = Import("../logic/service/agent/module/work_queue/base.lua")
 -- BUILD_WORK_QUEUE_BASE = Import("../logic/service/agent/module/work_queue/build_queue_base.lua")
 -- WORK_QUEUE_MGR = Import("../logic/service/agent/module/work_queue/mgr.lua")

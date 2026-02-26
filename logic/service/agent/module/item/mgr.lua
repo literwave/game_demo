@@ -199,7 +199,7 @@ local function doAddItemCntByType(userId, itemType, cnt, needSync, reasonList, n
 			end
 		end
 	end
-	LOG.addItem(userId, itemType, cnt, reasonList)
+	-- LOG.addItem(userId, itemType, cnt, reasonList)
 end
 
 function addItemCntByType(userId, itemType, cnt, reasonList)
