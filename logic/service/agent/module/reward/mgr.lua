@@ -23,11 +23,24 @@ end
 local ITEM_KIND_REWARD_FUNC = {
 	[CONST.ITEM_KIND.RES] = rewardResourceItem,
 	[CONST.ITEM_KIND.HERO_CHIP] = rewardHeroChip,
-	[CONST.ITEM_KIND.ACC] = rewardAccItem,
-	[CONST.ITEM_KIND.ACTIVITY] = rewardActivityItem,
 }
 
 local function rewardItem(ret, userId, rewardInfoList, reasonList)
+	-- 这是溢出的要发邮件
+	local overLimitItemTbl = {}
+	for _, rewardInfo in ipairs(rewardInfoList) do
+		local itemType = rewardInfo.item_type
+		local itemCount = rewardInfo.item_count
+		local itemMaxAddCnt = ITEM_MGR.getItemMaxAddCnt(itemType)
+		if itemMaxAddCnt and itemCount > itemMaxAddCnt then
+			overLimitItemTbl[itemType] = (overLimitItemTbl[itemType] or 0) + itemCount - itemMaxAddCnt
+			rewardInfo.item_count = itemMaxAddCnt
+		end
+		local newItemCount = rewardInfo.item_count
+		if newItemCount > 0 then
+			ITEM_MGR.addItem(userId, itemType, newItemCount, reasonList)
+		end
+	end
 end
 
 local function rewardHero(ret, userId, rewardInfoList, reasonList)

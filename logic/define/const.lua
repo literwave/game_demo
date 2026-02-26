@@ -44,3 +44,13 @@ COST_TYPE = {
 	RES = 2,
 	ITEM = 3,
 }
+
+ITEM_KIND = {
+	RES = 1,
+	HERO_CHIP = 2,
+	GIFT = 3,
+	HERO_EQUIP = 4,
+	RANDOM_REWARD = 5,
+	SOLDIER = 6,
+	VIP = 7,
+}

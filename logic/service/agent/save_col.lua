@@ -21,7 +21,11 @@ local colDescTbl = {
 	{
 		colKey = "WORK_QUEUE_COL",
 		colName = "workQueueCol"
-	}
+	},
+	{
+		colKey = "USER_ITEM_COL",
+		colName = "userItemCol"
+	},
 }
 
 local function tryInitColList()
