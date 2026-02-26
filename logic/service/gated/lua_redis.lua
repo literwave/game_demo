@@ -9,6 +9,7 @@ local function getRedisClient()
 		local config = {
 			host = skynet.getenv("redis_host"),
 			port = skynet.getenv("redis_port"),
+			auth = skynet.getenv("redis_password")
 		}
 		redisClient = redis.connect(config)
 	end

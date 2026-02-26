@@ -127,7 +127,6 @@ local function mongo_auth(mongoc)
 end
 
 function mongo.client( conf	)
-	print(table2str(conf))
 	local first	= conf
 	local backup = nil
 	if conf.rs then
