@@ -76,7 +76,7 @@ skynet.start(function()
 		skynet.error("fd", fd, ptoName, userId)
 		assert(fd)
 		if not for_maker[ptoName] then
-			LOG._debug("ptoName: %s not register", ptoName)
+			skynet.error("ptoName not registerptoName", ptoName)
 			return
 		end
 		skynet.error(table2str(msg))

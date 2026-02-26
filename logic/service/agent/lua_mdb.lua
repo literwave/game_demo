@@ -9,7 +9,9 @@ local function getMongoClient()
 	if not mongoClient then
 		local conn = mongo.client({
 			host = skynet.getenv("mongodb_host"),
-			port = skynet.getenv("mongodb_port"),
+			port = tonumber(skynet.getenv("mongodb_port")),
+			username = skynet.getenv("mongodb_user"),
+			password = skynet.getenv("mongodb_password"),
 		})
 		mongoClient = conn:getDB(GAME.getDataBase())
 	end

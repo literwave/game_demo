@@ -7,6 +7,8 @@ local function getMongoClient()
 		mongoClient = mongo.client({
 			host = skynet.getenv("mongodb_host"),
 			port = skynet.getenv("mongodb_port"),
+			username = skynet.getenv("mongodb_user"),
+			password = skynet.getenv("mongodb_password"),
 		})
 	end
 	return mongoClient

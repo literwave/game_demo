@@ -37,10 +37,11 @@ db_info = [[{
 }]]
 
 -- mongo etc
-mongodb_host = "192.168.24.185"
+mongodb_host = "127.0.0.1"
 mongodb_port = "27017"
 mongodb_user = "root"
-mongodb_password = "123"
+mongodb_password = "a1"
+
 
 -- redis etc
 redis_host = "192.168.24.185"

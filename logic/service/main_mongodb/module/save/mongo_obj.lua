@@ -8,6 +8,8 @@ function clsMongoDb:__init__(oci)
 	self.mongoClient = mongo.client({
 		host = skynet.getenv("mongodb_host"),
 		port = skynet.getenv("mongodb_port"),
+		username = skynet.getenv("mongodb_user"),
+		password = skynet.getenv("mongodb_password"),
 	})
 	if not self.mongoClient then
 		LOG._error("MongoDB connection failed")

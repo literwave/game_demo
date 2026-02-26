@@ -956,7 +956,7 @@ end
 function skynet.init_service(start)
 	local ok, err = skynet.pcall(start)
 	if not ok then
-		skynet.error("init service failed: " .. tostring(err))
+		skynet.error("init service failed: " .. table2str(err))
 		skynet.send(".launcher","lua", "ERROR")
 		skynet.exit()
 	else

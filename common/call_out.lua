@@ -12,7 +12,7 @@ local function doCB(id)
 	local info = CB_MGR.getCBInfo(id)
 	local f = _G[info.modName][info.funcName]
 	local ret = xpcall(function()
-		f(unpack(info.paramTbl))
+		f(table.unpack(info.paramTbl))
 	end, __G__TRACKBACK__)
 	if profile then
 		local modName = info.modName

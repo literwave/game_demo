@@ -16,6 +16,18 @@ local PROTO_FILE_LIST = {
 	"../3rd/server/proto/pb/lottery.pb"
 }
 
+function __G__TRACKBACK__(msg)
+	print("server lua error", SERVICE_NAME)
+	if not LOG then
+		print(btInfo)
+		return
+	end
+	LOG._error(btInfo)
+	if MONITOR_MGR then
+		pcall(MONITOR_MGR.onError, msg, btInfo)
+	end
+end
+
 local function systemStartUp()
 	MONGO_SLAVE.systemStartup()
 end

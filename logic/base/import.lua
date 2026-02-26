@@ -1,20 +1,8 @@
 
 local string=string
-local table=table
-local pairs=pairs
 
 _G._ImportModule = _G._ImportModule or {}
 local _ImportModule = _G._ImportModule
-
-local function getClassTbl(Module)
-	local classTbl = {}
-	for k, v in pairs(Module) do
-		if type(v) == "table" and v.__IsClass then
-			classTbl[k] = v
-		end
-	end
-	return classTbl
-end
 
 local function updateImportByContent(pathFile, content)
 	return __updateImportByContent(_ImportModule, pathFile, content)

@@ -6,7 +6,7 @@ local logPath = skynet.getenv("logpath")
 local CMD = {}
 
 -- 警告日志
-local function writefile(pfile, mod, args)
+local function writefile(pfile, mod, args, fileName)
 	if not mod then mod = "a+" end
 	local argsStr = table2str(args)
 	-- todo
@@ -19,7 +19,6 @@ local function writefile(pfile, mod, args)
 		end
 		argsStr = table.concat(args, " ")
 	end
-	local fileName = logPath .. "/" .. "common_error_"..os.date("%Y%m%d")..".txt"
 	local file = io.open(fileName, mod);
 	local writeStr = pfile..argsStr
 	print(writeStr)
@@ -28,15 +27,8 @@ local function writefile(pfile, mod, args)
 end
 
 function CMD.writefile(level, pfile, args)
-	writefile(pfile, nil, args)
-end
-
-function CMD.info(msg)
-	log(msg)
-end
-
-function CMD.error(msg)
-	log(msg)
+	local fileName = logPath .. "/" .. "common_"..level.."_"..os.date("%Y%m%d")..".log"
+	writefile(pfile, nil, args, fileName)
 end
 
 function CMD.shutdown()
