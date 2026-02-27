@@ -13,7 +13,8 @@ local PROTO_FILE_LIST = {
 	"../3rd/server/proto/pb/reward.pb",
 	"../3rd/server/proto/pb/build.pb",
 	"../3rd/server/proto/pb/user.pb",
-	"../3rd/server/proto/pb/lottery.pb"
+	"../3rd/server/proto/pb/lottery.pb",
+	"../3rd/server/proto/pb/item.pb",
 }
 
 function __G__TRACKBACK__(msg)

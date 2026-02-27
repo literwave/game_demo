@@ -77,9 +77,9 @@ end
 
 function clsItem:syncToClient()
 	local info = self:getItemPTOInfo()
-	local vfd = USER_MGR.getVfdByUserId(self._userId)
-	if vfd then
-		for_caller.c_up_item_data(vfd, {info})
+	local Fd = USER_MGR.getFdByUserId(self._userId)
+	if Fd then
+		for_caller.s2c_sync_item_data(Fd, info)
 	end
 end
 

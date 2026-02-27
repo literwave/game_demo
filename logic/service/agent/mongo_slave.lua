@@ -145,3 +145,7 @@ end
 function loadSingleUserBuild(userId)
 	return commonLoadSingle(USER_BUILD_COL, userId)
 end
+
+function loadSingleUserItem(userId)
+	return commonLoadSingle(USER_ITEM_COL, userId)
+end

@@ -19,6 +19,8 @@ DATA_FILE_LIST = {
 	"../3rd/server/read_config/BuildingLv.lua",
 	"../3rd/server/read_config/innerCity.lua",
 	"../3rd/server/read_config/HeadIcon.lua",
+	"../3rd/server/read_config/Item.lua",
+	"../3rd/server/read_config/Lottery.lua",
 }
 
 function CMD.shutdown()

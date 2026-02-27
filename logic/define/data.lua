@@ -32,6 +32,8 @@ skynet.init(function()
 	DATA_BUILD_LEVEL = sharedata.query("BuildingLv")
 	DATA_BUILD_CONF = sharedata.query("innerCity")
 	DATA_HEAD_ICON = sharedata.query("HeadIcon")
+	DATA_LOTTERY = sharedata.query("Lottery")
+	DATA_ITEM = sharedata.query("Item")
 	initConfigData()
 end)
 
@@ -93,4 +95,16 @@ function getUpHeroItemLotteryTimes(useLotteryTimes)
 end
 
 function getLotteryCost(useLotteryTimes)
+end
+
+function canOverlap(itemType)
+	return DATA_ITEM[itemType].canOverlap == 1
+end
+
+function getItemOverlap(itemType)
+	return DATA_ITEM[itemType].Overlap
+end
+
+function getItemKindByType(itemType)
+	return DATA_ITEM[itemType].Kind
 end

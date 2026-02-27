@@ -164,6 +164,7 @@ local function generateItem(userId, itemType, cnt)
 	}
 	local item = createItem(oci)
 	item:afterGenerate()
+	saveItem(item)
 	return item
 end
 
@@ -172,7 +173,6 @@ local function doAddItemCntByType(userId, itemType, cnt, needSync, reasonList, n
 	tryInitUserData(userId)
 	local userItemTbl = allItemTbl[userId] or {}
 	local itemTbl = userItemTbl[itemType] or {}
-
 	if DATA_COMMON.canOverlap(itemType) then
 		local _, item = next(itemTbl)
 		if not item then
@@ -180,7 +180,6 @@ local function doAddItemCntByType(userId, itemType, cnt, needSync, reasonList, n
 		else
 			item:addCnt(cnt)
 		end
-		saveItem(item)
 		if needSync then
 			item:syncToClient()
 		end
@@ -188,7 +187,6 @@ local function doAddItemCntByType(userId, itemType, cnt, needSync, reasonList, n
 		assert(cnt < 10000000)
 		for _ = 1, cnt do
 			local item = generateItem(userId, itemType)
-			saveItem(item)
 			if needSync then
 				item:syncToClient()
 			end
@@ -208,16 +206,17 @@ function addItemCntByTypeNoSync(userId, itemType, cnt, reasonList, newItemList)
 	return doAddItemCntByType(userId, itemType, cnt, false, reasonList, newItemList)
 end
 
-local function rewardResourceItem()
+local function rewardResourceBase(userId, itemType, cnt, reasonList)
 	addItemCntByType(userId, itemType, cnt, reasonList)
 end
 
-local function rewardHeroChip()
-end
-
 local ITEM_KIND_REWARD_FUNC = {
-	[CONST.ITEM_KIND.RES] = rewardResourceItem,
-	[CONST.ITEM_KIND.HERO_CHIP] = rewardHeroChip,
+	[CONST.ITEM_KIND.RES] = rewardResourceBase,
+	[CONST.ITEM_KIND.HERO_CHIP] = rewardResourceBase,
+	[CONST.ITEM_KIND.HERO_EQUIP] = rewardResourceBase,
+	[CONST.ITEM_KIND.RANDOM_REWARD] = rewardResourceBase,
+	[CONST.ITEM_KIND.SOLDIER] = rewardResourceBase,
+	[CONST.ITEM_KIND.VIP] = rewardResourceBase,
 }
 
 function addItem(userId, itemType, cnt, reasonList)

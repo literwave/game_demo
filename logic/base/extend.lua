@@ -180,9 +180,16 @@ end
 local id = 0
 local OPEN_DATE = 1704067200
 function getIdByUserIdAndTimestamp(userId)
-    id = id + 1
-    local sec = os.time() - OPEN_DATE
-    return string.format("%06d%08d%03d", userId, sec, id)
+	id = id + 1
+	local sec = os.time() - OPEN_DATE
+	return string.format("%06d%08d%03d", userId, sec, id)
+end
+
+local srvAutoId = 0
+function getIdBySrvIdAndTimestamp()
+	srvAutoId = srvAutoId + 1
+	local sec = os.time() - OPEN_DATE
+	return string.format("%06d%08d%03d", GAME.getServerId(), sec, srvAutoId)
 end
 
 function genRewardInfo(rewardType, itemType, itemCount)

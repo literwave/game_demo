@@ -21,7 +21,7 @@ local function rewardResource(ret, userId, rewardInfoList, reasonList)
 	for _, rewardInfo in pairs(rewardInfoList) do
 		local resType = rewardInfo.item_type 
 		local cnt = rewardInfo.item_count
-		USER_RESOURCE.addResAndSync(userId, resType, cnt, reasonList)
+		addResAndSync(userId, resType, cnt, reasonList)
 		table.insert(ret, rewardInfo)
 	end
 end

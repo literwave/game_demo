@@ -13,7 +13,7 @@ local saveFieldTbl = {
 		return nil
 	end,
 	_name = function ()
-		return nil
+		return CONST.NO_NAME
 	end,
 	_sex = function ()
 		return CONST.SEX_NONE
