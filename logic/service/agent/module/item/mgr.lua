@@ -154,6 +154,19 @@ local function saveItem(item)
 	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_ITEM_COL, userId, itemId}, saveInfo)
 end
 
+local function generateItem(userId, itemType, cnt)
+	local itemId = getIdByUserIdAndTimestamp(userId)
+	local oci = {
+		_itemId = itemId,
+		_itemType = itemType,
+		_userId = userId,
+		_itemCnt = cnt,
+	}
+	local item = createItem(oci)
+	item:afterGenerate()
+	return item
+end
+
 local function doAddItemCntByType(userId, itemType, cnt, needSync, reasonList, newItemList)
 	assert(cnt > 0)
 	tryInitUserData(userId)
@@ -163,15 +176,7 @@ local function doAddItemCntByType(userId, itemType, cnt, needSync, reasonList, n
 	if DATA_COMMON.canOverlap(itemType) then
 		local _, item = next(itemTbl)
 		if not item then
-			local itemId = getIdByUserIdAndTimestamp(userId)
-			local oci = {
-				_itemId = itemId,
-				_itemType = itemType,
-				_userId = userId,
-				_itemCnt = cnt,
-			}
-			item = createItem(oci)
-			item:afterGenerate()
+			item = generateItem(userId, itemType, cnt)
 		else
 			item:addCnt(cnt)
 		end
@@ -182,14 +187,7 @@ local function doAddItemCntByType(userId, itemType, cnt, needSync, reasonList, n
 	else
 		assert(cnt < 10000000)
 		for _ = 1, cnt do
-			local itemId = getIdByUserIdAndTimestamp(userId)
-			local oci = {
-				_itemId = itemId,
-				_itemType = itemType,
-				_userId = userId,
-			}
-			local item = createItem(oci)
-			item:afterGenerate()
+			local item = generateItem(userId, itemType)
 			saveItem(item)
 			if needSync then
 				item:syncToClient()
