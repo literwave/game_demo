@@ -1,9 +1,6 @@
 # Game Demo - Skynet 游戏服务器框架
 
-基于 [Skynet](https://github.com/cloudwu/skynet) 开发的游戏服务器框架，采用 Actor 模型和 ECS 架构设计，支持高并发、分布式部署。
-
-> ⚠️ **重要提示**: 当前框架存在一些已知问题（见 [已知问题与限制](#-已知问题与限制)），用于生产环境前建议先修复 P0 级别的 Bug。详细的框架评估和改进建议请参考 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)。
-
+基于 [Skynet](https://github.com/cloudwu/skynet) 开发的游戏服务器框架，采用 Actor 模型，支持高并发、分布式部署。
 ## 📋 目录
 
 - [项目简介](#项目简介)
@@ -27,13 +24,6 @@ Game Demo 是一个基于 Skynet 框架的游戏服务器项目，具有以下�
 - **数据持久化**: 支持 MongoDB 数据库存储
 - **分布式**: 支持多服务、多节点部署
 - **可扩展**: 网关、Agent、登录服务等核心组件可独立扩展
-- **共享数据守卫**: 内置 `sharedatad` 服务与封装接口，确保在 Skynet 初始化后再访问配置数据，避免 `skynet.call` 空指针
-
-### 当前状态与主要风险
-- 多 Gate 已上线，但登录服仍随机分配，未结合连接数/负载
-- Agent 登录时会递增 `userCnt`，断开未递减，长期运行会误判满载
-- 协议层缺少包长/ID 校验，`CMD.kick` 为空实现
-- Mongo 调用多为同步，缺少监控与告警，排障成本高
 
 ## 🏗️ 架构设计
 
@@ -108,18 +98,18 @@ game_demo/
 │   ├── base/                # 基础工具（netPb、Import 等）
 │   ├── define/              # 常量 & 数据访问
 │   ├── module/              # 玩法模块（account/login/user 等）
-│   ├── service/             # Skynet 服务
-│   │   ├── agent/           # 玩家逻辑服务
-│   │   ├── gamelog/         # 日志写入
-│   │   ├── gameserver/      # 游戏主逻辑聚合
-│   │   ├── game_sid/        # 服务器 ID 管理
-│   │   ├── gated/           # 网关
-│   │   ├── http_agent/      # HTTP handler
-│   │   ├── load_xls/        # 配置加载
-│   │   ├── logind/          # 登录 Master/Slave
-│   │   ├── main_mongodb/    # Mongo 访问封装
-│   │   └── mcs/             # HTTP 服务（GM/运维）
-│   └── protos/              # 旧版协议定义（保留）
+│   └── service/             # Skynet 服务
+│       ├── agent/           # 玩家逻辑服务
+│       ├── gamelog/         # 日志写入
+│       ├── gameserver/      # 游戏主逻辑聚合
+│       ├── game_sid/        # 玩家id管理
+│       ├── gated/           # 网关
+│       ├── http_agent/      # HTTP handler
+│       ├── load_xls/        # 配置加载
+│       ├── logind/          # 登录 Master/Slave
+│       ├── main_mongodb/    # Mongo 访问封装
+│       └── mcs/             # HTTP 服务（GM/运维）
+│   
 ├── proto/                   # Protobuf 文件
 │   ├── pb/                  # 编译结果
 │   └── *.proto              # 原始描述
@@ -141,6 +131,7 @@ game_demo/
 - Python 3.x (用于协议生成)
 - MongoDB (用于数据存储)
 - GCC/Clang (编译 Skynet)
+- Redis (用于玩家注册)
 
 ### 编译 Skynet
 
@@ -158,13 +149,7 @@ make linux  # Linux 系统
 mongodb_host = "127.0.0.1"
 mongodb_port = "27017"
 mongodb_user = "root"
-mongodb_password = "123"
-```
-
-### 生成协议
-
-```bash
-bash shell/gen_proto.sh
+mongodb_password = "a1"
 ```
 
 ### 启动服务器
@@ -236,11 +221,6 @@ mongodb_password = "123"
 - ✅ **负载均衡**: 登录服使用随机策略分配连接到不同 Gate（`master_func.lua:15`）
 - ✅ **注册机制**: 每个 Gate 启动后自动注册到登录服（`gated.lua:49`）
 
-**当前限制：**
-- ⚠️ **负载计数未递减**: 断线时未减少 `userCnt`，计数会一直累积，长时间运行后分配失真
-- ⚠️ **连接管理**: `CMD.kick` 为空实现，无法主动踢人
-- ⚠️ **负载均衡策略**: 登录服随机分配，未结合 Gate/Agent 实际负载
-
 **配置说明：**
 - `config/main_node` 中 `gate_cnt = 3` 控制 Gate 实例数量
 - 可在运行时调整数量以适配负载
@@ -261,11 +241,6 @@ mongodb_password = "123"
 - 按 `userId` 创建独立队列（`agent.lua:46-48`）
 - 同一玩家串行处理，不同玩家并行处理
 - 相比全局串行，吞吐量提升 3~4 倍
-
-**当前限制：**
-- ⚠️ **错误处理**: 协议处理错误被 `pcall` 吞掉，只有 debug 日志
-- ⚠️ **协议验证**: 缺少包长度检查，可能被恶意客户端攻击
-- ⚠️ **静态配置**: Agent 数量固定，无法动态扩缩容
 
 **关键代码：** `logic/service/agent/agent.lua`
 
@@ -397,21 +372,6 @@ skynet.call(".mongodb", "lua", "update", {
 2. 实现模块逻辑
 3. 在需要的地方 `Import` 模块
 
-### Socket 操作注意事项
-
-⚠️ **重要**: Skynet 的 `socket.read` 返回的是内部 buffer，必须立即使用 `skynet.tostring` 复制：
-
-```lua
--- ✅ 正确
-local block = socket.read(fd, 2)
-local data = skynet.tostring(block, 2)
-
--- ❌ 错误 - 会导致段错误
-local block = socket.read(fd, 2)
--- ... 其他操作 ...
-local data = skynet.tostring(block, 2)  -- block 可能已被复用
-```
-
 ### 服务间通信
 
 **同步调用 (skynet.call):**
@@ -476,10 +436,6 @@ end)
 | PERFORMANCE_ANALYSIS.md | 性能数据、瓶颈分析 | 性能优化工程师 |
 | docs/GATE_SCALING.md | Gate 扩展方案 | 需要扩展架构的开发者 |
 
-## ⚠️ 已知问题与限制
-
-> 详细的框架评估和问题分析请参考 [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md)
-
 ### 当前已知问题
 1. **Agent 负载计数未递减**（P0）
    - **位置**: `logic/service/gated/gated.lua:100`
@@ -510,25 +466,7 @@ end)
 
 ## ❓ 常见问题
 
-### 1. 段错误 (Segmentation Fault)
-
-**原因**: 直接使用 `socket.read` 返回的 buffer，没有立即复制。
-
-**解决**: 使用 `skynet.tostring(block, size)` 立即复制数据。
-
-**示例**:
-```lua
--- ✅ 正确
-local block = socket.read(fd, 2)
-local data = skynet.tostring(block, 2)
-
--- ❌ 错误 - 会导致段错误
-local block = socket.read(fd, 2)
--- ... 其他操作 ...
-local data = skynet.tostring(block, 2)  -- block 可能已被复用
-```
-
-### 2. 协议解析失败
+### 1. 协议解析失败
 
 **原因**: 
 - 协议未注册
@@ -540,7 +478,7 @@ local data = skynet.tostring(block, 2)  -- block 可能已被复用
 - 运行 `bash shell/gen_proto.sh` 重新生成协议
 - 确认使用完整的协议名称（如 `Login.c2splaylogin`）
 
-### 3. MongoDB 连接失败
+### 2. MongoDB 连接失败
 
 **原因**: 配置错误或 MongoDB 未启动。
 
@@ -550,7 +488,7 @@ local data = skynet.tostring(block, 2)  -- block 可能已被复用
 - 检查网络连接和防火墙设置
 - 查看日志文件 `log/skynet.log` 中的错误信息
 
-### 4. 服务启动失败
+### 3. 服务启动失败
 
 **原因**: 
 - 配置文件路径错误
@@ -563,7 +501,7 @@ local data = skynet.tostring(block, 2)  -- block 可能已被复用
 - 查看日志文件定位问题：`tail -f log/skynet.log`
 - 检查 sharedatad 是否正常启动（共享数据服务）
 
-### 5. 负载不均衡 / 所有连接分配到同一 Agent
+### 4. 负载不均衡 / 所有连接分配到同一 Agent
 
 **原因**: Agent `userCnt` 断开时未递减，计数持续累积（见已知问题 #1）
 
@@ -573,7 +511,7 @@ local data = skynet.tostring(block, 2)  -- block 可能已被复用
 
 **彻底解决**: 在断线/踢出时递减 `userCnt`，并在 `CONNECTION[fd]` 中保存 `agentInfo` 便于回收（见 [FRAMEWORK_REVIEW.md#71](FRAMEWORK_REVIEW.md#七、关键代码问题详解)）
 
-### 6. Gate 负载不均衡
+### 5. Gate 负载不均衡
 
 **原因**: 登录服使用随机策略分配连接（`master_func.lua:15`），未考虑 Gate 实际负载
 
@@ -581,7 +519,7 @@ local data = skynet.tostring(block, 2)  -- block 可能已被复用
 
 **优化建议**: 可参考 [docs/GATE_SCALING.md](docs/GATE_SCALING.md) 实现基于负载的分配策略
 
-### 7. sharedata.query 报错 "dest address type (nil)"
+### 6. sharedata.query 报错 "dest address type (nil)"
 
 **原因**: 在 `skynet.init` 之前调用 `sharedata.query`
 
