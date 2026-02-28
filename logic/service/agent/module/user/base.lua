@@ -96,6 +96,10 @@ function clsUser:setSex(sex)
 	self:saveField({"_sex"}, sex)
 end
 
+function clsUser:getResTbl()
+	return self._resTbl
+end
+
 function clsUser:getResNum(resType)
 	return self._resTbl[resType] or 0
 end
@@ -103,6 +107,17 @@ end
 function clsUser:addRes(resType, num)
 	local resNum = self:getResNum(resType)
 	self._resTbl[resType] = num + resNum
+end
+
+function clsUser:syncRes(resTypeList)
+	local resList = {}
+	for _, resType in ipairs(resTypeList) do
+		table.insert(resList, makeCommonPtoTbl(resType, self:getResNum(resType)))
+	end
+	local fd = self:getFd()
+	if fd then
+		for_caller.s2c_sync_user_res_list(fd, {resList = resList})
+	end
 end
 
 function clsUser:serialize(tbl)

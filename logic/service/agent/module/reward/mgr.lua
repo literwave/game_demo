@@ -1,3 +1,9 @@
+local function addResAndSync(userId, resType, cnt, reasonList)
+	local user = USER_MGR.tryInitUser(userId)
+	user:addRes(resType, cnt)
+	user:syncRes(resType)
+end
+
 local function rewardItem(ret, userId, rewardInfoList, reasonList)
 	local overLimitItemTbl = {}
 	for _, rewardInfo in ipairs(rewardInfoList) do
@@ -19,7 +25,7 @@ end
 
 local function rewardResource(ret, userId, rewardInfoList, reasonList)
 	for _, rewardInfo in pairs(rewardInfoList) do
-		local resType = rewardInfo.item_type 
+		local resType = rewardInfo.item_type
 		local cnt = rewardInfo.item_count
 		addResAndSync(userId, resType, cnt, reasonList)
 		table.insert(ret, rewardInfo)

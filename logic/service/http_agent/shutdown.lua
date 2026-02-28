@@ -19,5 +19,7 @@ function onHttpRequest(fd, paramsTbl, body)
 	end
 	response(fd, 200, "shutting down")
 	socket.close(fd)
-	skynet.exit()
+	skynet.timeout(100, function()
+		os.exit()
+	end)
 end
