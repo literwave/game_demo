@@ -4,7 +4,7 @@ allMailTbl = {}
 	[mailId] = mail,
 --]]
 
-loadedTbl = {}
+delMailIdTbl = {}
 --[[
 	[mailId] = true,
 --]]
@@ -18,6 +18,7 @@ userMailInfoTbl = {}
 					isRead = *,
 					isGotReward = *,
 					isLock = *,
+					lv = *,
 				},
 			},
 		},
@@ -47,7 +48,7 @@ function saveData()
 	end
 	MONGO_SLAVE.commonSaveMany(MONGO_SLAVE.MAIL_COL, saveMailTbl)
 	local delMailTbl = {}
-	for mailId, _ in pairs(loadedTbl) do
+	for mailId in pairs(delMailIdTbl) do
 		if not saveMailTbl[mailId] then
 			delMailTbl[mailId] = true
 		end
@@ -109,7 +110,6 @@ local function tryInitMailTbl(mailIdList)
 	if #queryList > 0 then
 		local dataTbl = MONGO_SLAVE.commonLoadMany(MONGO_SLAVE.MAIL_COL, queryList)
 		for mailId, data in pairs(dataTbl) do
-			loadedTbl[mailId] = true
 			local mail = createMail(data)
 			allMailTbl[mailId] = mail
 			ret[mailId] = mail
@@ -121,7 +121,6 @@ end
 function tryInitMail(mailId)
 	if not allMailTbl[mailId] then
 		local saveTbl = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.MAIL_COL, mailId)
-		loadedTbl[mailId] = true
 		if not saveTbl or not next(saveTbl) then
 			return
 		end
@@ -166,9 +165,10 @@ local function setMailLock(userId, mailKind, mailId, isLock)
 end
 
 local function delMail(mailId)
-	assert(loadedTbl[mailId])
+	assert(not delMailIdTbl[mailId])
 	local mail = allMailTbl[mailId]
 	if mail then
+		delMailIdTbl[mailId] = true
 		mail:release()
 		allMailTbl[mailId] = nil
 	end
@@ -308,12 +308,10 @@ local function createNewMail(mailKind, mailType, title, contentTbl, detailTbl, r
 		_rewardList = rewardList,
 		_startTime = startTime,
 		_endTime = endTime,
-		_mailAvatarType = mailAvatarType,
 	}
 	local mail = createMail(oci)
 	mail:saveToDB()
 	allMailTbl[mailId] = mail
-	loadedTbl[mailId] = true
 	return mailId
 end
 
@@ -373,7 +371,7 @@ local function checkMailRewardOverLimit(userId, mailKind, mailId)
 	end
 	local rewardItemTbl = {}
 	for _, rewardInfo in pairs(mail:getRewardList()) do
-		if rewardInfo.reward_type == COMMON_CONST.REWARD_TYPE_ITEM then
+		if rewardInfo.reward_type == CONST.REWARD_TYPE_ITEM then
 			local itemType = rewardInfo.item_type
 			rewardItemTbl[itemType] = (rewardItemTbl[itemType] or 0) + rewardInfo.item_count
 		end
@@ -407,12 +405,12 @@ local function tryGetMailReward(userId, mailKind, mailId)
 	return true, actualRwdList
 end
 
-local function clearUserMailByKind(userId, mailKind)
+local function tryDelUserMailByKind(userId, mailKind)
 	local mailTbl = getUserMailByKind(userId, mailKind)
 	if not mailTbl then
 		return
 	end
-	local delList = {}
+	local delMailTbl = {}
 	local mailList = {}
 	local queryMailIdList = {}
 	for mailId, info in pairs(mailTbl) do
@@ -423,35 +421,36 @@ local function clearUserMailByKind(userId, mailKind)
 	local queryMailTbl = tryInitMailTbl(queryMailIdList)
 	for mailId, mail in pairs(queryMailTbl) do
 		if mail:isTimeout(mailId) then
-			table.insert(delList, mailId)
+			delMailTbl[mailId] = true
 		else
 			table.insert(mailList, mail)
 		end
 	end
-	local limitCnt = 100
+	local limitCnt = DATA_COMMON.getMailLimitCnt()
 	local needDelCnt = #mailList - limitCnt
-	if needDelCnt > 0 then
-		table.sort(mailList, function(mail1, mail2)
-			return mail1:getStartTime() < mail2:getStartTime()
-		end)
-		for _, mail in ipairs(mailList) do
-			local mailId = mail:getMailId()
-			table.insert(delList, mailId)
-			needDelCnt = needDelCnt - 1
-			if needDelCnt <= 0 then
-				break
-			end
+	if needDelCnt <= 0 then
+		return
+	end
+	table.sort(mailList, function(mail1, mail2)
+		return mail1:getStartTime() < mail2:getStartTime()
+	end)
+	for _, mail in ipairs(mailList) do
+		local mailId = mail:getMailId()
+		delMailTbl[mailId] = true
+		needDelCnt = needDelCnt - 1
+		if needDelCnt <= 0 then
+			break
 		end
 	end
-	if #delList > 0 then
-		for _, mailId in ipairs(delList) do
-			tryGetMailReward(userId, mailKind, mailId)
-			delUserMail(userId, mailKind, mailId)
-		end
-		local vfd = USER_MGR.getVfdByUserId(userId)
-		if vfd then
-			for_caller.c_del_mail_list(vfd, mailKind, delList)
-		end
+	local delList = {}
+	for mailId in pairs(delMailTbl) do
+		tryGetMailReward(userId, mailKind, mailId)
+		delUserMail(userId, mailKind, mailId)
+		table.insert(delList, mailId)
+	end
+	local vfd = USER_MGR.getVfdByUserId(userId)
+	if vfd then
+		for_caller.s2c_del_mail_list(vfd, mailKind, delList)
 	end
 end
 
@@ -483,23 +482,14 @@ function tryDelMailById(delMailId)
 	end
 end
 
-function sendMail(userId, mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
+function sendUserMail(userId, mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
 	local mailId = createNewMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
 	putMailToUserAndSync(userId, mailKind, mailId)
-	clearUserMailByKind(userId, mailKind)
+	tryDelUserMailByKind(userId, mailKind)
 	return mailId
 end
 
-function sendGroupMail(userIdTbl, mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	local mailId = createNewMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	for userId, _ in pairs(userIdTbl) do
-		putMailToUserAndSync(userId, mailKind, mailId)
-		clearUserMailByKind(userId, mailKind)
-	end
-	return mailId
-end
-
-function sendServerMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
+function sendSrvMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
 	local mailId = createNewMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
 	addSvrMail(mailId)
 	local userIdList = COMMON_FUNC.getTblValueList(USER_MGR.getVfdUserIdTbl())
@@ -508,17 +498,26 @@ function sendServerMail(mailKind, mailType, title, contentTbl, detailTbl, reward
 	return mailId
 end
 
+function sendGroupMail(userIdTbl, mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
+	local mailId = createNewMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
+	for userId, _ in pairs(userIdTbl) do
+		putMailToUserAndSync(userId, mailKind, mailId)
+		tryDelUserMailByKind(userId, mailKind)
+	end
+	return mailId
+end
+
 function sendBattleMail(userIdTbl, mailKind, mailType, title, contentTbl, detailTbl, rewardList, mailBattleRec, lifeSec, mailAvatarType)
 	local mailId = createNewBattleMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, mailBattleRec, lifeSec, mailAvatarType)
 	for userId, _ in pairs(userIdTbl) do
 		putMailToUserAndSync(userId, mailKind, mailId)
-		clearUserMailByKind(userId, mailKind)
+		tryDelUserMailByKind(userId, mailKind)
 	end
 end
 
 local function onReqMailList(vfd, mailKind)
 	local userId = USER_MGR.getUserIdByVfd(vfd)
-	clearUserMailByKind(userId, mailKind)
+	tryDelUserMailByKind(userId, mailKind)
 	local list = {}
 	local tbl = getUserMailByKind(userId, mailKind)
 	if tbl then
@@ -536,15 +535,6 @@ local function onReqMailDetail(vfd, mailKind, mailId)
 		setMailReaded(userId, mailKind, mailId)
 		local mail = tryInitMail(mailId)
 		mail:syncDetail(vfd, userId)
-	end
-end
-
-local function onReqBattleRecDetail(vfd, mailKind, mailId)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	local tbl = getUserMailByKind(userId, mailKind)
-	if tbl and tbl[mailId] then
-		local mail = tryInitMail(mailId)
-		mail:syncBattleRecDetail(vfd)
 	end
 end
 
@@ -591,7 +581,7 @@ local function onDelMailList(vfd, mailKind, mailIdList)
 			end
 		end
 	end
-	for_caller.c_del_mail_list(vfd, mailKind, delMailIdList)
+	for_caller.s2c_del_mail_list(vfd, mailKind, delMailIdList)
 end
 
 local function onSetMailLock(vfd, mailKind, mailId, isLock)
@@ -627,48 +617,16 @@ local function onGetMailReward(vfd, mailKindIdList)
 			end
 		end
 	end
-	local showRewardList = COMMON_FUNC.mergeRewardList(unpack(allRewardList))
+	local showRewardList = FUNCLIB.mergeRewardList(table.unpack(allRewardList))
 	REWARD_MGR.showReward(userId, showRewardList)
 	for_caller.c_get_mail_reward(vfd, rewardMailIdList)
 end
 
-local function onReqShareMailDetail(vfd, mailUserId, mailId)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	local mail = tryInitMail(mailId)
-	if not mail then
-		USER_MGR.tellMeByLanguageId(userId, 350338)
-		return
-	end
-	local mailKind = mail:getMailKind()
-	local userMailInfo = getUserMailInfo(mailUserId, mailKind, mailId)
-	if not userMailInfo then
-		USER_MGR.tellMeByLanguageId(userId, 350338)
-		return
-	end
-	mail:syncDetail(vfd, mailUserId)
-	local mailInfo = genMailSimPto(mailUserId, mailKind, mailId)
-	for_caller.c_req_share_mail_detail_end(vfd, mailId, mailKind, mailInfo)
-end
-
-local function onReqShareBattleRecDetail(vfd, mailKind, mailId, mailUserId)
-	if not USER_MGR.checkUserExist(mailUserId) then
-		return
-	end
-	local tbl = getUserMailByKind(mailUserId, mailKind)
-	if tbl and tbl[mailId] then
-		local mail = tryInitMail(mailId)
-		mail:syncBattleRecDetail(vfd)
-	end
-end
-
 function __init__()
-	for_maker.s_req_mail_list = onReqMailList
-	for_maker.s_req_mail_detail = onReqMailDetail
-	for_maker.s_req_mail_battle_rec_detail = onReqBattleRecDetail
-	for_maker.s_req_unread_mail_cnt_list = onReqUnreadCntList
-	for_maker.s_del_mail_list = onDelMailList
-	for_maker.s_set_mail_lock = onSetMailLock
-	for_maker.s_get_mail_reward = onGetMailReward
-	for_maker.s_req_share_mail_detail = onReqShareMailDetail
-	for_maker.s_req_share_mail_battle_rec_detail = onReqShareBattleRecDetail
+	for_maker.c2s_req_mail_list = onReqMailList
+	for_maker.c2s_req_mail_detail = onReqMailDetail
+	for_maker.c2s_req_unread_mail_cnt_list = onReqUnreadCntList
+	for_maker.c2s_del_mail_list = onDelMailList
+	for_maker.c2s_set_mail_lock = onSetMailLock
+	for_maker.c2s_get_mail_reward = onGetMailReward
 end

@@ -113,6 +113,13 @@ function table.size(tbl)
 	return tblLen
 end
 
+function table.valToNumber(tbl)
+	for key, val in pairs(tbl) do
+		tbl[key] = tostring(val)
+	end
+	return tbl
+end
+
 function numberKeyAddPreString(key, preString)
 	if type(key) == "number" then
 		return string.format("%s%d", preString, key)

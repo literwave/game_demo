@@ -8,6 +8,21 @@ userIdToFd = {
 	-- [userId] = vfd
 }
 
+function tellMeByLanguageId(userId, ...)
+	local fd = userIdToFd[userId]
+	if fd then
+		local tbl = table.valToNumber({...})
+		for_caller.s2c_sys_notify_by_lanid(fd, {tbl = tbl})
+	end
+end
+
+function tellMe(userId, msg)
+	local fd = userIdToFd[userId]
+	if fd then
+		for_caller.s2c_tell_me(fd, msg)
+	end
+end
+
 function getUserById(UserId)
 	return allUserTbl[UserId]
 end

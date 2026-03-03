@@ -108,3 +108,10 @@ end
 function getItemKindByType(itemType)
 	return DATA_ITEM[itemType].Kind
 end
+
+function getMailLimitCnt()
+	return DATA_GLOBAL[3].value1
+end
+
+function canLockMail()
+end

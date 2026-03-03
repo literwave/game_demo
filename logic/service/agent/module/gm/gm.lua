@@ -1,7 +1,6 @@
 local CMD = {}
 
 function CMD.help(vfd, cmd)
-	for_caller.c_wiz_command_help_begin(vfd)
 	local cmdDescTbl = {
 		["code"] = "执行服务端代码[code codeString]",
 		["update"] = "重新加载lua文件: [update file]",
@@ -17,24 +16,9 @@ function CMD.help(vfd, cmd)
 	local ret = {}
 	if cmd then
 		local desc = cmdDescTbl[cmd] or ""
-		table.insert(ret, {k = cmd, v = desc})
-		for_caller.c_wiz_command_help(vfd, ret)
-	else
-		local count = 0
-		for cmd, desc in pairs(cmdDescTbl) do
-			table.insert(ret, {k = cmd, v = desc})
-			count = count + 1
-			if count >= 100 then
-				for_caller.c_wiz_command_help(vfd, ret)
-				ret = {}
-				count = 0
-			end
-		end
-		if count > 0 then
-			for_caller.c_wiz_command_help(vfd, ret)
-		end
+		table.insert(ret, makeCommonPtoTbl(cmd, desc))
+		for_caller.s2c_gm_command_help(vfd, {ret = ret})
 	end
-	for_caller.c_wiz_command_help_end(vfd)
 end
 
 CMD.h = CMD.help
@@ -73,5 +57,5 @@ local function onGmCommand(vfd, cmd)
 end
 
 function __init__()
-	for_maker.s_gm_command = onGmCommand
+	for_maker.c2s_gm_command = onGmCommand
 end

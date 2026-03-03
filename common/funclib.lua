@@ -100,3 +100,21 @@ function checkTblEqual(tbl1, tbl2, depth)
 	return true
 end
 
+function mergeRewardList(...)
+	local tbl = {}
+	for _, rewardList in ipairs({...}) do
+		for _, info in pairs(rewardList) do
+			if not tbl[info.reward_type] then
+				tbl[info.reward_type] = {}
+			end
+			if not tbl[info.reward_type][info.item_type] then
+				tbl[info.reward_type][info.item_type] = 0
+			end
+			tbl[info.reward_type][info.item_type] = tbl[info.reward_type][info.item_type] + info.item_count
+		end
+	end
+end
+
+function subItemList(itemList, cb)
+
+end
