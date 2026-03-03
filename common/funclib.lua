@@ -114,7 +114,3 @@ function mergeRewardList(...)
 		end
 	end
 end
-
-function subItemList(itemList, cb)
-
-end
