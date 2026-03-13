@@ -115,3 +115,7 @@ end
 
 function canLockMail()
 end
+
+function getQueueCapacity()
+	return 5
+end

@@ -3,10 +3,7 @@ local saveFieldTbl = {
 	_userId = function ()
 		return nil
 	end,
-	_workQueueType = function()
-		return nil
-	end,
-	_workQueueIdx = function()
+	_queueIdx = function()
 		return nil
 	end,
 	_queueTbl = function()
@@ -18,18 +15,18 @@ local saveFieldTbl = {
 			}
 		]]
 	end,
-	_workIdx = function()	-- 当前队列目标索引
+	_workIdx = function()
 		return nil
 	end,
-	_expireTime = function()	-- 队伍过期时间
+	_expireTime = function()
 		return nil
 	end,
 }
 
-clsWorkQueue = clsObject:Inherit()
+clsQueue = clsObject:Inherit()
 
-function clsWorkQueue:__init__(oci)
-	Super(clsWorkQueue).__init__(self, oci)
+function clsQueue:__init__(oci)
+	Super(clsQueue).__init__(self, oci)
 	for k, func in pairs(saveFieldTbl) do
 		if oci[k] == nil then
 			self[k] = func()
@@ -37,82 +34,78 @@ function clsWorkQueue:__init__(oci)
 			self[k] = oci[k]
 		end
 	end
-	WORK_QUEUE_MGR.refWorkQueue(self)
+	QUEUE_MGR.refQueue(self)
 end
 
-function clsWorkQueue:serialize(tbl)
+function clsQueue:serialize(tbl)
 	for key, _ in pairs(saveFieldTbl) do
 		tbl[key] = self[key]
 	end
 end
 
-function clsWorkQueue:release()
-	WORK_QUEUE_MGR.unrefWorkQueue(self)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.WORK_QUEUE_COL, self._userId, self._workQueueType, self._workQueueIdx}, nil)
-	Super(clsWorkQueue).release(self)
+function clsQueue:release()
+	QUEUE_MGR.unrefQueue(self)
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.QUEUE_COL, self._userId, self._queueIdx}, nil)
+	Super(clsQueue).release(self)
 end
 
-function clsWorkQueue:saveField(keyList, val)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.WORK_QUEUE_COL, self._userId, self._workQueueType, self._workQueueIdx, unpack(keyList)}, val)
+function clsQueue:saveField(keyList, val)
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.QUEUE_COL, self._userId, self._queueIdx, table.unpack(keyList)}, val)
 end
 
-function clsWorkQueue:saveToDB()
+function clsQueue:saveToDB()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.WORK_QUEUE_COL, self._userId, self._workQueueType, self._workQueueIdx}, info)
+	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.QUEUE_COL, self._userId, self._queueIdx}, info)
 end
 
-function clsWorkQueue:getUserId()
+function clsQueue:getUserId()
 	return self._userId
 end
 
-function clsWorkQueue:getWorkQueueType()
-	return self._workQueueType
+function clsQueue:getQueueIdx()
+	return self._queueIdx
 end
 
-function clsWorkQueue:getWorkQueueIdx()
-	return self._workQueueIdx
-end
-
-function clsWorkQueue:getQueueTbl()
+function clsQueue:getQueueTbl()
 	return self._queueTbl
 end
 
-function clsWorkQueue:getWorkIdx()
+function clsQueue:getWorkIdx()
 	return self._workIdx
 end
 
-function clsWorkQueue:getExpireTime()
+function clsQueue:getExpireTime()
 	return self._expireTime
 end
 
-function clsWorkQueue:getWorkTargetId()
+function clsQueue:getWorkTargetId()
 	if not self:getWorkIdx() then
 		return
 	end
 	return self._queueTbl[self:getWorkIdx()].targetId
 end
 
-function clsWorkQueue:setWorkIdx(workIdx)
+function clsQueue:setWorkIdx(workIdx)
 	self._workIdx = workIdx
 	self:saveField({"_workIdx"}, self._workIdx)
 end
 
-function clsWorkQueue:setExpireTime(expireTime)
+function clsQueue:setExpireTime(expireTime)
 	self._expireTime = expireTime
 	self:saveField({"_expireTime"}, self._expireTime)
 end
 
-function clsWorkQueue:checkIsExpired()
+function clsQueue:checkIsExpired()
 	return self._expireTime and self._expireTime < TIME.osBJSec()
 end
 
-function clsWorkQueue:removeQueueData(queueIdx)
+function clsQueue:removeQueueData(queueIdx)
 	self._queueTbl[queueIdx] = nil
 	self:saveField({"_queueTbl", queueIdx}, nil)
 end
 
-function clsWorkQueue:addNewWork(targetId, cancelRewardList)
+function clsQueue:addNewWork(targetId, cancelRewardList)
 	local nextQueueIdx = 1
 	local queueTbl = self:getQueueTbl()
 	for queueIdx, _ in pairs(queueTbl) do
@@ -127,7 +120,7 @@ function clsWorkQueue:addNewWork(targetId, cancelRewardList)
 	self:saveField({"_queueTbl", nextQueueIdx}, queueTbl[nextQueueIdx])
 end
 
-function clsWorkQueue:getQueueFrontData()
+function clsQueue:getQueueFrontData()
 	local frontIdx = nil
 	local queueTbl = self:getQueueTbl()
 	for queueIdx, _ in pairs(queueTbl) do
@@ -138,11 +131,11 @@ function clsWorkQueue:getQueueFrontData()
 	return frontIdx, queueTbl[frontIdx]
 end
 
-function clsWorkQueue:getQueueCapacity()
-	return 1
+function clsQueue:getQueueCapacity()
+	return DATA_COMMON.getQueueCapacity()
 end
 
-function clsWorkQueue:onExpired()
+function clsQueue:onExpired()
 	local tbl = self:getQueueTbl()
 	local workIdx = self:getWorkIdx()
 	if not workIdx or table.size(tbl) == 0 then
@@ -162,7 +155,7 @@ function clsWorkQueue:onExpired()
 	return true
 end
 
-function clsWorkQueue:checkCanAddNewWork(targetId)
+function clsQueue:checkCanAddNewWork()
 	if self:checkIsExpired() then
 		return false
 	end
@@ -172,7 +165,7 @@ function clsWorkQueue:checkCanAddNewWork(targetId)
 	return true
 end
 
-function clsWorkQueue:checkTargetIsInQueue(targetId)
+function clsQueue:checkTargetIsInQueue(targetId)
 	for queueIdx, info in pairs(self:getQueueTbl()) do
 		if info.targetId == targetId then
 			return true, queueIdx
@@ -183,24 +176,24 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------------------
 
-function clsWorkQueue:systemStartup(offsetTime)
+function clsQueue:systemStartup(offsetTime)
 end
 
-function clsWorkQueue:genClientPTOInfo()
+function clsQueue:genClientPTOInfo()
 	local queueInfoList = {}
 	for queueIdx, info in pairs(self:getQueueTbl()) do 
 		table.insert(queueInfoList, {k = queueIdx, v = info.targetId})
 	end
 	return {
-		workQueueType = self:getWorkQueueType(),
-		workQueueIdx = self:getWorkQueueIdx(),
+		QueueType = self:getQueueType(),
+		QueueIdx = self:getQueueIdx(),
 		queueInfoList = queueInfoList,
-		targetId = self:getWorkTargetId() or COMMON_CONST.BUILD_WORK_QUEUE_BUSY_NONE,
+		targetId = self:getWorkTargetId() or CONST.BUILD_WORK_QUEUE_BUSY_NONE,
 		expireTime = self:getExpireTime() or -1,
 	}
 end
 
-function clsWorkQueue:tryStartWork()
+function clsQueue:tryStartWork()
 	if self:getWorkIdx() then
 		return
 	end
@@ -212,11 +205,10 @@ function clsWorkQueue:tryStartWork()
 	return startQueueIdx, startTargetInfo.targetId
 end
 
-function clsWorkQueue:afterStartWork(startQueueIdx, startTargetId)
-
+function clsQueue:afterStartWork()
 end
 
-function clsWorkQueue:onWorkFinish(targetId)
+function clsQueue:onWorkFinish(targetId)
 	local nowWorkTargetId = self:getWorkTargetId()
 	assert(nowWorkTargetId == targetId)
 	self._queueTbl[self:getWorkIdx()] = nil
@@ -224,11 +216,11 @@ function clsWorkQueue:onWorkFinish(targetId)
 	self:setWorkIdx(nil)
 end
 
-function clsWorkQueue:getTimerKey(targetId)
+function clsQueue:getTimerKey(targetId)
 	assert(false)
 end
 
-function clsWorkQueue:onCancel(queueIdx)
+function clsQueue:onCancel(queueIdx)
 	if queueIdx == self:getWorkIdx() then
 		return false
 	end

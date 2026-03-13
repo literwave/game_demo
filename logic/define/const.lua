@@ -48,3 +48,9 @@ ITEM_KIND = {
 }
 
 NO_NAME = ""
+
+FIRST_QUEUE_IDX = 1
+QUEUE_PRIORITY = {1, 2, 3}
+
+
+REASON_BUY_BUILD_QUEUE = 1 -- 购买建造队列

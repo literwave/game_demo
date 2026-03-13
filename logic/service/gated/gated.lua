@@ -163,18 +163,8 @@ function CMD.open(conf)
 	skynet.send(".logind", "lua", "registerGate", skynet.self(), conf.serverId, addr)
 end
 
-function CMD.login(token, loginInfo, addr)
-	skynet.error("login step 2-gate", token)
-	assert(not TKOEN_TBL[token])
-	TKOEN_TBL[token] = {
-		userId = loginInfo.userId,
-		serverId = loginInfo.serverId,
-		account = loginInfo.account,
-	}
-end
-
 function CMD.sendClientPack(fd, packet)
-	websocket.write(fd, packet, "binary")
+	websocket.write(fd, packet, "binary") 
 end
 
 function CMD.kick(fd)

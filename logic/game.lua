@@ -37,3 +37,7 @@ end
 function getLoginLockKey()
 	return "loginLock"
 end
+
+function getShutDownTime()
+	return 0
+end
