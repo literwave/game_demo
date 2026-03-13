@@ -66,6 +66,22 @@ function systemStartup()
 	end
 end
 
+local function initUserQueue(userId)
+	local oci = {
+		_userId = userId,
+		_queueIdx = CONST.FIRST_QUEUE_IDX,
+	}
+	local queue = createQueue(oci)
+	queue:saveToDB()
+end
+
+function onUserLogin(user, isFirstLogin)
+	if not isFirstLogin then
+		return
+	end
+	initUserQueue(user:getUserId())
+end
+
 function syncAllQueueInfoToClient(userId)
 	local fd = USER_MGR.getfdByUserId(userId)
 	if not fd then
@@ -87,15 +103,6 @@ function syncQueueInfoToClient(queueObj)
 	if fd then
 		for_caller.s2c_sync_queue_info(fd, queueObj:genClientPTOInfo())
 	end
-end
-
-function initUserWorkQueue(userId)
-	local oci = {
-		_userId = userId,
-		_queueIdx = CONST.FIRST_QUEUE_IDX,
-	}
-	local queue = createQueue(oci)
-	queue:saveToDB()
 end
 
 local function tryUpdateUserWorkQueue(userId)

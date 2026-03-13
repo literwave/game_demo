@@ -45,6 +45,7 @@ function refLogin(userId, fd, gateSrv)
 end
 
 function moduleOnUserLogin(user, isFirstLogin)
+	QUEUE_MGR.onUserLogin(user, isFirstLogin)
 end
 
 local function kickUser(fd, userId)

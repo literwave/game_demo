@@ -19,8 +19,8 @@ local colDescTbl = {
 		colName = "userBuildCol",
 	},
 	{
-		colKey = "WORK_QUEUE_COL",
-		colName = "workQueueCol"
+		colKey = "QUEUE_COL",
+		colName = "queueCol"
 	},
 	{
 		colKey = "USER_ITEM_COL",
