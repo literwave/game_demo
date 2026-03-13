@@ -220,15 +220,15 @@ function clsQueue:getTimerKey(targetId)
 	assert(false)
 end
 
-function clsQueue:onCancel(queueIdx)
-	if queueIdx == self:getWorkIdx() then
+function clsQueue:onCancel(workIdx)
+	if workIdx == self:getWorkIdx() then
 		return false
 	end
-	local targetInfo = self._queueTbl[queueIdx]
+	local targetInfo = self._queueTbl[workIdx]
 	if not targetInfo then
 		return false
 	end
-	self:removeQueueData(queueIdx)
+	self:removeQueueData(workIdx)
 	return true, targetInfo
 end
 

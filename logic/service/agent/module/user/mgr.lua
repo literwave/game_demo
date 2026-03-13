@@ -124,6 +124,7 @@ end
 function moduleOnUserLogin(user, isFirstLogin)
 	user:onLogin()
 	BUILD_MGR.onUserLogin(user, isFirstLogin)
+	QUEUE_MGR.onUserLogin(user, isFirstLogin)
 end
 
 local function kickUser(fd, userId)

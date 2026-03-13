@@ -1,30 +1,26 @@
 
-allUserWorkQueueTbl = {}
+allUserQueueTbl = {}
 --[[
 	[userId] = {
 		[queueIdx] = obj,
 	}
 ]]
 
-function refQueue(workQueueObj)
-	local userId = workQueueObj:getUserId()
-	local workQueueType = workQueueObj:getWorkQueueType()
-	local workQueueIdx = workQueueObj:getWorkQueueIdx()
-	if not allUserWorkQueueTbl[userId] then
-		allUserWorkQueueTbl[userId] = {}
+function refQueue(queueObj)
+	local userId = queueObj:getUserId()
+	local queueIdx = queueObj:getQueueIdx()
+	if not allUserQueueTbl[userId] then
+		allUserQueueTbl[userId] = {}
 	end
-	if not allUserWorkQueueTbl[userId][workQueueType] then
-		allUserWorkQueueTbl[userId][workQueueType] = {}
-	end
-	allUserWorkQueueTbl[userId][workQueueType][workQueueIdx] = workQueueObj
+	allUserQueueTbl[userId][queueIdx] = queueObj
 end
 
 function unrefQueue(workQueueObj)
 	local userId = workQueueObj:getUserId()
-	local workQueueIdx = workQueueObj:getWorkQueueIdx()
-	allUserWorkQueueTbl[userId][workQueueIdx] = nil
-	if table.isEmpty(allUserWorkQueueTbl[userId]) then
-		allUserWorkQueueTbl[userId] = nil
+	local queueIdx = workQueueObj:getWorkQueueIdx()
+	allUserQueueTbl[userId][queueIdx] = nil
+	if table.isEmpty(allUserQueueTbl[userId]) then
+		allUserQueueTbl[userId] = nil
 	end
 end
 
@@ -43,7 +39,7 @@ end
 
 function saveData()
 	local saveTbl = {}
-	for userId, queueInfoTbl in pairs(allUserWorkQueueTbl) do
+	for userId, queueInfoTbl in pairs(allUserQueueTbl) do
 		saveTbl[userId] = {}
 		for queueIdx, queueObj in pairs(queueInfoTbl) do
 			local info = {}
@@ -59,7 +55,7 @@ function systemStartup()
 	if offsetTime <= 0 then
 		return
 	end
-	for _, queueInfoTbl in pairs(allUserWorkQueueTbl) do
+	for _, queueInfoTbl in pairs(allUserQueueTbl) do
 		for _, queueObj in pairs(queueInfoTbl) do
 			queueObj:systemStartup(offsetTime)
 		end
@@ -94,7 +90,7 @@ function syncAllQueueInfoToClient(userId)
 			table.insert(list, queueObj:genClientPTOInfo())
 		end
 	end
-	for_caller.s2c_sync_all_queue_info(fd, list)
+	for_caller.s2c_sync_all_queue_info(fd, {list = list})
 end
 
 function syncQueueInfoToClient(queueObj)
@@ -105,9 +101,9 @@ function syncQueueInfoToClient(queueObj)
 	end
 end
 
-local function tryUpdateUserWorkQueue(userId)
+local function tryUpdateUserQueue(userId)
 	local needSyncToClient = false
-	for _, queueInfoTbl in pairs(allUserWorkQueueTbl[userId] or {}) do
+	for _, queueInfoTbl in pairs(allUserQueueTbl[userId] or {}) do
 		for _, queueObj in pairs(queueInfoTbl) do
 			if queueObj:checkIsExpired() then
 				needSyncToClient = queueObj:onExpired()
@@ -120,8 +116,8 @@ local function tryUpdateUserWorkQueue(userId)
 end
 
 function getUserAllQueueTbl(userId)
-	tryUpdateUserWorkQueue(userId)
-	return allUserWorkQueueTbl[userId]
+	tryUpdateUserQueue(userId)
+	return allUserQueueTbl[userId]
 end
 
 function getUserQueueTbl(userId)
@@ -130,17 +126,17 @@ function getUserQueueTbl(userId)
 end
 
 function getUserQueue(userId, queueIdx)
-	local workQueueTbl = getUserQueueTbl(userId)
-	return workQueueTbl and workQueueTbl[queueIdx]
+	local queueTbl = getUserQueueTbl(userId)
+	return queueTbl and queueTbl[queueIdx]
 end
 
-function createUserQueue(userId, workQueueIdx, expireTime)
-	if getUserQueue(userId, workQueueIdx) then
+function createUserQueue(userId, queueIdx, expireTime)
+	if getUserQueue(userId, queueIdx) then
 		return
 	end
 	local oci = {
 		_userId = userId,
-		_workQueueIdx = workQueueIdx,
+		_queueIdx = queueIdx,
 		_expireTime = expireTime,
 	}
 	local workQueueObj = createQueue(oci)
@@ -157,13 +153,13 @@ function getIdleBuildQueue(userId, targetId)
 end
 
 function checkWorkIsExist(userId, targetId)
-	local workQueueTbl = getUserQueueTbl(userId)
-	if not workQueueTbl then
+	local queueTbl = getUserQueueTbl(userId)
+	if not queueTbl then
 		return false
 	end
-	for _, workQueueObj in pairs(workQueueTbl) do
-		if workQueueObj:checkTargetIsInQueue(targetId) then
-			return true, workQueueObj
+	for _, queueObj in pairs(queueTbl) do
+		if queueObj:checkTargetIsInQueue(targetId) then
+			return true
 		end
 	end
 	return false
@@ -222,7 +218,8 @@ function tryRemoveWork(userId, queueIdx, targetId)
 	syncQueueInfoToClient(queueObj)
 end
 
-local function onReqBuyQueue(fd, buyQueueIdx, buyCnt)
+local function onReqBuyQueue(fd, tbl)
+	local buyQueueIdx, buyCnt = tbl.buyQueueIdx, tbl.buyCnt
 	if buyCnt <= 0 then
 		return
 	end
@@ -246,7 +243,7 @@ local function onReqBuyQueue(fd, buyQueueIdx, buyCnt)
 		createUserQueue(userId, buyQueueIdx, TIME.osBJSec() + CONST.ONE_HOUR_SEC * buyCnt)
 	end
 	syncAllQueueInfoToClient(userId)
-	for_caller.s2c_buy_build_queue(fd, buyQueueIdx, buyCnt)
+	for_caller.s2c_buy_build_queue(fd, {buyQueueIdx = buyQueueIdx, buyCnt = buyCnt})
 end
 
 local function onReqAllWorkQueueInfo(fd)
@@ -254,16 +251,17 @@ local function onReqAllWorkQueueInfo(fd)
 	syncAllQueueInfoToClient(userId)
 end
 
-local function onCancelBuildWork(fd, workQueueIdx, queueIdx)
+local function onCancelBuildWork(fd, tbl)
+	local workIdx, queueIdx = tbl.idx, tbl.queueIdx
 	local userId = USER_MGR.getUserIdByFd(fd)
-	local queueObj = getUserQueue(userId, workQueueIdx)
+	local queueObj = getUserQueue(userId, queueIdx)
 	if not queueObj then
 		return
 	end
-	if queueObj:getWorkIdx() == queueIdx then
+	if queueObj:getWorkIdx() == workIdx then
 		return
 	end
-	if not queueObj:onCancel(queueIdx) then
+	if not queueObj:onCancel(workIdx) then
 		return
 	end
 	syncQueueInfoToClient(queueObj)

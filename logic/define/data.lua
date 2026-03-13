@@ -77,10 +77,6 @@ function getBuildTypeById(bid)
 	return DATA_BUILD_CONF.builds[bid].buildType
 end
 
-function getInitialBuildFacilityList(bid)
-	return {}
-end
-
 function getDefaultHeadIcon()
 	return DATA_GLOBAL[2].value1
 end
