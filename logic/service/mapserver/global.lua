@@ -13,4 +13,5 @@ QTREE		= Import("../logic/service/mapserver/module/qtree/base.lua")
 MAP_BASE	= Import("../logic/service/mapserver/module/map/base.lua")
 SCENE_BASE	= Import("../logic/service/mapserver/module/scene/base.lua")
 SCENE_MGR	= Import("../logic/service/mapserver/module/scene/mgr.lua")
+ENTITY_MGR	= Import("../logic/service/mapserver/module/entity/mgr.lua")
 

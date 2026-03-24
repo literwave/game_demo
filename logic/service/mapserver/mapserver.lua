@@ -17,8 +17,8 @@ function CMD.onUserLogout(userId, fd)
 	USER_MGR.disconnect(userId, fd)
 end
 
-function CMD.syncToMap(modName, fd)
-	skynet.error("mapserver sync to map success", modName, fd)
+function CMD.syncToMap(oci)
+	ENTITY_MGR.syncToMap(oci)
 end
 
 skynet.start(function()
