@@ -17,7 +17,7 @@ skynet.start(function()
 	skynet.newservice("mcs") -- http服务
 	skynet.newservice("gameserver") -- gameserver can get all userId
 	skynet.newservice("mail")
-	-- skynet.newservice("mapserver")
+	skynet.newservice("mapserver")
 	-- skynet.newservice("battleserver")
 	-- 作为启动成功的logo
 	skynet.error("***       *******   *******   *******   *******     ***     ***       ***     ***   ***    ********")

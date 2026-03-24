@@ -1,5 +1,3 @@
-TIME = {}
-
 local offset = 0
 
 function osBJSecByTbl(tbl)
@@ -14,13 +12,12 @@ function osBJSec()
 end
 
 function getRelaDayNo(time)
-	local totalDay = 0
 	local Standard = TIME_BASE
 	if not time then
 		time = osBJSec()
 	end
 	assert(time > Standard)
-	totalDay = time / CONST.ONE_HOUR_SEC / CONST.ONE_DAY_HOUR
+	local totalDay = time / CONST.ONE_HOUR_SEC / CONST.ONE_DAY_HOUR
 	return math.floor(totalDay) + 1
 end
 
