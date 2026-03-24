@@ -127,6 +127,10 @@ function moduleOnUserLogin(user, isFirstLogin)
 	QUEUE_MGR.onUserLogin(user, isFirstLogin)
 end
 
+function moduleOnUserNextDay(userId, times)
+	times = times or 1
+end
+
 local function kickUser(fd, userId)
 	disconnect(fd)
 end

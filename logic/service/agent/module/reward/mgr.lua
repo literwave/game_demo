@@ -17,7 +17,7 @@ local function rewardItem(ret, userId, rewardInfoList, reasonList)
 		local newItemCount = rewardInfo.item_count
 		if newItemCount > 0 then
 			ITEM_MGR.addItem(userId, itemType, newItemCount, reasonList)
-			table.insert(ret, genRewardInfo(rewardInfo.reward_type, itemType, newItemCount))
+			table.insert(ret, GLOBAL_FUNC.genRewardInfo(rewardInfo.reward_type, itemType, newItemCount))
 		end
 		-- todo -- 这是溢出的要发邮件
 	end

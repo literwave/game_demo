@@ -38,7 +38,7 @@ local saveFieldTbl = {
 		return 0
 	end,
 	_headIcon = function ()
-		return DATA_COMMON.getDefaultHeadIcon()
+		return DATA_COMMON.getValueByKey(2)
 	end,
 	_lotteryTimes = function ()
 		return nil

@@ -199,8 +199,4 @@ function getIdBySrvIdAndTimestamp()
 	return string.format("%06d%08d%03d", GAME.getServerId(), sec, srvAutoId)
 end
 
-function genRewardInfo(rewardType, itemType, itemCount)
-	return {reward_type = rewardType, item_type = itemType, item_count = itemCount}
-end
-
 EMPTY_TABLE = {}

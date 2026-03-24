@@ -12,3 +12,7 @@ function subItemList(itemList, cb)
 	}
 	skynet.send(tAddr, "lua", "subItemList", tbl)
 end
+
+function genRewardInfo(rewardType, itemType, itemCount)
+	return {reward_type = rewardType, item_type = itemType, item_count = itemCount}
+end

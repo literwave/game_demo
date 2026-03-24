@@ -26,6 +26,7 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId, token)
 	skynet.error("login step 3-agent", fd, userId, addr, account)
 	local user = false
 	local isFirstLogin = false
+	local lastLoginTime = TIME.osBJSec()
 	if USER_MGR.isNewUser(userId) then
 		user = USER_MGR.createNewUser(gateSrv, fd, userId, serverId)
 		isFirstLogin = true
@@ -34,6 +35,7 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId, token)
 		USER_MGR.refLogin(userId, fd, user)
 		user:setFd(fd)
 		user:setGateSrv(gateSrv)
+		lastLoginTime = user:getLoginTime()
 	end
 	user:setAndSyncVerifyLogin(token)
 	user:setAccount(account)
@@ -41,6 +43,11 @@ function CMD.login(gateSrv, fd, userId, addr, account, serverId, token)
 	user:setAndSyncHeartBeatTime(TIME.osBJSec())
 	CALL_OUT.callFre("USER_MGR", "detectUserHeartBeat", CONST.USER_HEART_BEAT_TIMEOUT, userId)
 	USER_MGR.moduleOnUserLogin(user, isFirstLogin)
+	local times = TIME.getDiffDay(TIME.osBJSec(), lastLoginTime)
+	if times > 1 then
+		USER_MGR.moduleOnUserNextDay(user, times)
+	end
+	CALL_OUT.callOnce("USER_MGR", "moduleOnUserNextDay", 24, userId)
 	skynet.send(".gameserver", "lua", "onUserLogin", userId, fd, gateSrv, isFirstLogin)
 	skynet.send(".mail", "lua", "onUserLogin", userId, fd, gateSrv, isFirstLogin)
 end

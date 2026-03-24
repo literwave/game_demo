@@ -426,7 +426,7 @@ local function tryDelUserMailByKind(userId, mailKind)
 			table.insert(mailList, mail)
 		end
 	end
-	local limitCnt = DATA_COMMON.getMailLimitCnt()
+	local limitCnt = DATA_COMMON.getValueByKey(3)
 	local needDelCnt = #mailList - limitCnt
 	if needDelCnt <= 0 then
 		return

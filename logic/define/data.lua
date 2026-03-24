@@ -37,6 +37,10 @@ skynet.init(function()
 	initConfigData()
 end)
 
+function getValueByKey(key)
+	return DATA_GLOBAL[key].value2
+end
+
 local function getReportInfo(reportId)
 	return DATA_REPORT[reportId]
 end
@@ -60,10 +64,6 @@ function getHeroInfoByType(heroType)
 	return DATA_HERO[heroType]
 end
 
-function getUserCreateReward()
-	return DATA_GLOBAL[1].value2
-end
-
 function getItemKindByType(itemType)
 	local itemKind = DATA_ITEM[itemType].itemKind
 	return itemKind
@@ -75,10 +75,6 @@ end
 
 function getBuildTypeById(bid)
 	return DATA_BUILD_CONF.builds[bid].buildType
-end
-
-function getDefaultHeadIcon()
-	return DATA_GLOBAL[2].value1
 end
 
 function getLotteryCommonPools(useLotteryTimes)
@@ -105,13 +101,21 @@ function getItemKindByType(itemType)
 	return DATA_ITEM[itemType].Kind
 end
 
-function getMailLimitCnt()
-	return DATA_GLOBAL[3].value1
-end
-
 function canLockMail()
 end
 
 function getQueueCapacity()
 	return 5
+end
+
+function getBuildLevelUpLimit()
+	return {}
+end
+
+function getBuildCreateLimit()
+	return {}
+end
+
+function getBuildMaxLevel(bType)
+	return 1
 end
