@@ -2,6 +2,13 @@ TIME = {}
 
 local offset = 0
 
+function osBJSecByTbl(tbl)
+	local ret = os.time(tbl)
+	return ret
+end
+
+local TIME_BASE = osBJSecByTbl({year=2004,month=1,day=1,hour=0,min=0,sec=0,})
+
 function osBJSec()
 	return os.time() + offset
 end
