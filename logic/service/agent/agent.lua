@@ -3,6 +3,7 @@ local queue = require "skynet.queue"
 local protobuf = require "protobuf"
 
 local CMD = {}
+local RPC_CMD = {}
 
 local userQueues = {
 	-- [userId] = queue(),
@@ -10,6 +11,12 @@ local userQueues = {
 
 skynet.register_protocol {
 	name = "client",
+	id = skynet.PTYPE_CLIENT,
+	unpack = skynet.unpack
+}
+
+skynet.register_protocol {
+	name = "rpc",
 	id = skynet.PTYPE_CLIENT,
 	unpack = skynet.unpack
 }
@@ -58,6 +65,26 @@ function CMD.disconnect(fd, userId)
 	skynet.send(".gameserver", "lua", "onUserLogout", userId, fd)
 end
 
+local function subItemListRecv(id, taddr, userId, itemList, reasonList)
+	if not ITEM_MGR.checkCostEnough(userId, itemList) then
+		skynet.send(taddr, "rpc", id, false)
+		return
+	end
+	local ok = skynet.call(taddr, "rpc", id, true)
+	if not ok then
+		return
+	end
+	assert(ITEM_MGR.delCostList(userId, itemList))
+end
+
+function RPC_CMD.subItemList(id, userId, taddr, itemList, reasonList)
+	if not ITEM_MGR.checkCostEnough(userId, itemList) then
+		skynet.send(taddr, "rpc", id, false)
+	end
+	local q = queue()
+	local ok = q(subItemListRecv, id, taddr, userId, itemList, reasonList)
+end
+
 local function errorHandler(err)
 	skynet.error("agent error：", err)
 	skynet.error("stack: ", debug.traceback())
@@ -96,5 +123,9 @@ skynet.start(function()
 		if not ok then
 			LOG._error("userQueue error: %s", err)
 		end
+	end)
+
+		skynet.dispatch("rpc", function(seesion, address)
+		RPC_CMD.subItemList
 	end)
 end)
