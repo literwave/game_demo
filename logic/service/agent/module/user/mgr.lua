@@ -116,7 +116,7 @@ function createNewUser(gateSrv, fd, userId, serverId)
 	user:setFd(fd)
 	user:setGateSrv(gateSrv)
 	-- WORK_QUEUE_MGR.initUserWorkQueue(userId)
-	REWARD_MGR.rewardUser(userId, DATA_COMMON.getUserCreateReward())
+	REWARD_MGR.rewardUser(userId, DATA_COMMON.getValueByKey(1))
 	return user
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
 end
