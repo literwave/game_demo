@@ -17,7 +17,7 @@ skynet.register_protocol {
 
 skynet.register_protocol {
 	name = "rpc",
-	id = skynet.PTYPE_CLIENT,
+	id = skynet.PTYPE_RPC,
 	unpack = skynet.unpack
 }
 
@@ -125,7 +125,12 @@ skynet.start(function()
 		end
 	end)
 
-		skynet.dispatch("rpc", function(seesion, address)
-		RPC_CMD.subItemList
+		skynet.dispatch("rpc", function(seesion, address, command,...)
+			local f = RPC_CMD[command]
+			if seesion ~= 0 then
+				skynet.ret(skynet.pack(f(...)))
+			else
+				f(...)
+			end
 	end)
 end)

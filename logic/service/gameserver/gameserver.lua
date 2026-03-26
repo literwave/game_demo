@@ -20,7 +20,7 @@ end
 
 skynet.register_protocol {
 	name = "rpc",
-	id = skynet.PTYPE_CLIENT,
+	id = skynet.PTYPE_RPC,
 	unpack = skynet.unpack
 }
 
