@@ -132,8 +132,9 @@ bash shell/runtest.sh
 ### 新增 Agent 玩法模块
 
 1. 在 `logic/service/agent/module/` 新增模块
-2. 在对应模块管理器`logic/service/agent/global.lua` 中注册处理函数
-3. 需要持久化时统一走 `.mongodb` 服务
+2. 在对应模块管理器 `logic/service/agent/module/*/mgr.lua` 中实现处理入口（handler/CMD）
+3. 在 `logic/service/agent/global.lua` 里把模块 `Import` 挂到全局（例如 `BUILD_MGR = Import(...)`），让其他地方可直接调用
+4. 需要持久化时统一走 `.mongodb` 服务
 
 ### 通信建议
 

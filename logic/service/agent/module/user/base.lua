@@ -6,7 +6,7 @@ local saveFieldTbl = {
 	_birthTime = function ()
 		return nil
 	end,
-	_logintime = function ()
+	_loginTime = function ()
 		return nil
 	end,
 	_bornServerId = function ()
@@ -195,6 +195,10 @@ end
 
 function clsUser:setLoginTime(time)
 	self:saveField({"_loginTime"}, time)
+end
+
+function clsUser:getLoginTime()
+	return self._loginTime
 end
 
 function clsUser:setBornServerId(serverId)
