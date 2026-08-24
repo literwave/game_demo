@@ -20,12 +20,27 @@ function createHero(oci)
 	return hero
 end
 
+-- 将内存中该玩家全部英雄 dump 为 UserHeroDoc 写入 mongo（路径只用 _heroes）
+function persistUserHeroes(userId)
+	assert(userId)
+	local heroTbl = userHeroTbl[userId] or {}
+	local bagData = {}
+	for heroType, hero in pairs(heroTbl) do
+		bagData[heroType] = hero._data
+	end
+	local doc = ORM.create(ORM.CLS_USER_HERO_DOC, { _heroes = bagData })
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_HERO_COL, userId, ORM.dump(doc))
+end
+
 local function tryInitUserHeroData(userId)
 	if not userHeroTbl[userId] then
-		local dataTbl = MONGO_SLAVE.loadSingleUserHero(userId) or {}
+		local raw = MONGO_SLAVE.loadSingleUserHero(userId) or {}
 		userHeroTbl[userId] = {}
-		for _, oci in pairs(dataTbl) do
-			createHero(oci)
+		local doc = ORM.create(ORM.CLS_USER_HERO_DOC, raw)
+		for _, heroData in pairs(doc._heroes) do
+			if ORM.is_cls(heroData, ORM.CLS_HERO_DATA) then
+				createHero(heroData)
+			end
 		end
 	end
 	return userHeroTbl[userId]
@@ -41,17 +56,9 @@ function getHeroByType(userId, heroType)
 end
 
 function saveData()
-	local saveTbl = {}
-	for userId, heroTbl in pairs(userHeroTbl) do
-		local heroInfoTbl = {}
-		for heroType, hero in pairs(heroTbl) do
-			local info = {}
-			hero:serialize(info)
-			heroInfoTbl[heroType] = info
-		end
-		saveTbl[userId] = heroInfoTbl
+	for userId in pairs(userHeroTbl) do
+		persistUserHeroes(userId)
 	end
-	MONGO_SLAVE.saveManyUserHero(saveTbl)
 end
 
 function addHero(userId, heroType, reasonList)
@@ -63,6 +70,8 @@ function addHero(userId, heroType, reasonList)
 		_userId = userId,
 		_heroType = heroType,
 		_newTag = true,
+		_level = 1,
+		_star = 1,
 	}
 	local hero = createHero(oci)
 	hero:saveToDB()

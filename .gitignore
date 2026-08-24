@@ -9,24 +9,36 @@ Thumbs.db
 *.lnk
 .vs/
 .idea/
+.vscode/
 
-# Build artifacts
+# Build artifacts (generic)
 bin/
 obj/
 Build/
 build/
 temp/
 Temp/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.pid
 
 # Logs
 log/
 logs/
 *.log
 
+# Skynet compiled binaries / native libs
+skynet/skynet
+skynet/skynet.pid
+skynet/luaclib/*.so
+skynet/cservice/*.so
+skynet/3rd/lua/lua
+skynet/3rd/lua/luac
+skynet/3rd/pbc/**/*.so
+
+# Third-party / generated
 src/
 skynet/3rd/protobuf/
-
-# Third-party tarballs / archives
-src/
-
-

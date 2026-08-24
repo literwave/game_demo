@@ -1,112 +1,70 @@
-
-local saveFieldTbl = {
-	_userId = function ()
-		return nil
-	end,
-	_birthTime = function ()
-		return nil
-	end,
-	_loginTime = function ()
-		return nil
-	end,
-	_bornServerId = function ()
-		return nil
-	end,
-	_name = function ()
-		return CONST.NO_NAME
-	end,
-	_sex = function ()
-		return CONST.SEX_NONE
-	end,
-	_sdkParamTbl = function ()
-		return nil
-	end,
-	_resTbl = function ()
-		return {
-			--[[
-				[resourceType] = cnt,
-			]]
-		}
-	end,
-	_realDiamond = function ()
-		return 0
-	end,
-	_giftDiamond = function ()
-		return 0
-	end,
-	_sumRechargeDiamond = function ()
-		return 0
-	end,
-	_headIcon = function ()
-		return DATA_COMMON.getValueByKey(2)
-	end,
-	_lotteryTimes = function ()
-		return nil
-	end
-}
-
 clsUser = clsObject:Inherit()
 
 function clsUser:__init__(oci)
 	Super(clsUser).__init__(self, oci)
-	for k, func in pairs(saveFieldTbl) do
-		if oci[k] == nil then
-			self[k] = func()
-		else
-			self[k] = oci[k]
-		end
-	end
+	self._data = ORM.create(ORM.CLS_USER_DATA, oci)
+	-- 运行时字段，不落库
 	self._loginAddr = nil
 	self._fd = nil
 	self._heartBeatTime = nil
 	self._gateSrv = nil
 	self._token = nil
+	self._account = nil
 end
 
-function clsUser:saveField(keyList, val)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_INFO_COL, self._userId, table.unpack(keyList)}, val)
+-- 方案 A：子树更新，路径只允许 string 字段名（无 @、无数字段）
+function clsUser:saveField(field)
+	assert(type(field) == "string", "saveField only accepts string field name")
+	local userId = self._data._userId
+	local value = ORM.dump_field(self._data, field)
+	MONGO_SLAVE.saveDocField(MONGO_SLAVE.USER_INFO_COL, userId, field, value)
+end
+
+function clsUser:saveToDB()
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_INFO_COL, self._data._userId, ORM.dump(self._data))
 end
 
 function clsUser:getUserId()
-	return self._userId
+	return self._data._userId
 end
+
 function clsUser:isOnline()
-	return self:getVfd() ~= nil
+	return self:getFd() ~= nil
 end
 
 function clsUser:getBirthTime()
-	return self._birthTime
+	return self._data._birthTime
 end
 
 function clsUser:getName()
-	return self._name
+	return self._data._name
 end
 
 function clsUser:setName(name)
-	self._name = name
-	self:saveField({"_name"}, name)
+	self._data._name = name
+	self:saveField("_name")
 end
 
 function clsUser:getSex()
-	return self._sex
+	return self._data._sex
 end
 
 function clsUser:setSex(sex)
-	self._sex = sex
-	self:saveField({"_sex"}, sex)
+	self._data._sex = sex
+	self:saveField("_sex")
 end
 
 function clsUser:getResTbl()
-	return self._resTbl
+	return self._data._resTbl
 end
 
 function clsUser:getResNum(resType)
-	return self._resTbl[resType] or 0
+	return self._data._resTbl[resType] or 0
 end
 
 function clsUser:addRes(resType, num)
 	local resNum = self:getResNum(resType)
-	self._resTbl[resType] = num + resNum
+	self._data._resTbl[resType] = num + resNum
 end
 
 function clsUser:syncRes(resTypeList)
@@ -120,21 +78,16 @@ function clsUser:syncRes(resTypeList)
 	end
 end
 
-function clsUser:serialize(tbl)
-	for key, _ in pairs(saveFieldTbl) do
-		tbl[key] = self[key]
-	end
-end
-
-function clsUser:saveToDB()
-	local info = {}
-	self:serialize(info)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_INFO_COL, self._userId}, info)
-end
-
 function clsUser:setSdkParamTbl(paramTbl)
-	self._sdkParamTbl = paramTbl
-	self:saveField({"_sdkParamTbl"}, self._sdkParamTbl)
+	-- 归一成 <string,string>，与 SdkParamMap 一致
+	local tbl = {}
+	if paramTbl then
+		for k, v in pairs(paramTbl) do
+			tbl[tostring(k)] = tostring(v)
+		end
+	end
+	self._data._sdkParamTbl = tbl
+	self:saveField("_sdkParamTbl")
 end
 
 function clsUser:updateByLoginParamTbl(paramTbl)
@@ -181,7 +134,12 @@ function clsUser:getHeartBeatTime()
 	return self._heartBeatTime
 end
 
+function clsUser:setHeartBeatTime(time)
+	self._heartBeatTime = time
+end
+
 function clsUser:setAndSyncHeartBeatTime(time)
+	self:setHeartBeatTime(time)
 	local fd = self:getFd()
 	local ptoTbl = {
 		heartBeatTime = time
@@ -194,49 +152,51 @@ function clsUser:onLogin()
 end
 
 function clsUser:setLoginTime(time)
-	self:saveField({"_loginTime"}, time)
+	self._data._loginTime = time
+	self:saveField("_loginTime")
 end
 
 function clsUser:getLoginTime()
-	return self._loginTime
+	return self._data._loginTime
 end
 
 function clsUser:setBornServerId(serverId)
-	self:saveField({"_bornServerId"}, serverId)
+	self._data._bornServerId = serverId
+	self:saveField("_bornServerId")
 end
 
 function clsUser:getDiamond()
-	return self._realDiamond + self._giftDiamond
+	return self._data._realDiamond + self._data._giftDiamond
 end
 
 function clsUser:getRealDiamond()
-	return self._realDiamond
+	return self._data._realDiamond
 end
 
 function clsUser:getGiftDiamond()
-	return self._giftDiamond
+	return self._data._giftDiamond
 end
 
 function clsUser:addSumRechargeDiamond(addCnt)
-	self._sumRechargeDiamond = self._sumRechargeDiamond + addCnt
-	self:saveField({"_sumRechargeDiamond"}, self._sumRechargeDiamond)
+	self._data._sumRechargeDiamond = self._data._sumRechargeDiamond + addCnt
+	self:saveField("_sumRechargeDiamond")
 end
 
 function clsUser:getSumRechargeDiamond()
-	return self._sumRechargeDiamond
+	return self._data._sumRechargeDiamond
 end
 
 function clsUser:addRealDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
 	assert(reasonList[1] == CONST.FLOW_REASON.RECHARGE or reasonList[1] == CONST.FLOW_REASON.WIZ)
-	self._realDiamond = self._realDiamond + addCnt
-	self:saveField({"_realDiamond"}, self._realDiamond)
+	self._data._realDiamond = self._data._realDiamond + addCnt
+	self:saveField("_realDiamond")
 end
 
 function clsUser:addGiftDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
-	self._giftDiamond = self._giftDiamond + addCnt
-	self:saveField({"_giftDiamond"}, self._giftDiamond)
+	self._data._giftDiamond = self._data._giftDiamond + addCnt
+	self:saveField("_giftDiamond")
 end
 
 function clsUser:addRealDiamondAndSync(addCnt, reasonList)
@@ -255,36 +215,35 @@ function clsUser:syncDiamond()
 	}
 	local fd = self:getFd()
 	if fd then
-		for_caller.s2c_sync_user_diamond(fd, ptoTbl)	
+		for_caller.s2c_sync_user_diamond(fd, ptoTbl)
 	end
 end
 
 function clsUser:addDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
-	self._realDiamond = self._realDiamond + addCnt
-	self:saveField({"_realDiamond"}, self._realDiamond)
+	self._data._realDiamond = self._data._realDiamond + addCnt
+	self:saveField("_realDiamond")
 end
 
 function clsUser:subDiamond(sumSubCnt, reasonList)
 	assert(sumSubCnt > 0)
 	assert(self:getDiamond() >= sumSubCnt)
 	local subReal, subGift = 0, 0
-	if self._realDiamond >= sumSubCnt then
+	if self._data._realDiamond >= sumSubCnt then
 		subReal = sumSubCnt
-		self._realDiamond = self._realDiamond - sumSubCnt
+		self._data._realDiamond = self._data._realDiamond - sumSubCnt
 	else
-		subReal = self._realDiamond
-		self._realDiamond = 0
+		subReal = self._data._realDiamond
+		self._data._realDiamond = 0
 		subGift = sumSubCnt - subReal
-		self._giftDiamond = self._giftDiamond - subGift
+		self._data._giftDiamond = self._data._giftDiamond - subGift
 	end
 	if subReal > 0 then
-		self:saveField({"_realDiamond"}, self._realDiamond)
+		self:saveField("_realDiamond")
 	end
 	if subGift > 0 then
-		self:saveField({"_giftDiamond"}, self._giftDiamond)
+		self:saveField("_giftDiamond")
 	end
-	-- afterSubDiamond(self, subReal, subGift, extTbl, reasonList)
 end
 
 function clsUser:setAndSyncVerifyLogin(token)
@@ -293,16 +252,16 @@ function clsUser:setAndSyncVerifyLogin(token)
 	local ptoTbl = {
 		token = token
 	}
-	for_caller.s2c_verify_login(fd, ptoTbl)	
+	for_caller.s2c_verify_login(fd, ptoTbl)
 end
 
 function clsUser:getHeadIcon()
-	return self._headIcon
+	return self._data._headIcon
 end
 
 function clsUser:setHeadIcon(headIcon)
-	self._headIcon = headIcon
-	self:saveField({"_headIcon"}, headIcon)
+	self._data._headIcon = headIcon
+	self:saveField("_headIcon")
 end
 
 function clsUser:getClientPTOInfo()
@@ -320,10 +279,10 @@ function clsUser:syncUserBaseInfo()
 end
 
 function clsUser:getLotteryTimes()
-	return self._lotteryTimes
+	return self._data._lotteryTimes
 end
 
 function clsUser:setLotteryTimes(lotteryTimes)
-	self._lotteryTimes = lotteryTimes
-	self:saveField({"_lotteryTimes"}, lotteryTimes)
+	self._data._lotteryTimes = lotteryTimes
+	self:saveField("_lotteryTimes")
 end

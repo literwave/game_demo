@@ -134,6 +134,39 @@ function commonLoadSingle(col, key)
 	end
 end
 
+-- 整包覆盖 dat（无 @；map 的 number key 由 ORM.dump 转成字符串）
+function saveDoc(col, key, dumped)
+	assert(col)
+	assert(key)
+	assert(type(dumped) == "table")
+	local cmd = {
+		key = key,
+		opType = "$set",
+		fieldStr = "dat",
+		value = dumped,
+	}
+	skynet.send(".mongodb", "lua", "saveData", {
+		[col] = {cmd},
+	})
+end
+
+-- 子树字段更新：field 必须是 string 字段名，禁止数字路径段
+function saveDocField(col, key, field, value)
+	assert(col)
+	assert(key)
+	assert(type(field) == "string", "saveDocField field must be string")
+	assert(not tonumber(field), "saveDocField field must not be numeric string")
+	local cmd = {
+		key = key,
+		opType = "$set",
+		fieldStr = "dat." .. field,
+		value = value,
+	}
+	skynet.send(".mongodb", "lua", "saveData", {
+		[col] = {cmd},
+	})
+end
+
 function loadSingleUserInfo(userId)
 	return commonLoadSingle(USER_INFO_COL, userId)
 end

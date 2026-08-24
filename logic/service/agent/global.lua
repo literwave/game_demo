@@ -10,6 +10,8 @@ MAIL		= Import("../common/mail.lua")
 GLOBAL_FUNC	= Import("../common/global_func.lua")
 TIME		= Import("../common/time.lua")
 
+ORM		= Import("../orm/init.lua")
+
 USER_BASE	= Import("../logic/service/agent/module/user/base.lua")
 USER_MGR	= Import("../logic/service/agent/module/user/mgr.lua")
 JSON4LUA	= Import("../common/json.lua")

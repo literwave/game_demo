@@ -104,6 +104,9 @@ function createNewUser(gateSrv, fd, userId, serverId)
 		_userId = userId,
 		_birthTime = os.time(),
 		_bornServerId = serverId,
+		_name = CONST.NO_NAME,
+		_sex = CONST.SEX_NONE,
+		_headIcon = DATA_COMMON.getValueByKey(2),
 	}
 	local user = USER_BASE.clsUser:New(oci)
 	refLogin(userId, fd, user)
