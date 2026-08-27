@@ -39,6 +39,44 @@ mailRefTbl = {}
 	[mailId] = cnt,
 --]]
 
+local SVR_MAIL_DOC_KEY = "1"
+
+local function dumpUserMailInfo(info)
+	local mailTbl = {}
+	for mailKind, idMap in pairs(info.mailTbl or {}) do
+		mailTbl[mailKind] = {}
+		for mailId, st in pairs(idMap) do
+			mailTbl[mailKind][tostring(mailId)] = {
+				isRead = st.isRead and true or false,
+				isGotReward = st.isGotReward and true or false,
+				isLock = st.isLock and true or false,
+				lv = st.lv or 0,
+			}
+		end
+	end
+	local doc = ORM.create(ORM.CLS_USER_MAIL_DOC, {
+		mailTbl = mailTbl,
+		fetchSvrIdx = info.fetchSvrIdx or 0,
+	})
+	return ORM.dump(doc)
+end
+
+local function persistUserMail(userId)
+	local info = userMailInfoTbl[userId]
+	if not info then
+		return
+	end
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_MAIL_COL, userId, dumpUserMailInfo(info))
+end
+
+local function persistSvrMail()
+	local doc = ORM.create(ORM.CLS_SVR_MAIL_DOC, {
+		globalIdx = svrMailInfo.globalIdx or 0,
+		svrMailTbl = svrMailInfo.svrMailTbl or {},
+	})
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.SVR_MAIL_COL, SVR_MAIL_DOC_KEY, ORM.dump(doc))
+end
+
 function saveData()
 	local saveMailTbl = {}
 	for mailId, mail in pairs(allMailTbl) do
@@ -54,8 +92,10 @@ function saveData()
 		end
 	end
 	MONGO_SLAVE.commonDelMany(MONGO_SLAVE.MAIL_COL, delMailTbl)
-	MONGO_SLAVE.commonSaveTbl(MONGO_SLAVE.USER_MAIL_COL, userMailInfoTbl)
-	MONGO_SLAVE.commonSaveTbl(MONGO_SLAVE.SVR_MAIL_COL, svrMailInfo)
+	for userId, info in pairs(userMailInfoTbl) do
+		MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_MAIL_COL, userId, dumpUserMailInfo(info))
+	end
+	persistSvrMail()
 end
 
 local function createMail(oci)
@@ -66,14 +106,40 @@ local function createMail(oci)
 end
 
 function loadData()
-	userMailInfoTbl = MONGO_SLAVE.commonLoadTbl(MONGO_SLAVE.USER_MAIL_COL)
-	svrMailInfo = MONGO_SLAVE.commonLoadTbl(MONGO_SLAVE.SVR_MAIL_COL)
-	if not svrMailInfo.globalIdx then
-		svrMailInfo = {
-			globalIdx = 0,
-			svrMailTbl = {},
+	userMailInfoTbl = {}
+	local rawUserTbl = MONGO_SLAVE.commonLoadTbl(MONGO_SLAVE.USER_MAIL_COL) or {}
+	for userId, raw in pairs(rawUserTbl) do
+		local doc = ORM.create(ORM.CLS_USER_MAIL_DOC, raw)
+		local info = {
+			mailTbl = {},
+			fetchSvrIdx = doc.fetchSvrIdx,
 		}
+		for mailKind, idMap in pairs(doc.mailTbl) do
+			info.mailTbl[mailKind] = {}
+			for mailId, st in pairs(idMap) do
+				if type(st) == "table" then
+					info.mailTbl[mailKind][mailId] = {
+						isRead = st.isRead,
+						isGotReward = st.isGotReward,
+						isLock = st.isLock,
+						lv = st.lv,
+					}
+				end
+			end
+		end
+		userMailInfoTbl[userId] = info
 	end
+
+	local rawSvr = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.SVR_MAIL_COL, SVR_MAIL_DOC_KEY) or {}
+	local svrDoc = ORM.create(ORM.CLS_SVR_MAIL_DOC, rawSvr)
+	svrMailInfo = {
+		globalIdx = svrDoc.globalIdx or 0,
+		svrMailTbl = {},
+	}
+	for idx, mailId in pairs(svrDoc.svrMailTbl) do
+		svrMailInfo.svrMailTbl[idx] = mailId
+	end
+
 	for _, mailId in pairs(svrMailInfo.svrMailTbl) do
 		mailRefTbl[mailId] = (mailRefTbl[mailId] or 0) + 1
 	end
@@ -92,7 +158,7 @@ local function tryInitUserMailInfo(userId)
 			mailTbl = {},
 			fetchSvrIdx = svrMailInfo.globalIdx,
 		}
-		MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_MAIL_COL, userId}, userMailInfoTbl[userId])
+		persistUserMail(userId)
 	end
 end
 
@@ -148,20 +214,20 @@ local function setMailReaded(userId, mailKind, mailId)
 	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
 	if not userMailInfo.isRead then
 		userMailInfo.isRead = true
-		MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_MAIL_COL, userId, "mailTbl", mailKind, mailId, "isRead"}, true)
+		persistUserMail(userId)
 	end
 end
 
 local function setMailRewarded(userId, mailKind, mailId)
 	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
 	userMailInfo.isGotReward = true
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_MAIL_COL, userId, "mailTbl", mailKind, mailId, "isGotReward"}, true)
+	persistUserMail(userId)
 end
 
 local function setMailLock(userId, mailKind, mailId, isLock)
 	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
 	userMailInfo.isLock = isLock
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_MAIL_COL, userId, "mailTbl", mailKind, mailId, "isLock"}, isLock)
+	persistUserMail(userId)
 end
 
 local function delMail(mailId)
@@ -190,7 +256,7 @@ local function delUserMail(userId, mailKind, mailId)
 	local mailTbl = userMailInfoTbl[userId].mailTbl
 	if mailTbl[mailKind] and mailTbl[mailKind][mailId] then
 		mailTbl[mailKind][mailId] = nil
-		MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_MAIL_COL, userId, "mailTbl", mailKind, mailId}, nil)
+		persistUserMail(userId)
 		descMailRefCnt(mailId)
 	end
 end
@@ -202,13 +268,13 @@ local function addUserMailInfo(userId, mailKind, mailId, userMailInfo)
 	end
 	assert(not mailTbl[mailKind][mailId])
 	mailTbl[mailKind][mailId] = userMailInfo
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_MAIL_COL, userId, "mailTbl", mailKind, mailId}, userMailInfo)
+	persistUserMail(userId)
 	incrMailRefCnt(mailId)
 end
 
 local function setUserFetchSvrIdx(userId, idx)
 	userMailInfoTbl[userId].fetchSvrIdx = idx
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_MAIL_COL, userId, "fetchSvrIdx"}, idx)
+	persistUserMail(userId)
 end
 
 local function addSvrMail(mailId)
@@ -216,14 +282,13 @@ local function addSvrMail(mailId)
 	incrMailRefCnt(mailId)
 	svrMailInfo.globalIdx = idx
 	svrMailInfo.svrMailTbl[idx] = mailId
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.SVR_MAIL_COL, "globalIdx"}, idx)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.SVR_MAIL_COL, "svrMailTbl", idx}, mailId)
+	persistSvrMail()
 end
 
 local function delSvrMail(idx)
 	local mailId = svrMailInfo.svrMailTbl[idx]
 	svrMailInfo.svrMailTbl[idx] = nil
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.SVR_MAIL_COL, "svrMailTbl", idx}, nil)
+	persistSvrMail()
 	descMailRefCnt(mailId)
 end
 

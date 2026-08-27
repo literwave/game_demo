@@ -24,8 +24,10 @@ function clsAct:__init__(oci)
 	end
 end
 
-function clsAct:saveField(keyList, val)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_INFO_COL, self._userId, table.unpack(keyList)}, val)
+function clsAct:saveField(field, val)
+	assert(type(field) == "string", "saveField only accepts string field name")
+	self[field] = val
+	MONGO_SLAVE.saveDocField(MONGO_SLAVE.USER_INFO_COL, self._userId, field, val)
 end
 
 function clsAct:getUserId()
@@ -45,7 +47,7 @@ end
 
 function clsAct:setName(name)
 	self._name = name
-	self:saveField({"_name"}, name)
+	self:saveField("_name", name)
 end
 
 function clsAct:getSex()
@@ -54,7 +56,7 @@ end
 
 function clsAct:setSex(sex)
 	self._sex = sex
-	self:saveField({"_sex"}, sex)
+	self:saveField("_sex", sex)
 end
 
 function clsAct:getResNum(resType)
@@ -75,12 +77,12 @@ end
 function clsAct:saveToDB()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_INFO_COL, self._userId}, info)
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_INFO_COL, self._userId, info)
 end
 
 function clsAct:setSdkParamTbl(paramTbl)
 	self._sdkParamTbl = paramTbl
-	self:saveField({"_sdkParamTbl"}, self._sdkParamTbl)
+	self:saveField("_sdkParamTbl", self._sdkParamTbl)
 end
 
 function clsAct:updateByLoginParamTbl(paramTbl)
@@ -140,11 +142,11 @@ function clsAct:onLogin()
 end
 
 function clsAct:setLoginTime(time)
-	self:saveField({"_loginTime"}, time)
+	self:saveField("_loginTime", time)
 end
 
 function clsAct:setBornServerId(serverId)
-	self:saveField({"_bornServerId"}, serverId)
+	self:saveField("_bornServerId", serverId)
 end
 
 function clsAct:getDiamond()
@@ -161,7 +163,7 @@ end
 
 function clsAct:addSumRechargeDiamond(addCnt)
 	self._sumRechargeDiamond = self._sumRechargeDiamond + addCnt
-	self:saveField({"_sumRechargeDiamond"}, self._sumRechargeDiamond)
+	self:saveField("_sumRechargeDiamond", self._sumRechargeDiamond)
 end
 
 function clsAct:getSumRechargeDiamond()
@@ -172,13 +174,13 @@ function clsAct:addRealDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
 	assert(reasonList[1] == CONST.FLOW_REASON.RECHARGE or reasonList[1] == CONST.FLOW_REASON.WIZ)
 	self._realDiamond = self._realDiamond + addCnt
-	self:saveField({"_realDiamond"}, self._realDiamond)
+	self:saveField("_realDiamond", self._realDiamond)
 end
 
 function clsAct:addGiftDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
 	self._giftDiamond = self._giftDiamond + addCnt
-	self:saveField({"_giftDiamond"}, self._giftDiamond)
+	self:saveField("_giftDiamond", self._giftDiamond)
 end
 
 function clsAct:addRealDiamondAndSync(addCnt, reasonList)
@@ -204,7 +206,7 @@ end
 function clsAct:addDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
 	self._realDiamond = self._realDiamond + addCnt
-	self:saveField({"_realDiamond"}, self._realDiamond)
+	self:saveField("_realDiamond", self._realDiamond)
 end
 
 function clsAct:subDiamond(sumSubCnt, reasonList)
@@ -221,10 +223,10 @@ function clsAct:subDiamond(sumSubCnt, reasonList)
 		self._giftDiamond = self._giftDiamond - subGift
 	end
 	if subReal > 0 then
-		self:saveField({"_realDiamond"}, self._realDiamond)
+		self:saveField("_realDiamond", self._realDiamond)
 	end
 	if subGift > 0 then
-		self:saveField({"_giftDiamond"}, self._giftDiamond)
+		self:saveField("_giftDiamond", self._giftDiamond)
 	end
 	-- afterSubDiamond(self, subReal, subGift, extTbl, reasonList)
 end
@@ -244,7 +246,7 @@ end
 
 function clsAct:setHeadIcon(headIcon)
 	self._headIcon = headIcon
-	self:saveField({"_headIcon"}, headIcon)
+	self:saveField("_headIcon", headIcon)
 end
 
 function clsAct:getClientPTOInfo()
@@ -267,5 +269,5 @@ end
 
 function clsAct:setLotteryTimes(lotteryTimes)
 	self._lotteryTimes = lotteryTimes
-	self:saveField({"_lotteryTimes"}, lotteryTimes)
+	self:saveField("_lotteryTimes", lotteryTimes)
 end

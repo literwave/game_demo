@@ -7,14 +7,26 @@ CLS_USER_DATA = "UserData"
 CLS_HERO_DATA = "HeroData"
 CLS_HERO_BAG = "HeroBag"
 CLS_USER_HERO_DOC = "UserHeroDoc"
+CLS_ITEM_DATA = "ItemData"
+CLS_ITEM_BAG = "ItemBag"
+CLS_USER_ITEM_DOC = "UserItemDoc"
+CLS_QUEUE_DATA = "QueueData"
+CLS_QUEUE_BAG = "QueueBag"
+CLS_USER_QUEUE_DOC = "UserQueueDoc"
+CLS_USER_MAIL_DOC = "UserMailDoc"
+CLS_SVR_MAIL_DOC = "SvrMailDoc"
+CLS_GAME_SID_DATA = "GameSidData"
 
 local SCHEMA_FILES = {
 	"user.td",
 	"hero.td",
+	"item.td",
+	"queue.td",
+	"mail.td",
+	"game_sid.td",
 }
 
 local function schema_dir()
-	-- config rootdir 相对 skynet 工作目录，一般为 ../
 	local root = nil
 	local ok, skynet = pcall(require, "skynet")
 	if ok and skynet.getenv then

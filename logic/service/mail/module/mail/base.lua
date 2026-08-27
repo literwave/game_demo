@@ -48,7 +48,7 @@ function clsMail:__init__(oci)
 end
 
 function clsMail:release()
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.MAIL_COL, self._mailId}, nil)
+	MONGO_SLAVE.delDoc(MONGO_SLAVE.MAIL_COL, self._mailId)
 	Super(clsMail).release(self)
 end
 
@@ -58,14 +58,16 @@ function clsMail:serialize(tbl)
 	end
 end
 
-function clsMail:saveField(keyList, val)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.MAIL_COL, self._mailId, unpack(keyList)}, val)
+function clsMail:saveField(field, val)
+	assert(type(field) == "string")
+	self[field] = val
+	self:saveToDB()
 end
 
 function clsMail:saveToDB()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.MAIL_COL, self._mailId}, info)
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.MAIL_COL, self._mailId, info)
 end
 
 function clsMail:getDetail()

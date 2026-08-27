@@ -51,36 +51,8 @@ if not table.maxn then
 	end
 end
 
-local function keyToNumber(fixTbl, preString)
-	for k, v in pairs(fixTbl) do
-		if type(k) == "string" then
-			if k:sub(1, 2) == '@' then
-				fixTbl[k:sub(2, #k)] = v
-			end
-		end
-		if type(v) == "table" then
-			keyToNumber(v, preString)
-		end
-	end
-	return fixTbl
-end
 
-function table.removePreString(fixTbl, preString)
-	if not fixTbl then
-		return fixTbl
-	end
-	return keyToNumber(fixTbl, preString)
-end
 
-function table.addNumberKeyPreString(fixTbl, preString)
-	for key, value in pairs(fixTbl) do
-		local newKey = numberKeyAddPreString(key, preString)
-		if type(value) == "table" then
-			table.addNumberKeyPreString(value, preString)
-		end
-		fixTbl[newKey] = value
-	end
-end
 
 function table.hasElement(tbl)
 	if not tbl then
@@ -120,13 +92,6 @@ function table.valToNumber(tbl)
 	return tbl
 end
 
-function numberKeyAddPreString(key, preString)
-	if type(key) == "number" then
-		return string.format("%s%d", preString, key)
-	else
-		return key
-	end
-end
 
 function string.split(input, delimiter)
 	input = tostring(input)

@@ -136,37 +136,65 @@ local function createItem(oci)
 	return item
 end
 
+function unrefItem(item)
+	local userId = item:getUserId()
+	local itemType = item:getItemType()
+	local itemId = item:getItemId()
+	local itemKind = item:getItemKind()
+	if allItemTbl[userId] and allItemTbl[userId][itemType] then
+		allItemTbl[userId][itemType][itemId] = nil
+	end
+	if allItemIdTbl[userId] then
+		allItemIdTbl[userId][itemId] = nil
+	end
+	if allItemKindTbl[userId] and allItemKindTbl[userId][itemKind] then
+		allItemKindTbl[userId][itemKind][itemId] = nil
+	end
+end
+
+function persistUserItems(userId)
+	assert(userId)
+	local itemTbl = allItemIdTbl[userId] or {}
+	local bagData = {}
+	for itemId, item in pairs(itemTbl) do
+		bagData[itemId] = item._data
+	end
+	local doc = ORM.create(ORM.CLS_USER_ITEM_DOC, { _items = bagData })
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_ITEM_COL, userId, ORM.dump(doc))
+end
+
 local function tryInitUserData(userId)
 	if not allItemIdTbl[userId] then
-		local tbl = MONGO_SLAVE.loadSingleUserItem(userId) or {}
-		for _, saveInfo in pairs(tbl) do
-			createItem(saveInfo)
+		local raw = MONGO_SLAVE.loadSingleUserItem(userId) or {}
+		allItemIdTbl[userId] = {}
+		local doc = ORM.create(ORM.CLS_USER_ITEM_DOC, raw)
+		for _, itemData in pairs(doc._items) do
+			if ORM.is_cls(itemData, ORM.CLS_ITEM_DATA) then
+				createItem(itemData)
+			end
 		end
 	end
 	return allItemIdTbl[userId]
 end
 
 local function saveItem(item)
-	local saveInfo = {}
-	item:serialize(saveInfo)
-	local userId = item:getUserId()
-	local itemId = item:getItemId()
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_ITEM_COL, userId, itemId}, saveInfo)
+	persistUserItems(item:getUserId())
 end
 
 local function generateItem(userId, itemType, cnt)
 	local itemId = getIdByUserIdAndTimestamp(userId)
 	local oci = {
-		_itemId = itemId,
+		_itemId = tostring(itemId),
 		_itemType = itemType,
 		_userId = userId,
-		_itemCnt = cnt,
+		_itemCnt = cnt or 1,
 	}
 	local item = createItem(oci)
 	item:afterGenerate()
 	saveItem(item)
 	return item
 end
+
 
 local function doAddItemCntByType(userId, itemType, cnt, needSync, reasonList, newItemList)
 	assert(cnt > 0)

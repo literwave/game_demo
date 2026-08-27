@@ -47,8 +47,7 @@ end
 function clsMongoDb:findOne(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
-	local result = c:findOne(args.query, args.selector)
-	return table.removePreString(result, '@')
+	return c:findOne(args.query, args.selector)
 end
 
 function clsMongoDb:findAll(args)
@@ -67,9 +66,7 @@ function clsMongoDb:findAll(args)
 		table.insert(result, document)
 	end
 	cursor:close()
-	if #result > 0 then
-		return table.removePreString(result, '@')
-	end
+	return result
 end
 
 function clsMongoDb:update(args)

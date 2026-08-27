@@ -2,15 +2,18 @@ allColList = {}
 allColTbl = {}
 allColNameTbl = {}
 
--- 设计思路，colName就是这个模块的变量，这样就不用写枚举字符串了，
 local colDescTbl = {
 	{
 		colKey = "MAIL_COL",
-		colName = "mailCol",USER_MAIL_COL
+		colName = "mailCol",
 	},
 	{
 		colKey = "USER_MAIL_COL",
 		colName = "userMailCol",
+	},
+	{
+		colKey = "SVR_MAIL_COL",
+		colName = "svrMailCol",
 	},
 }
 

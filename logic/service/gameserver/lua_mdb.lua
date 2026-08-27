@@ -33,7 +33,7 @@ function commonLoadSingle(col, key)
 	local db = mongoClient:getDB(GAME.getDataBase())
 	local c = db:getCollection(col)
 	local result = c:findOne({_id = key})
-	return table.removePreString(result, '@')
+	return result
 end
 
 function commonLoadTbl(col)
@@ -48,6 +48,6 @@ function commonLoadTbl(col)
 	end
 	cursor:close()
 	if table.hasElement(tbl) then
-		return table.removePreString(tbl, '@')
+		return tbl
 	end
 end

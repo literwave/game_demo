@@ -1,83 +1,63 @@
-local saveKeyTbl = {
-	_itemId = function()
-		return nil
-	end,
-	_itemType = function()
-		return nil
-	end,
-	_userId = function()
-		return nil
-	end,
-	_itemCnt = function()
-		return 1
-	end,
-}
-
 clsItem = clsObject:Inherit()
 
 function clsItem:__init__(oci)
 	Super(clsItem).__init__(self)
-
-	for k, func in pairs(saveKeyTbl) do
-		if oci[k] == nil then
-			self[k] = func()
-		else
-			self[k] = oci[k]
-		end
+	if ORM.is_cls(oci, ORM.CLS_ITEM_DATA) then
+		self._data = oci
+	else
+		self._data = ORM.create(ORM.CLS_ITEM_DATA, oci)
 	end
 end
 
-function clsItem:serialize(tbl)
-	for key, _ in pairs(saveKeyTbl) do
-		tbl[key] = self[key]
-	end
+function clsItem:saveField(field)
+	assert(type(field) == "string", "saveField only accepts string field name")
+	ITEM_MGR.persistUserItems(self:getUserId())
 end
 
-function clsItem:saveField(keyList, value)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_ITEM_COL, self._userId, self._itemId, unpack(keyList)}, value)	
+function clsItem:saveToDB()
+	ITEM_MGR.persistUserItems(self:getUserId())
 end
 
 function clsItem:getItemId()
-	return self._itemId
+	return self._data._itemId
 end
 
 function clsItem:getItemType()
-	return self._itemType
+	return self._data._itemType
 end
 
 function clsItem:getUserId()
-	return self._userId
+	return self._data._userId
 end
 
 function clsItem:getCnt()
-	return self._itemCnt
+	return self._data._itemCnt
 end
 
 function clsItem:addCnt(cnt)
-	assert(DATA_COMMON.canOverlap(self._itemType))
+	assert(DATA_COMMON.canOverlap(self:getItemType()))
 	assert(cnt > 0)
-	self._itemCnt = self._itemCnt + cnt
-	self:saveField({"_itemCnt"}, self._itemCnt)
+	self._data._itemCnt = self._data._itemCnt + cnt
+	self:saveField("_itemCnt")
 end
 
 function clsItem:subCnt(cnt)
-	assert(cnt > 0 and cnt <= self._itemCnt)
-	self._itemCnt = self._itemCnt - cnt
-	self:saveField({"_itemCnt"}, self._itemCnt)
+	assert(cnt > 0 and cnt <= self._data._itemCnt)
+	self._data._itemCnt = self._data._itemCnt - cnt
+	self:saveField("_itemCnt")
 end
 
 function clsItem:getItemPTOInfo()
-	local info = {
+	return {
 		itemId = self:getItemId(),
 		itemType = self:getItemType(),
 		itemCnt = self:getCnt(),
 	}
-	return info
 end
 
 function clsItem:syncToClient()
 	local info = self:getItemPTOInfo()
-	local Fd = USER_MGR.getFdByUserId(self._userId)
+	local Fd = USER_MGR.getFdByUserId(self:getUserId())
 	if Fd then
 		for_caller.s2c_sync_item_data(Fd, info)
 	end
@@ -89,9 +69,8 @@ end
 
 function clsItem:release()
 	local userId = self:getUserId()
-	local itemId = self:getItemId()
 	ITEM_MGR.unrefItem(self)
-	MONGO_SLAVE.opMongoValue({MONGO_SLAVE.USER_ITEM_COL, userId, itemId}, nil)
+	ITEM_MGR.persistUserItems(userId)
 	Super(clsItem).release(self)
 end
 
@@ -99,5 +78,5 @@ function clsItem:afterGenerate()
 end
 
 function clsItem:getItemKind()
-	return DATA_COMMON.getItemKindByType(self._itemType)
+	return DATA_COMMON.getItemKindByType(self:getItemType())
 end

@@ -1,4 +1,3 @@
-
 allUserQueueTbl = {}
 --[[
 	[userId] = {
@@ -17,10 +16,12 @@ end
 
 function unrefQueue(workQueueObj)
 	local userId = workQueueObj:getUserId()
-	local queueIdx = workQueueObj:getWorkQueueIdx()
-	allUserQueueTbl[userId][queueIdx] = nil
-	if table.isEmpty(allUserQueueTbl[userId]) then
-		allUserQueueTbl[userId] = nil
+	local queueIdx = workQueueObj:getQueueIdx()
+	if allUserQueueTbl[userId] then
+		allUserQueueTbl[userId][queueIdx] = nil
+		if table.isEmpty(allUserQueueTbl[userId]) then
+			allUserQueueTbl[userId] = nil
+		end
 	end
 end
 
@@ -28,26 +29,38 @@ local function createQueue(oci)
 	return QUEUE_BASE.clsQueue:New(oci)
 end
 
-function loadData()
-	local tbl = MONGO_SLAVE.commonLoadTbl(MONGO_SLAVE.QUEUE_COL)
-	for _, queueInfoTbl in pairs(tbl) do
-		for _, info in pairs(queueInfoTbl) do
-			createQueue(info)
+function persistUserQueues(userId)
+	assert(userId)
+	local queueTbl = allUserQueueTbl[userId] or {}
+	local bagData = {}
+	for queueIdx, queueObj in pairs(queueTbl) do
+		bagData[queueIdx] = queueObj._data
+	end
+	local doc = ORM.create(ORM.CLS_USER_QUEUE_DOC, { _queues = bagData })
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.QUEUE_COL, userId, ORM.dump(doc))
+end
+
+local function tryInitUserQueues(userId)
+	if not allUserQueueTbl[userId] then
+		allUserQueueTbl[userId] = {}
+		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.QUEUE_COL, userId) or {}
+		local doc = ORM.create(ORM.CLS_USER_QUEUE_DOC, raw)
+		for _, queueData in pairs(doc._queues) do
+			if ORM.is_cls(queueData, ORM.CLS_QUEUE_DATA) then
+				createQueue(queueData)
+			end
 		end
 	end
+	return allUserQueueTbl[userId]
+end
+
+function loadData()
 end
 
 function saveData()
-	local saveTbl = {}
-	for userId, queueInfoTbl in pairs(allUserQueueTbl) do
-		saveTbl[userId] = {}
-		for queueIdx, queueObj in pairs(queueInfoTbl) do
-			local info = {}
-			queueObj:serialize(info)
-			saveTbl[userId][queueIdx] = info
-		end
+	for userId in pairs(allUserQueueTbl) do
+		persistUserQueues(userId)
 	end
-	MONGO_SLAVE.commonSaveTbl(MONGO_SLAVE.QUEUE_COL, saveTbl)
 end
 
 function systemStartup()
@@ -63,6 +76,10 @@ function systemStartup()
 end
 
 local function initUserQueue(userId)
+	tryInitUserQueues(userId)
+	if getUserQueue(userId, CONST.FIRST_QUEUE_IDX) then
+		return
+	end
 	local oci = {
 		_userId = userId,
 		_queueIdx = CONST.FIRST_QUEUE_IDX,
@@ -73,22 +90,21 @@ end
 
 function onUserLogin(user, isFirstLogin)
 	if not isFirstLogin then
+		tryInitUserQueues(user:getUserId())
 		return
 	end
 	initUserQueue(user:getUserId())
 end
 
 function syncAllQueueInfoToClient(userId)
-	local fd = USER_MGR.getfdByUserId(userId)
+	local fd = USER_MGR.getFdByUserId(userId)
 	if not fd then
 		return
 	end
 	local allWorkQueueTbl = getUserAllQueueTbl(userId)
 	local list = {}
-	for _, queueInfoTbl in pairs(allWorkQueueTbl or EMPTY_TABLE) do
-		for _, queueObj in pairs(queueInfoTbl) do
-			table.insert(list, queueObj:genClientPTOInfo())
-		end
+	for _, queueObj in pairs(allWorkQueueTbl or EMPTY_TABLE) do
+		table.insert(list, queueObj:genClientPTOInfo())
 	end
 	for_caller.s2c_sync_all_queue_info(fd, {list = list})
 end
@@ -103,11 +119,9 @@ end
 
 local function tryUpdateUserQueue(userId)
 	local needSyncToClient = false
-	for _, queueInfoTbl in pairs(allUserQueueTbl[userId] or {}) do
-		for _, queueObj in pairs(queueInfoTbl) do
-			if queueObj:checkIsExpired() then
-				needSyncToClient = queueObj:onExpired()
-			end
+	for _, queueObj in pairs(allUserQueueTbl[userId] or {}) do
+		if queueObj:checkIsExpired() then
+			needSyncToClient = queueObj:onExpired()
 		end
 	end
 	if needSyncToClient then
@@ -116,13 +130,13 @@ local function tryUpdateUserQueue(userId)
 end
 
 function getUserAllQueueTbl(userId)
+	tryInitUserQueues(userId)
 	tryUpdateUserQueue(userId)
 	return allUserQueueTbl[userId]
 end
 
 function getUserQueueTbl(userId)
-	local allWorkQueueTbl = getUserAllQueueTbl(userId)
-	return allWorkQueueTbl
+	return getUserAllQueueTbl(userId)
 end
 
 function getUserQueue(userId, queueIdx)

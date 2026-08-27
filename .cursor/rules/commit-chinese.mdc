@@ -1,0 +1,12 @@
+---
+description: Git 提交信息必须使用简体中文
+alwaysApply: true
+---
+
+# 提交信息语言
+
+生成或撰写 git commit message 时：
+
+- **必须使用简体中文**
+- 第一行：一句概括改动目的/内容
+- 不要默认写成英文 Conventional Commits（如 `feat:` / `fix:`），除非用户明确要求

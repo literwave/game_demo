@@ -29,6 +29,10 @@ function CMD.findOne(args)
 	return MONGODB:findOne(args)
 end
 
+function CMD.findAll(args)
+	return MONGODB:findAll(args)
+end
+
 function CMD.update(args)
 	MONGODB:update(args)
 end
