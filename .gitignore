@@ -11,11 +11,11 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Build artifacts (generic)
+# Build artifacts（只忽略仓库根目录，避免误伤 logic/.../module/build）
 bin/
 obj/
-Build/
-build/
+/Build/
+/build/
 temp/
 Temp/
 *.o
@@ -37,8 +37,6 @@ skynet/luaclib/*.so
 skynet/cservice/*.so
 skynet/3rd/lua/lua
 skynet/3rd/lua/luac
-skynet/3rd/pbc/**/*.so
 
-# Third-party / generated
-src/
-skynet/3rd/protobuf/
+# Third-party / generated（仅忽略仓库根目录 src/，不要误伤 vendor/pbc/src）
+/src/

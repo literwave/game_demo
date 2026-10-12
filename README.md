@@ -41,7 +41,7 @@
 
 ## 技术栈
 
-- **运行时**：Skynet（Lua 5.4）
+- **运行时**：Skynet v1.4.0（Lua 5.4.2，`skynet/` 为 submodule）
 - **传输**：WebSocket
 - **协议**：Protobuf（`3rd/server/proto`）
 - **存储**：MongoDB、Redis（登录 token 等）
@@ -85,7 +85,7 @@
             |   (.mongodb)  |     +------------+
             +---------------+
 
-  旁路服务: gameserver / game_sid / mail / mapserver / mcs(HTTP) / gamelog / load_xls
+  旁路服务: gameserver / game_sid / mail / world / mcs(HTTP) / gamelog / load_xls
 ```
 
 ### 登录与消息链路
@@ -123,16 +123,19 @@ game_demo/
 │   │   ├── gameserver/       # 全局协调
 │   │   ├── main_mongodb/     # Mongo 访问（注册 .mongodb）
 │   │   ├── game_sid/         # 玩家 ID
-│   │   ├── mail/ mapserver/ mcs/ ...
+│   │   ├── mail/ world/ mcs/ ...
 │   ├── define/               # 常量与表数据访问
 │   └── base/                 # OOP / 工具基础库
 ├── common/                   # preload、Import、通用工具
 ├── orm/
 │   ├── init.lua              # 游戏侧 ORM 入口（加载 .td）
 │   └── schema/               # 持久化 schema（user.td / hero.td）
-├── skynet/                   # Skynet 及 lualib（含 orm 核心）
-│   └── lualib/orm/           # create / dump / typedef
-├── 3rd/server/               # protobuf、导表配置等
+├── lualib/                   # 游戏侧 Lua 库（非 Skynet 官方）
+│   ├── orm/                  # create / dump / typedef
+│   └── protobuf.lua
+├── vendor/pbc/               # pbc 源码（protobuf C 实现）
+├── skynet/                   # submodule：cloudwu/skynet（当前 v1.4.0）
+├── 3rd/server/               # protobuf 协议、导表配置等
 ├── docs/                     # 专题设计文档
 └── test/                     # 简易客户端 / 联调脚本
 ```
@@ -155,21 +158,36 @@ game_demo/
 ### 1. 获取代码
 
 ```bash
-git clone <your-repo-url> game_demo
+git clone --recurse-submodules <your-repo-url> game_demo
 cd game_demo
 ```
 
-### 2. 编译 Skynet
+若已经克隆但 submodule 是空的：
+
+```bash
+git submodule update --init --recursive
+```
+
+`3rd` 需要对齐 `tools.git` 的 master 时，在仓库根目录执行：
+
+```bash
+git submodule update --init --remote 3rd
+```
+
+不要对 `skynet` 使用 `--remote`，它钉在 v1.4.0。
+
+Skynet 来自 [cloudwu/skynet](https://github.com/cloudwu/skynet)，当前钉在 **v1.4.0**（Lua 5.4.2），与现有业务 API 对齐。
+
+### 2. 编译 Skynet 与 protobuf
 
 编译产物（`skynet/skynet`、`luaclib/*.so` 等）已加入 `.gitignore`，克隆后需本地编译：
 
 ```bash
-cd skynet
-make linux          # macOS: make macosx
-cd ..
+make                # 或 bash shell/build.sh
+                    # macOS 会自动走 make macosx
 ```
 
-确认存在可执行文件：`skynet/skynet`。
+确认存在：`skynet/skynet`、`skynet/luaclib/protobuf.so`。
 
 ### 3. 准备 MongoDB / Redis
 
@@ -227,7 +245,7 @@ bash shell/runtest.sh
 持久化采用 **schema + OOP 行为分离**：
 
 - **Schema**：`orm/schema/*.td` 描述可落库结构（`number` / `string` / `boolean` / `struct` / `list` / `map`）
-- **核心库**：`skynet/lualib/orm`（`create` / `dump` / `dump_field`）
+- **核心库**：`lualib/orm`（`create` / `dump` / `dump_field`）
 - **游戏入口**：`Import("../orm/init.lua")` → 全局 `ORM`
 - **行为类**：`clsUser` / `clsHero` 等通过 `self._data` 持有 ORM 对象，方法仍用 `clsObject:Inherit()`
 

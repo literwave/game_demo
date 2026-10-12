@@ -6,11 +6,14 @@ redisClient = nil
 
 local function getRedisClient()
 	if not redisClient then
+		local password = skynet.getenv("redis_password")
 		local config = {
 			host = skynet.getenv("redis_host"),
 			port = skynet.getenv("redis_port"),
-			auth = skynet.getenv("redis_password")
 		}
+		if password and password ~= "" then
+			config.auth = password
+		end
 		redisClient = redis.connect(config)
 	end
 	return redisClient

@@ -7,7 +7,7 @@ preload = "../common/preload.lua"
 luaservice = skynetdir.."service/?.lua;"..workdir.."service/?.lua;"..skynetdir.."../start_up/?.lua;"..workdir.. "service/?/?.lua;"..skynetdir.."../test/?.lua;"
 
 lualoader = skynetdir .. "lualib/loader.lua"
-lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua;"..workdir.."base/?.lua;";
+lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua;"..rootdir.."lualib/?.lua;"..rootdir.."lualib/?/init.lua;"..workdir.."base/?.lua;";
 lua_cpath = skynetdir .. "luaclib/?.so;"..skynetdir .. "luaclib/?.dll"
 snax = skynetdir.."script/?.lua;"
 -- snax_interface_g = "snax_g"

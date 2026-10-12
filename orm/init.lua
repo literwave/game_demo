@@ -1,4 +1,4 @@
--- 游戏侧 ORM 入口：加载 orm/schema/*.td，转发到 skynet/lualib/orm
+-- 游戏侧 ORM 入口：加载 orm/schema/*.td，转发到 lualib/orm
 
 local core = require "orm"
 local typedef = require "orm.typedef"
@@ -16,6 +16,9 @@ CLS_USER_QUEUE_DOC = "UserQueueDoc"
 CLS_USER_MAIL_DOC = "UserMailDoc"
 CLS_SVR_MAIL_DOC = "SvrMailDoc"
 CLS_GAME_SID_DATA = "GameSidData"
+CLS_BUILD_DATA = "BuildData"
+CLS_BUILD_BAG = "BuildBag"
+CLS_USER_BUILD_DOC = "UserBuildDoc"
 
 local SCHEMA_FILES = {
 	"user.td",
@@ -24,6 +27,7 @@ local SCHEMA_FILES = {
 	"queue.td",
 	"mail.td",
 	"game_sid.td",
+	"build.td",
 }
 
 local function schema_dir()

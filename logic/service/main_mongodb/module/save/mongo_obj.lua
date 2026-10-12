@@ -5,12 +5,17 @@ clsMongoDb = clsObject:Inherit()
 
 function clsMongoDb:__init__(oci)
 	Super(clsMongoDb).__init__(self, oci)
-	self.mongoClient = mongo.client({
+	local username = skynet.getenv("mongodb_user")
+	local password = skynet.getenv("mongodb_password")
+	local conf = {
 		host = skynet.getenv("mongodb_host"),
 		port = skynet.getenv("mongodb_port"),
-		username = skynet.getenv("mongodb_user"),
-		password = skynet.getenv("mongodb_password"),
-	})
+	}
+	if username and username ~= "" and password and password ~= "" then
+		conf.username = username
+		conf.password = password
+	end
+	self.mongoClient = mongo.client(conf)
 	if not self.mongoClient then
 		LOG._error("MongoDB connection failed")
 	end
@@ -23,19 +28,21 @@ end
 function clsMongoDb:insert(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
-	c:insert(args.doc)
+	c:safe_insert(args.doc)
 end
 
 function clsMongoDb:insertBatch(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
-	c:batch_insert(args.docs)
+	for _, doc in ipairs(args.docs) do
+		c:safe_insert(doc)
+	end
 end
 
 function clsMongoDb:delete(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
-	c:delete(args.selector, args.single)
+	c:safe_delete(args.selector, args.single)
 end
 
 function clsMongoDb:drop(args)
@@ -44,35 +51,49 @@ function clsMongoDb:drop(args)
 	return r
 end
 
+local function find_command(db, args)
+	local cmd = {
+		"find", args.collection,
+		"filter", args.query or {},
+	}
+	if args.selector then
+		cmd[#cmd + 1] = "projection"
+		cmd[#cmd + 1] = args.selector
+	end
+	if args.skip ~= nil then
+		cmd[#cmd + 1] = "skip"
+		cmd[#cmd + 1] = args.skip
+	end
+	if args.limit ~= nil then
+		cmd[#cmd + 1] = "limit"
+		cmd[#cmd + 1] = args.limit
+	end
+	return db:runCommand(table.unpack(cmd))
+end
+
 function clsMongoDb:findOne(args)
 	local db = self.mongoClient:getDB(args.database)
-	local c = db:getCollection(args.collection)
-	return c:findOne(args.query, args.selector)
+	args.limit = 1
+	local r = find_command(db, args)
+	if r and r.cursor and r.cursor.firstBatch then
+		return r.cursor.firstBatch[1]
+	end
+	return nil
 end
 
 function clsMongoDb:findAll(args)
 	local db = self.mongoClient:getDB(args.database)
-	local c = db:getCollection(args.collection)
-	local result = {}
-	local cursor = c:find(args.query, args.selector)
-	if args.skip ~= nil then
-		cursor:skip(args.skip)
+	local r = find_command(db, args)
+	if r and r.cursor then
+		return r.cursor.firstBatch or {}
 	end
-	if args.limit ~= nil then
-		cursor:limit(args.limit)
-	end
-	while cursor:hasNext() do
-		local document = cursor:next()
-		table.insert(result, document)
-	end
-	cursor:close()
-	return result
+	return {}
 end
 
 function clsMongoDb:update(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
-	c:update(args.selector, args.update, args.upsert, args.multi)
+	c:safe_update(args.selector, args.update, args.upsert, args.multi)
 end
 
 function clsMongoDb:createIndex(args)

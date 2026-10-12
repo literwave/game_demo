@@ -1,3 +1,9 @@
+local skynet = require "skynet"
+
+if skynet.PTYPE_RPC == nil then
+	skynet.PTYPE_RPC = 13
+end
+
 DOFILE_LIST = {
 	"../logic/base/import.lua",
 	"../logic/base/common_class.lua",

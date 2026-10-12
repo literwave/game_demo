@@ -35,6 +35,7 @@ description: >-
 UserItemDoc { _items <string, ItemData> }
 UserHeroDoc { _heroes <number, HeroData> }
 UserQueueDoc { _queues <number, QueueData> }
+UserBuildDoc { _builds <number, BuildData> }
 ```
 
-核心库：`skynet/lualib/orm`；游戏入口：`Import("../orm/init.lua")` → `ORM`。
+核心库：`lualib/orm`；游戏入口：`Import("../orm/init.lua")` → `ORM`。

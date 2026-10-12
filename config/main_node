@@ -8,7 +8,7 @@ preload = "../common/preload.lua"
 luaservice = skynetdir.."service/?.lua;"..workdir.."service/?.lua;"..skynetdir.."../start_up/?.lua;"..workdir.. "service/?/?.lua;"
 
 lualoader = skynetdir .. "lualib/loader.lua"
-lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua;"..workdir.."base/?.lua;"..datadir.."?.lua;";
+lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua;"..rootdir.."lualib/?.lua;"..rootdir.."lualib/?/init.lua;"..workdir.."base/?.lua;"..datadir.."?.lua;";
 lua_cpath = skynetdir .. "luaclib/?.so;"
 snax = skynetdir.."script/?.lua;"
 -- snax_interface_g = "snax_g"
@@ -39,14 +39,14 @@ db_info = [[{
 -- mongo etc
 mongodb_host = "127.0.0.1"
 mongodb_port = "27017"
-mongodb_user = "root"
-mongodb_password = "a1"
+mongodb_user = ""
+mongodb_password = ""
 
 
 -- redis etc
 redis_host = "127.0.0.1"
 redis_port = 6379
-redis_password = "a1"
+redis_password = ""
 
 -- 协议路径
 pbpath = rootdir .. "proto/pb/"

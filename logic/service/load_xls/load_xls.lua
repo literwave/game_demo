@@ -49,9 +49,16 @@ end
 local function loadDataFile()
 	for _, file in ipairs(DATA_FILE_LIST) do
 		local filename = file:match("([^/\\]+)%.lua$")
-		local loadData = require(filename)
-		sharedata.new(filename, loadData)
+		assert(filename, "bad config path: " .. tostring(file))
+		local chunk, err = loadfile(file)
+		if not chunk then
+			error(string.format("load config failed: %s (%s)", file, tostring(err)))
+		end
+		local data = chunk()
+		assert(type(data) == "table", "config must return a table: " .. file)
+		sharedata.new(filename, data)
 		FILE_MODIFY_TIME_TBL[filename] = os.time()
+		skynet.error("sharedata loaded:", filename)
 	end
 end
 
