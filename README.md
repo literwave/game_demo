@@ -2,9 +2,9 @@
 
 基于 [Skynet](https://github.com/cloudwu/skynet) 的 Lua 游戏服务端骨架。
 
-面向学习、原型验证与中小型玩法服务端二次开发，提供可运行的登录、网关、玩家逻辑、持久化与基础运维能力。
+面向原型验证与中小型玩法服务端二次开发，提供可运行的登录、网关、玩家逻辑、持久化与基础运维能力。
 
-> **不是**开箱即用的商业全量方案。请先读完 [快速开始](#快速开始) 与 [架构总览](#架构总览)。
+> **不是**开箱即用的商业全量方案。请先读完 [安装步骤](#安装步骤) 与 [架构总览](#架构总览)。
 
 ---
 
@@ -15,7 +15,7 @@
 - [架构总览](#架构总览)
 - [仓库结构](#仓库结构)
 - [环境要求](#环境要求)
-- [快速开始](#快速开始)
+- [安装步骤](#安装步骤)
 - [配置说明](#配置说明)
 - [数据与 ORM](#数据与-orm)
 - [开发指南](#开发指南)
@@ -45,7 +45,7 @@
 - **传输**：WebSocket
 - **协议**：Protobuf（`3rd/server/proto`）
 - **存储**：MongoDB、Redis（登录 token 等）
-- **数据模型**：自研精简 ORM（`skynet/lualib/orm` + `orm/schema/*.td`）
+- **数据模型**：ORM（`lualib/orm` + `orm/schema/*.td`）
 
 ---
 
@@ -147,77 +147,133 @@ game_demo/
 | 项目 | 建议 |
 |------|------|
 | OS | Linux / macOS；Windows 请用 **WSL2** |
-| 编译器 | gcc / clang（按 Skynet 文档） |
-| 依赖服务 | MongoDB、Redis |
-| 网络 | 默认可本机：`login 33021` / `gate 33022` / `http 33023` |
+| 编译器 | gcc、make、autoconf（Skynet 的 jemalloc 需要） |
+| 依赖服务 | Redis、MongoDB（本机无鉴权即可跑通默认配置） |
+| Git | 能拉 GitHub SSH（`skynet` / `3rd` 子模块地址是 `git@github.com:...`） |
+| 网络 | 默认本机：`login 33021` / `gate 33022` / `http 33023` / console `8000` |
+
+Ubuntu / Debian / WSL2 编译依赖：
+
+```bash
+sudo apt update
+sudo apt install -y git build-essential autoconf
+```
 
 ---
 
-## 快速开始
+## 安装步骤
 
-### 1. 获取代码
+Skynet 来自 [cloudwu/skynet](https://github.com/cloudwu/skynet)，当前钉在 **v1.4.0**（Lua 5.4.2）。`3rd` 来自 `literwave/tools`，应对齐 **master**。
+
+### 1. 安装 Redis
 
 ```bash
-git clone --recurse-submodules <your-repo-url> game_demo
+sudo apt install -y redis-server
+sudo systemctl enable --now redis-server
+```
+
+默认配置 `redis_password` 为空，本机 Redis **不要**设 `requirepass`。确认：
+
+```bash
+redis-cli ping    # 应返回 PONG
+```
+
+### 2. 安装 MongoDB
+
+默认配置 `mongodb_user` / `mongodb_password` 为空，本机 Mongo **不要开鉴权**，监听 `127.0.0.1:27017`。
+
+Skynet 1.4 自带的 Mongo 驱动走旧协议（OP_QUERY）。**MongoDB 8 无法正常 find**，本地建议用 **4.4 / 5.x**。
+
+安装后确认：
+
+```bash
+ss -ltnp | grep 27017
+# 或
+mongosh --eval 'db.runCommand({ ping: 1 })'
+```
+
+`shell/start_db.sh` 里的路径是 `/usr/local/mongodb`、`/usr/local/redis` 模板。用系统包安装时不必跑这个脚本，用 `systemctl` 即可。
+
+### 3. 克隆仓库与子模块
+
+本机需已配置 [GitHub SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)。
+
+```bash
+git clone --recurse-submodules git@github.com:literwave/game_demo.git
 cd game_demo
 ```
 
-若已经克隆但 submodule 是空的：
+若已经克隆但 `skynet/`、`3rd/` 是空的：
 
 ```bash
 git submodule update --init --recursive
 ```
 
-`3rd` 需要对齐 `tools.git` 的 master 时，在仓库根目录执行：
+`3rd` 要对齐 tools 的 **master**（导表、协议、`Item.lua` 等）：
 
 ```bash
 git submodule update --init --remote 3rd
 ```
 
-不要对 `skynet` 使用 `--remote`，它钉在 v1.4.0。
+**不要**对 `skynet` 使用 `--remote`，否则会离开 v1.4.0。
 
-Skynet 来自 [cloudwu/skynet](https://github.com/cloudwu/skynet)，当前钉在 **v1.4.0**（Lua 5.4.2），与现有业务 API 对齐。
-
-### 2. 编译 Skynet 与 protobuf
-
-编译产物（`skynet/skynet`、`luaclib/*.so` 等）已加入 `.gitignore`，克隆后需本地编译：
+确认：
 
 ```bash
-make                # 或 bash shell/build.sh
-                    # macOS 会自动走 make macosx
+ls skynet/Makefile 3rd/server/read_config/Item.lua 3rd/server/proto/pb/common.pb
 ```
 
-确认存在：`skynet/skynet`、`skynet/luaclib/protobuf.so`。
+### 4. 编译 Skynet 与 protobuf
 
-### 3. 准备 MongoDB / Redis
+编译产物（`skynet/skynet`、`skynet/luaclib/*.so`）已 gitignore，克隆后必须本地编一次：
 
 ```bash
-# 脚本内路径多为模板，请先改成你机器上的安装路径
-bash shell/start_db.sh
+make
+# 或
+sh shell/build.sh
 ```
 
-### 4. 修改配置
+macOS 会走 `make macosx`。成功后应存在：
 
-编辑 [`config/main_node`](config/main_node)，至少核对：
+- `skynet/skynet`
+- `skynet/luaclib/protobuf.so`
 
-- `host_id`
-- `gate_port` / `login_port` / `http_port`
-- `mongodb_*` / `redis_*`
-- `agent_init_cnt` / `agent_max_user_cnt`
-- `protocol`（默认 `ws`）
+`make` 提示 `Nothing to be done` 且上述文件都在，就是已经编过了。
 
-### 5. 启动主节点
+### 5. 核对配置
+
+打开 [`config/main_node`](config/main_node)，本机默认即可：
+
+| 项 | 默认 |
+|----|------|
+| `login_port` / `gate_port` / `http_port` | `33021` / `33022` / `33023` |
+| `mongodb_host` / `mongodb_port` | `127.0.0.1` / `27017` |
+| `mongodb_user` / `mongodb_password` | 空 |
+| `redis_host` / `redis_port` / `redis_password` | `127.0.0.1` / `6379` / 空 |
+| `protocol` | `ws` |
+
+改端口或远程 DB 时改这一份即可。
+
+### 6. 启动
 
 ```bash
-bash shell/start.sh
+sh shell/start.sh
 ```
 
-看到 ASCII logo / `server start` 相关日志即表示主链路已拉起。
+日志出现 `server start`、`boot world success` 以及 ASCII logo，主链路已拉起。
 
-### 6.（可选）测试节点
+Debug console（telnet）：
 
 ```bash
-bash shell/runtest.sh
+telnet 127.0.0.1 8000
+```
+
+停止：在启动终端按 `Ctrl+C`。
+
+### 7.（可选）测试节点
+
+```bash
+sh shell/runtest.sh
 ```
 
 ---
@@ -301,13 +357,11 @@ MONGO_SLAVE.saveDocField(col, userId, "_name", ORM.dump_field(self._data, "_name
 
 | 脚本 | 作用 |
 |------|------|
+| `shell/build.sh` | 编译 Skynet 与 `protobuf.so` |
 | `shell/start.sh` | 启动主节点（`config/main_node`） |
-| `shell/stop.sh` | 停止主节点 |
-| `shell/restart.sh` | 重启主节点 |
 | `shell/runtest.sh` | 启动测试节点 |
-| `shell/start_db.sh` | 启动 MongoDB / Redis（需改路径） |
-| `shell/stop_db.sh` | 停止 DB |
-| `shell/restart_db.sh` | 重启 DB |
+| `shell/start_db.sh` | 启动 MongoDB / Redis（`/usr/local` 模板路径，系统包安装可不用） |
+| `shell/stop_db.sh` | 停止 DB（同样依赖模板路径） |
 | `shell/drop_db.sh` | 清空业务库与 Redis（慎用） |
 
 ---
@@ -326,7 +380,7 @@ MONGO_SLAVE.saveDocField(col, userId, "_name", ORM.dump_field(self._data, "_name
 
 ## 已知限制
 
-- 面向教学 / 原型 / 中小型项目；大型 MMO 需补监控、压测与工程化  
+- 大型 MMO 需补监控、压测与工程化  
 - Redis 登录 token 默认约 **300s** 过期（以登录服实现为准）  
 - 多 Gate 分配策略相对简单，扩展见 `docs/GATE_SCALING.md`
 
