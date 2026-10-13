@@ -91,19 +91,22 @@ function handle.message(id, msg)
 end
 
 function handle.close(id, code, reason)
-	print("logind ws close from: " .. tostring(id), code, reason)
+	skynet.error("logind ws close from:", id, code, reason)
 end
 
 function handle.error(id)
-	print("logind ws error from: " .. tostring(id))
+	skynet.error("logind ws error from:", id,
+		"handshake failed; connect with ws://host:33021 not raw TCP/HTTP")
 end
 
 function CMD.auth(fd, addr)
 	skynet.error("login step 1-auth", fd, addr)
-	local ok, err = websocket.accept(fd, handle, PROTOCOL, addr)
-	if not ok then
-		skynet.error("login error ", fd, addr, err)
-	end
+	skynet.fork(function()
+		local ok, err = websocket.accept(fd, handle, PROTOCOL, addr)
+		if not ok then
+			skynet.error("login error", fd, addr, err)
+		end
+	end)
 end
 
 function CMD.createUserOk(account, userId)

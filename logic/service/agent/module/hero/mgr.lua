@@ -64,7 +64,10 @@ end
 function addHero(userId, heroType, reasonList)
 	assert(userId)
 	assert(DATA_COMMON.getHeroInfoByType(heroType))
-	assert(not getHeroByType(userId, heroType))
+	local exist = getHeroByType(userId, heroType)
+	if exist then
+		return exist
+	end
 	tryInitUserHeroData(userId)
 	local oci = {
 		_userId = userId,

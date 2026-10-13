@@ -1,26 +1,45 @@
-
-local saveFieldTbl = {
-}
+local BITSET = Import("../logic/service/world/module/bit_set/base.lua")
 
 clsMap = clsObject:Inherit()
 
-local BITSET = Import("../logic/service/world/module/bit_set/base.lua")
-
 function clsMap:__init__(oci)
-	Super(clsMap).__init__(self, oci)
-	for k, func in pairs(saveFieldTbl) do
-		if oci[k] == nil then
-			self[k] = func()
-		else
-			self[k] = oci[k]
-		end
-	end
-	self._bitSet = BITSET.new(CONST.MAP_WIDTH, CONST.MAP_HEIGHT)
+	Super(clsMap).__init__(self)
+	self._width = oci._width
+	self._height = oci._height
+	self._cellCnt = self._width * self._height
+	self._bitSet = BITSET.clsBitSet:New({
+		_size = self._cellCnt,
+	})
 end
 
-function clsMap:registerPart(partType, width, height)
-	self._partType = partType
-	self._width = width
-	self._height = height
-	self._qtree = QTREE.new(CONST.MAP_WIDTH, CONST.MAP_HEIGHT)
+function clsMap:getWidth()
+	return self._width
+end
+
+function clsMap:getHeight()
+	return self._height
+end
+
+function clsMap:inBound(idx)
+	return idx >= 1 and idx <= self._cellCnt
+end
+
+function clsMap:loadBlockFromRes(mapRes)
+	local list = mapRes.list
+	local obstruct = CONST.MAP_CELL_TYPE.OBSTRUCT
+	local cnt = 0
+	for idx = 1, #list do
+		if list[idx][1] == obstruct then
+			self._bitSet:set(idx, true)
+			cnt = cnt + 1
+		end
+	end
+	return cnt
+end
+
+function clsMap:isBlock(idx)
+	if not self:inBound(idx) then
+		return true
+	end
+	return self._bitSet:get(idx)
 end

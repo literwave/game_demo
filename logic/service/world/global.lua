@@ -11,6 +11,7 @@ USER_MGR	= Import("../logic/service/world/module/user/mgr.lua")
 
 QTREE		= Import("../logic/service/world/module/qtree/base.lua")
 MAP_BASE	= Import("../logic/service/world/module/map/base.lua")
+MAP_MGR		= Import("../logic/service/world/module/map/mgr.lua")
 SCENE_BASE	= Import("../logic/service/world/module/scene/base.lua")
 SCENE_MGR	= Import("../logic/service/world/module/scene/mgr.lua")
 ENTITY_MGR	= Import("../logic/service/world/module/entity/mgr.lua")

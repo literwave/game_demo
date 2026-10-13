@@ -13,6 +13,7 @@
 - [特性](#特性)
 - [技术栈](#技术栈)
 - [架构总览](#架构总览)
+- [玩家登录过程](#玩家登录过程)
 - [仓库结构](#仓库结构)
 - [环境要求](#环境要求)
 - [安装步骤](#安装步骤)
@@ -46,6 +47,7 @@
 - **协议**：Protobuf（`3rd/server/proto`）
 - **存储**：MongoDB、Redis（登录 token 等）
 - **数据模型**：ORM（`lualib/orm` + `orm/schema/*.td`）
+- **大地图寻路**：JPS（`vendor/slg-navigation` submodule）
 
 ---
 
@@ -88,19 +90,60 @@
   旁路服务: gameserver / game_sid / mail / world / mcs(HTTP) / gamelog / load_xls
 ```
 
-### 登录与消息链路
-
-1. 客户端连接 **logind**，完成账号校验  
-2. logind 写入 Redis token，返回可用 **gate** 地址  
-3. 客户端携带 token 连接 **gated**  
-4. gated 校验 token，按负载分配 **agent**  
-5. 业务包：`gated → agent`；存档：`agent → .mongodb`
-
 ### 并发约定
 
 - **gated**：维护 `AGENT_POOLS`，优先选择玩家数较少的 agent  
 - **agent**：每个 `userId` 独立 `queue()` —— 同玩家串行，异玩家并行  
 - 断线 / 异常时由 gated 回收连接并通知 `disconnect`
+
+---
+
+## 玩家登录过程
+
+以本机默认配置为例：登录 `33021`，网关 `33022`，`host_id` / `serverId` 为 `120`。玩家账号 `alice`、密码 `123`，PC 登录（`accountType = 1`）。
+
+```text
+Client                logind                 Redis              gated                agent              MongoDB
+  |                     |                     |                  |                    |                   |
+  |-- WS :33021 ------->|                     |                  |                    |                   |
+  |  c2s_user_login     |                     |                  |                    |                   |
+  |                     |-- 查/建账号 ------->|                  |                    |                   |
+  |                     |-- 写 token (300s) ->|                  |                    |                   |
+  |<- s2c_user_login ---|                     |                  |                    |                   |
+  |   gateAddr + token  x 断开                 |                  |                    |                   |
+  |                     |                     |                  |                    |                   |
+  |-- WS :33022 ---------------------------------------------->|                    |                   |
+  |  c2s_verify_login   |                     |                  |                    |                   |
+  |                     |                     |<-- 校验 token ---|                    |                   |
+  |                     |                     |                  |-- login ---------->|                   |
+  |                     |                     |                  |                    |-- 读档 ---------->|
+  |<- s2c_user_login_ok --------------------------------------------------------------|                   |
+  |   之后业务包都走 gated → agent                                                      |                   |
+```
+
+1. **连登录服**  
+   客户端 WebSocket 连 `logind:33021`，发 `Login.c2s_user_login`（账号、密码、`serverId`）。  
+   Master 按轮询把连接交给某个 login slave。
+
+2. **校验账号、签发 token**  
+   `accountType = 1` 走 PC 登录。`ACCOUNT.sdkLoginOk` 用 Redis 查账号是否已有 `userId`：没有则向 `.game_sid` 要新 ID 并写回 Redis。  
+   按 `serverId` 从已注册的 gate 里挑一个，生成 token（约 300 秒过期），Redis 记下 `{userId, passwd, serverId, account}`。
+
+3. **回 gate 地址后断开**  
+   回 `Login.s2c_user_login`（`gateAddr`、`token`、`userId`），然后关掉这条登录连接。登录服不持游戏长连接。
+
+4. **连网关并验 token**  
+   客户端用 `gateAddr` 连 `gated:33022`，发 `Login.c2s_verify_login`（`token`、`userId`、`passwd`）。  
+   gated 从 Redis 取出 token 记录，对不上就拒绝。
+
+5. **进 agent**  
+   gated 从 `AGENT_POOLS` 里挑人数最少的 agent，`skynet.call(agent, "lua", "login", ...)`。  
+   agent 向 Mongo 读档：没有存档则 `createNewUser`，否则加载玩家对象；挂心跳，并通知 `.gameserver`、`.mail`。  
+   **此时还不进 world**，进大世界时再通知 `.world`。
+
+6. **登录完成，之后走业务**  
+   gated 记下 `fd → agent`，回 `Login.s2c_user_login_ok`。  
+   之后这条连接上的包都由 gated 转给该 agent；存档走 `agent → .mongodb`。断线时 gated 调 agent 的 `disconnect`。
 
 ---
 
@@ -134,6 +177,7 @@ game_demo/
 │   ├── orm/                  # create / dump / typedef
 │   └── protobuf.lua
 ├── vendor/pbc/               # pbc 源码（protobuf C 实现）
+├── vendor/slg-navigation/    # submodule：SLG JPS 寻路
 ├── skynet/                   # submodule：cloudwu/skynet（当前 v1.4.0）
 ├── 3rd/server/               # protobuf 协议、导表配置等
 ├── docs/                     # 专题设计文档
@@ -220,10 +264,10 @@ git submodule update --init --remote 3rd
 确认：
 
 ```bash
-ls skynet/Makefile 3rd/server/read_config/Item.lua 3rd/server/proto/pb/common.pb
+ls skynet/Makefile 3rd/server/read_config/Item.lua 3rd/server/proto/pb/common.pb vendor/slg-navigation/Makefile
 ```
 
-### 4. 编译 Skynet 与 protobuf
+### 4. 编译 Skynet、protobuf 与寻路
 
 编译产物（`skynet/skynet`、`skynet/luaclib/*.so`）已 gitignore，克隆后必须本地编一次：
 
@@ -237,6 +281,7 @@ macOS 会走 `make macosx`。成功后应存在：
 
 - `skynet/skynet`
 - `skynet/luaclib/protobuf.so`
+- `skynet/luaclib/navigation/c.so`
 
 `make` 提示 `Nothing to be done` 且上述文件都在，就是已经编过了。
 
@@ -357,7 +402,7 @@ MONGO_SLAVE.saveDocField(col, userId, "_name", ORM.dump_field(self._data, "_name
 
 | 脚本 | 作用 |
 |------|------|
-| `shell/build.sh` | 编译 Skynet 与 `protobuf.so` |
+| `shell/build.sh` | 编译 Skynet、`protobuf.so`、`navigation/c.so` |
 | `shell/start.sh` | 启动主节点（`config/main_node`） |
 | `shell/runtest.sh` | 启动测试节点 |
 | `shell/start_db.sh` | 启动 MongoDB / Redis（`/usr/local` 模板路径，系统包安装可不用） |

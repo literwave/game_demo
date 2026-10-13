@@ -34,6 +34,7 @@ logs/
 skynet/skynet
 skynet/skynet.pid
 skynet/luaclib/*.so
+skynet/luaclib/navigation/
 skynet/cservice/*.so
 skynet/3rd/lua/lua
 skynet/3rd/lua/luac

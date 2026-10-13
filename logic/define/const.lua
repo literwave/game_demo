@@ -60,6 +60,18 @@ ONE_DAY_SEC = ONE_DAY_HOUR * ONE_HOUR_SEC
 
 INT_SIZE = 32
 
+-- 与 res/map/map_res.lua 格子 type 一致
+MAP_CELL_TYPE = {
+	OBSTRUCT = 0,
+	SYS_FORTRESS = 50,
+	SYS_CITY = 51,
+	WOOD = 52,
+	IRON = 53,
+	STONE = 54,
+	GRAIN = 55,
+	FORTRESS = 56,
+}
+
 ENTITY_TYPE = {
 	MAIN_HALL = 1,
 }

@@ -33,6 +33,7 @@ local function initDofile()
 		for_caller[ptoName] = createSendMessage(id, ID_TO_PACK_NAME[id])
 	end
 	math.randomseed(os.time())
+	MAP_MGR.init()
 end
 
 initDofile()

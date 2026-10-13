@@ -11,4 +11,4 @@ if [ ! -f skynet/Makefile ]; then
 fi
 
 make
-echo "编译完成: skynet/skynet 与 skynet/luaclib/protobuf.so"
+echo "编译完成: skynet/skynet、skynet/luaclib/protobuf.so、skynet/luaclib/navigation/c.so"

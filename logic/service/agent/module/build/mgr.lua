@@ -81,11 +81,8 @@ end
 
 function onUserLogin(user, isFirstLogin)
 	local userId = user:getUserId()
-	if isFirstLogin then
-		initUserBuilds(userId)
-	else
-		tryInitUserBuilds(userId)
-	end
+	-- 无建筑时补初始建筑（含首次创角中途失败、未 persist 的号）
+	initUserBuilds(userId)
 	syncAllBuildToClient(userId)
 end
 

@@ -6,3 +6,6 @@
 [submodule "skynet"]
 	path = skynet
 	url = git@github.com:cloudwu/skynet.git
+[submodule "vendor/slg-navigation"]
+	path = vendor/slg-navigation
+	url = git@github.com:xcoding1024/slg-navigation.git
