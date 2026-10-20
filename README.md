@@ -46,7 +46,7 @@
 
 - **运行时**：Skynet v1.4.0（Lua 5.4.2，`skynet/` 为 submodule）
 - **传输**：WebSocket
-- **协议**：Protobuf（`3rd/server/proto`）
+- **协议**：Protobuf（`game_common/pb`、`game_common/proto`，协议号在 `game_common/server/net_pb.lua`）
 - **存储**：MongoDB、Redis（登录 token 等）
 - **数据模型**：ORM（`lualib/orm` + `orm/schema/*.td`）
 - **大地图寻路**：JPS（`vendor/slg-navigation` submodule）
@@ -181,7 +181,8 @@ game_demo/
 ├── vendor/pbc/               # pbc 源码（protobuf C 实现）
 ├── vendor/slg-navigation/    # submodule：SLG JPS 寻路
 ├── skynet/                   # submodule：cloudwu/skynet（当前 v1.4.0）
-├── 3rd/server/               # protobuf 协议、导表配置等
+├── game_common/              # submodule：协议、pb、导表（literwave/game_common）
+├── res/innerCity.lua         # 本服内城布局，不在 game_common 里
 ├── docs/                     # 专题设计文档
 └── test/                     # 简易客户端 / 联调脚本
 ```
@@ -195,7 +196,7 @@ game_demo/
 | OS | Linux / macOS；Windows 请用 **WSL2** |
 | 编译器 | gcc、make、autoconf（Skynet 的 jemalloc 需要） |
 | 依赖服务 | Redis、MongoDB（本机无鉴权即可跑通默认配置） |
-| Git | 能拉 GitHub SSH（`skynet` / `3rd` 子模块地址是 `git@github.com:...`） |
+| Git | 能拉 GitHub SSH（`skynet` / `game_common` 子模块地址是 `git@github.com:...`） |
 | 网络 | 默认本机：`login 33021` / `gate 33022` / `http 33023` / console `8000` |
 
 Ubuntu / Debian / WSL2 编译依赖：
@@ -209,7 +210,7 @@ sudo apt install -y git build-essential autoconf
 
 ## 安装步骤
 
-Skynet 来自 [cloudwu/skynet](https://github.com/cloudwu/skynet)，当前钉在 **v1.4.0**（Lua 5.4.2）。`3rd` 来自 `literwave/tools`，应对齐 **master**。
+Skynet 来自 [cloudwu/skynet](https://github.com/cloudwu/skynet)，当前钉在 **v1.4.0**（Lua 5.4.2）。协议和导表来自 [game_common](https://github.com/literwave/game_common)，应对齐 **master**。工作区只检出 `pb/`、`proto/`、`server/`（`net_pb.lua` 和 `server/res`）。上游 README、客户端 JSON、`tsv/`、导表工具不会检出。
 
 ### 1. 安装 Redis
 
@@ -249,16 +250,25 @@ git clone --recurse-submodules git@github.com:literwave/game_demo.git
 cd game_demo
 ```
 
-若已经克隆但 `skynet/`、`3rd/` 是空的：
+若已经克隆但 `skynet/`、`game_common/` 是空的：
 
 ```bash
 git submodule update --init --recursive
 ```
 
-`3rd` 要对齐 tools 的 **master**（导表、协议、`Item.lua` 等）：
+`game_common` 拉下来后只保留协议和导表。Git 不允许在 `.gitmodules` 里写自动执行的命令，所以这一步要在本机跑：
 
 ```bash
-git submodule update --init --remote 3rd
+git -C game_common sparse-checkout init
+git -C game_common sparse-checkout set '/pb/' '/pb/**' '/proto/' '/proto/**' '/server/' '/server/**'
+```
+
+这样工作区里不会有上游 README、`client/`、`tsv/`、`ptotools/`、`vis_conf/`。
+
+要对齐 **master** 上的协议和导表：
+
+```bash
+git submodule update --init --remote game_common
 ```
 
 **不要**对 `skynet` 使用 `--remote`，否则会离开 v1.4.0。
@@ -266,7 +276,7 @@ git submodule update --init --remote 3rd
 确认：
 
 ```bash
-ls skynet/Makefile 3rd/server/read_config/Item.lua 3rd/server/proto/pb/common.pb vendor/slg-navigation/Makefile
+ls skynet/Makefile game_common/server/res/Item.lua game_common/pb/common.pb game_common/server/net_pb.lua vendor/slg-navigation/Makefile
 ```
 
 ### 4. 编译 Skynet、protobuf 与寻路
@@ -395,8 +405,9 @@ MONGO_SLAVE.saveDocField(col, userId, "_name", ORM.dump_field(self._data, "_name
 ### 协议
 
 - 包格式：`长度(2) + 协议ID(2) + protobuf`  
-- 映射：`3rd/server/proto/netPb.lua`  
-- `.pb` 文件：`3rd/server/proto/pb/`  
+- 映射：`game_common/server/net_pb.lua`  
+- `.pb` 文件：`game_common/pb/`  
+- `.proto` 源文件：`game_common/proto/`  
 
 ---
 

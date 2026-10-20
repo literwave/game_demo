@@ -6,7 +6,7 @@ local DOFILE_LIST = {
 }
 
 local PROTO_FILE_LIST = {
-	"../3rd/server/proto/pb/common.pb",
+	"../game_common/pb/common.pb",
 }
 
 local function encodePack(msg, id, name)

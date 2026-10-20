@@ -1,7 +1,7 @@
 skynetdir = "./"   -- skynet目录
 rootdir = "../"    -- 根目录
 workdir = "../logic/"
-datadir = "../3rd/server/read_config/"
+datadir = "../game_common/server/res/"
 
 preload = "../common/preload.lua"
 
@@ -49,7 +49,7 @@ redis_port = 6379
 redis_password = ""
 
 -- 协议路径
-pbpath = rootdir .. "proto/pb/"
+pbpath = rootdir .. "game_common/pb/"
 
 -- 日志路径
 logpath = rootdir.."log"
@@ -79,6 +79,6 @@ https_port = 33023
 game = "a"
 
 ------------ 配置路径相关 --------------
-config_path = "../read_config/"
+config_path = "../game_common/server/res/"
 
 protocol = "ws"

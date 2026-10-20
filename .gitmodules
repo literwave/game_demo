@@ -1,11 +1,10 @@
-[submodule "3rd"]
-	path = 3rd
-	url = git@github.com:literwave/tools.git
-	branch = master
-	ignore = all
 [submodule "skynet"]
 	path = skynet
 	url = git@github.com:cloudwu/skynet.git
 [submodule "vendor/slg-navigation"]
 	path = vendor/slg-navigation
 	url = git@github.com:xcoding1024/slg-navigation.git
+[submodule "game_common"]
+	path = game_common
+	url = git@github.com:literwave/game_common.git
+	branch = master

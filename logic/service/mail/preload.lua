@@ -6,8 +6,8 @@ local DOFILE_LIST = {
 }
 
 local PROTO_FILE_LIST = {
-	"../3rd/server/proto/pb/common.pb",
-	"../3rd/server/proto/pb/mail.pb",
+	"../game_common/pb/common.pb",
+	"../game_common/pb/mail.pb",
 }
 
 local function systemStartUp()

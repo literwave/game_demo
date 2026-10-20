@@ -6,14 +6,14 @@ local DOFILE_LIST = {
 }
 
 local PROTO_FILE_LIST = {
-	"../3rd/server/proto/pb/common.pb",
-	"../3rd/server/proto/pb/login.pb",
-	"../3rd/server/proto/pb/heartbeat.pb",
-	"../3rd/server/proto/pb/hero.pb",
-	"../3rd/server/proto/pb/reward.pb",
-	"../3rd/server/proto/pb/build.pb",
-	"../3rd/server/proto/pb/user.pb",
-	"../3rd/server/proto/pb/lottery.pb"
+	"../game_common/pb/common.pb",
+	"../game_common/pb/login.pb",
+	"../game_common/pb/heartbeat.pb",
+	"../game_common/pb/hero.pb",
+	"../game_common/pb/reward.pb",
+	"../game_common/pb/build.pb",
+	"../game_common/pb/user.pb",
+	"../game_common/pb/lottery.pb"
 }
 
 local function systemStartUp()
