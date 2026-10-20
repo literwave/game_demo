@@ -9,7 +9,7 @@ CALL_OUT	= Import("../common/call_out.lua")
 
 ORM		= Import("../orm/init.lua")
 
-MONGO_SLAVE	= Import("../logic/service/mail/mongo_slave.lua")
+MONGO_SLAVE	= Import("../logic/base/mongo_slave.lua")
 LMDB		= Import("../logic/service/mail/lua_mdb.lua")
 
 USER_MGR	= Import("../logic/service/mail/module/user/mgr.lua")

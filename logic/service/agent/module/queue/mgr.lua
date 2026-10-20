@@ -29,22 +29,12 @@ local function createQueue(oci)
 	return QUEUE_BASE.clsQueue:New(oci)
 end
 
-function persistUserQueues(userId)
-	assert(userId)
-	local queueTbl = allUserQueueTbl[userId] or {}
-	local bagData = {}
-	for queueIdx, queueObj in pairs(queueTbl) do
-		bagData[queueIdx] = queueObj._data
-	end
-	local doc = ORM.create(ORM.CLS_USER_QUEUE_DOC, { _queues = bagData })
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.QUEUE_COL, userId, ORM.dump(doc))
-end
-
 local function tryInitUserQueues(userId)
-	if not allUserQueueTbl[userId] then
-		allUserQueueTbl[userId] = {}
-		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.QUEUE_COL, userId) or {}
+	if not ORM.get(MONGO_SLAVE.COL.QUEUE, userId) then
+		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.QUEUE, userId) or {}
 		local doc = ORM.create(ORM.CLS_USER_QUEUE_DOC, raw)
+		ORM.hold(doc, MONGO_SLAVE.COL.QUEUE, userId)
+		allUserQueueTbl[userId] = {}
 		for _, queueData in pairs(doc._queues) do
 			if ORM.is_cls(queueData, ORM.CLS_QUEUE_DATA) then
 				createQueue(queueData)
@@ -58,9 +48,7 @@ function loadData()
 end
 
 function saveData()
-	for userId in pairs(allUserQueueTbl) do
-		persistUserQueues(userId)
-	end
+	MONGO_SLAVE.flush()
 end
 
 function systemStartup()
@@ -84,8 +72,7 @@ local function initUserQueue(userId)
 		_userId = userId,
 		_queueIdx = CONST.FIRST_QUEUE_IDX,
 	}
-	local queue = createQueue(oci)
-	queue:saveToDB()
+	createQueue(oci)
 end
 
 function onUserLogin(user, isFirstLogin)
@@ -153,8 +140,7 @@ function createUserQueue(userId, queueIdx, expireTime)
 		_queueIdx = queueIdx,
 		_expireTime = expireTime,
 	}
-	local workQueueObj = createQueue(oci)
-	workQueueObj:saveToDB()
+	createQueue(oci)
 end
 
 function getIdleBuildQueue(userId, targetId)

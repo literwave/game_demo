@@ -132,6 +132,32 @@ function M.parse_map(cls, data)
 	return cls:new(ret)
 end
 
+-- 字段不放在对象本体上，已有字段的再次赋值也会走进 __newindex。
+local values_of = setmetatable({}, { __mode = "k" })
+
+local function value_box(obj)
+	local box = values_of[obj]
+	if not box then
+		box = {}
+		values_of[obj] = box
+	end
+	return box
+end
+
+local function read_value(obj, k, defaults)
+	local box = values_of[obj]
+	if box ~= nil and box[k] ~= nil then
+		return box[k]
+	end
+	if defaults then
+		return defaults[k]
+	end
+end
+
+local function iter_values(obj)
+	return next, values_of[obj] or {}
+end
+
 local data_parsers = {
 	boolean = M.parse_boolean,
 	number = M.parse_number,
@@ -190,8 +216,11 @@ function M.load_cls_define(cls, parent_name)
 		cls.new = M.create_struct
 		local mt_index = {__cls = cls}
 		cls.mt = {
-			__index = mt_index,
+			__index = function(obj, k)
+				return read_value(obj, k, mt_index)
+			end,
 			__newindex = M.struct_setfield,
+			__pairs = iter_values,
 		}
 		assert(cls.attrs, "not attrs")
 		local attrs = {}
@@ -212,9 +241,17 @@ function M.load_cls_define(cls, parent_name)
 
 	if data_type == "list" then
 		cls.new = M.create_list
+		local mt_index = {__cls = cls}
 		cls.mt = {
-			__index = {__cls = cls},
+			__index = function(obj, k)
+				return read_value(obj, k, mt_index)
+			end,
 			__newindex = M.list_setfield,
+			__pairs = iter_values,
+			__len = function(obj)
+				local box = values_of[obj]
+				return box and #box or 0
+			end,
 		}
 		cls.item.name = "item"
 		cls.item = M.load_cls_define(cls.item, cls_name)
@@ -223,9 +260,13 @@ function M.load_cls_define(cls, parent_name)
 
 	if data_type == "map" then
 		cls.new = M.create_map
+		local mt_index = {__cls = cls}
 		cls.mt = {
-			__index = {__cls = cls},
+			__index = function(obj, k)
+				return read_value(obj, k, mt_index)
+			end,
 			__newindex = M.map_setfield,
+			__pairs = iter_values,
 		}
 		cls.key.name = "key"
 		cls.key = M.load_cls_define(cls.key, cls_name)
@@ -247,6 +288,130 @@ function M.init(type_list)
 	M.cls_map = cls_map
 end
 
+local parent_of = setmetatable({}, { __mode = "k" })
+local doc_of = setmetatable({}, { __mode = "k" })
+local held = {}
+local dirty_list = {}
+local DIRTY_KEY = "_is_dirty"
+
+local function is_orm(v)
+	return type(v) == "table" and v.__cls ~= nil
+end
+
+local function root_of(obj)
+	local seen = {}
+	while parent_of[obj] do
+		if seen[obj] then
+			break
+		end
+		seen[obj] = true
+		obj = parent_of[obj]
+	end
+	return obj
+end
+
+local function mark_dirty(obj)
+	local root = root_of(obj)
+	local info = doc_of[root]
+	if not info or rawget(root, DIRTY_KEY) then
+		return
+	end
+	rawset(root, DIRTY_KEY, true)
+	dirty_list[#dirty_list + 1] = root
+	if M.on_dirty then
+		M.on_dirty()
+	end
+end
+
+-- 写入字段并挂上父子关系。未 bind 的对象不会进入脏列表。
+local function commit(obj, k, v)
+	local box = value_box(obj)
+	local old = box[k]
+	if old ~= v and is_orm(old) then
+		parent_of[old] = nil
+	end
+	box[k] = v
+	if is_orm(v) then
+		parent_of[v] = obj
+	end
+	mark_dirty(obj)
+end
+
+function M.bind(obj, col, key)
+	assert(is_orm(obj), "orm.bind: target is not orm object")
+	assert(parent_of[obj] == nil, "orm.bind: only document root can be bound")
+	assert(type(col) == "string" and col ~= "", "orm.bind: col required")
+	assert(key ~= nil, "orm.bind: key required")
+	doc_of[obj] = { col = col, key = key }
+end
+
+local function held_by(col)
+	local by_key = held[col]
+	if not by_key then
+		by_key = {}
+		held[col] = by_key
+	end
+	return by_key
+end
+
+-- 按集合和文档 id 记住根。模块不用再各存一张 doc 表。
+function M.hold(obj, col, key)
+	M.bind(obj, col, key)
+	held_by(col)[key] = obj
+end
+
+function M.get(col, key)
+	local by_key = held[col]
+	return by_key and by_key[key]
+end
+
+function M.forget(col, key)
+	local by_key = held[col]
+	if by_key then
+		by_key[key] = nil
+	end
+end
+
+-- 已经挂在文档上的对象直接返回。新对象要求文档已经 hold。
+function M.put(col, key, field, map_key, child)
+	assert(is_orm(child), "orm.put: child is not orm object")
+	if parent_of[child] then
+		return
+	end
+	local root = M.get(col, key)
+	assert(root, "orm.put: document not held")
+	root[field][map_key] = child
+end
+
+function M.remove(col, key, field, map_key)
+	local root = M.get(col, key)
+	if root and root[field] then
+		root[field][map_key] = nil
+	end
+end
+
+function M.touch(obj)
+	mark_dirty(obj)
+end
+
+function M.has_dirty()
+	return dirty_list[1] ~= nil
+end
+
+function M.drain_dirty()
+	local list = dirty_list
+	dirty_list = {}
+	local ret = {}
+	for _, root in ipairs(list) do
+		rawset(root, DIRTY_KEY, nil)
+		local info = doc_of[root]
+		if info then
+			ret[#ret + 1] = { obj = root, col = info.col, key = info.key }
+		end
+	end
+	return ret
+end
+
 function M.struct_setfield(obj, k, v)
 	local cls = obj.__cls
 	if not cls then
@@ -258,7 +423,7 @@ function M.struct_setfield(obj, k, v)
 	end
 	if type(v) == "table" and v.__cls ~= nil then
 		if v_cls.id == v.__cls.id then
-			rawset(obj, k, v)
+			commit(obj, k, v)
 			return
 		end
 		error(string.format(
@@ -267,10 +432,10 @@ function M.struct_setfield(obj, k, v)
 		))
 	end
 	if v == nil and v_cls.is_atom then
-		rawset(obj, k, nil)
+		commit(obj, k, nil)
 		return
 	end
-	rawset(obj, k, v_cls:parse(v))
+	commit(obj, k, v_cls:parse(v))
 end
 
 function M.list_setfield(obj, k, v)
@@ -282,13 +447,13 @@ function M.list_setfield(obj, k, v)
 		error(string.format("cls<%s> key<%s> is not integer index", cls.name, tostring(k)))
 	end
 	if v == nil then
-		rawset(obj, k, nil)
+		commit(obj, k, nil)
 		return
 	end
 	local v_cls = cls.item
 	if type(v) == "table" and v.__cls ~= nil then
 		if v_cls.id == v.__cls.id then
-			rawset(obj, k, v)
+			commit(obj, k, v)
 			return
 		end
 		error(string.format(
@@ -296,7 +461,7 @@ function M.list_setfield(obj, k, v)
 			cls.name, k, v_cls.id.name, v.__cls.name
 		))
 	end
-	rawset(obj, k, v_cls:parse(v))
+	commit(obj, k, v_cls:parse(v))
 end
 
 function M.map_setfield(obj, k, v)
@@ -306,13 +471,13 @@ function M.map_setfield(obj, k, v)
 	end
 	local k_data = cls.key:parse(k)
 	if v == nil then
-		rawset(obj, k_data, nil)
+		commit(obj, k_data, nil)
 		return
 	end
 	local v_cls = cls.value
 	if type(v) == "table" and v.__cls ~= nil then
 		if v_cls.id == v.__cls.id then
-			rawset(obj, k_data, v)
+			commit(obj, k_data, v)
 			return
 		end
 		error(string.format(
@@ -320,7 +485,7 @@ function M.map_setfield(obj, k, v)
 			cls.name, tostring(k_data), v_cls.id.name, v.__cls.name
 		))
 	end
-	rawset(obj, k_data, v_cls:parse(v))
+	commit(obj, k_data, v_cls:parse(v))
 end
 
 function M.create_struct(cls, data)

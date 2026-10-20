@@ -3,6 +3,7 @@ clsUser = clsObject:Inherit()
 function clsUser:__init__(oci)
 	Super(clsUser).__init__(self, oci)
 	self._data = ORM.create(ORM.CLS_USER_DATA, oci)
+	ORM.bind(self._data, MONGO_SLAVE.COL.USER_INFO, self._data._userId)
 	-- 运行时字段，不落库
 	self._loginAddr = nil
 	self._fd = nil
@@ -10,18 +11,6 @@ function clsUser:__init__(oci)
 	self._gateSrv = nil
 	self._token = nil
 	self._account = nil
-end
-
--- 方案 A：子树更新，路径只允许 string 字段名（无 @、无数字段）
-function clsUser:saveField(field)
-	assert(type(field) == "string", "saveField only accepts string field name")
-	local userId = self._data._userId
-	local value = ORM.dump_field(self._data, field)
-	MONGO_SLAVE.saveDocField(MONGO_SLAVE.USER_INFO_COL, userId, field, value)
-end
-
-function clsUser:saveToDB()
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_INFO_COL, self._data._userId, ORM.dump(self._data))
 end
 
 function clsUser:getUserId()
@@ -42,7 +31,6 @@ end
 
 function clsUser:setName(name)
 	self._data._name = name
-	self:saveField("_name")
 end
 
 function clsUser:getSex()
@@ -51,7 +39,6 @@ end
 
 function clsUser:setSex(sex)
 	self._data._sex = sex
-	self:saveField("_sex")
 end
 
 function clsUser:getResTbl()
@@ -87,7 +74,6 @@ function clsUser:setSdkParamTbl(paramTbl)
 		end
 	end
 	self._data._sdkParamTbl = tbl
-	self:saveField("_sdkParamTbl")
 end
 
 function clsUser:updateByLoginParamTbl(paramTbl)
@@ -153,7 +139,6 @@ end
 
 function clsUser:setLoginTime(time)
 	self._data._loginTime = time
-	self:saveField("_loginTime")
 end
 
 function clsUser:getLoginTime()
@@ -162,7 +147,6 @@ end
 
 function clsUser:setBornServerId(serverId)
 	self._data._bornServerId = serverId
-	self:saveField("_bornServerId")
 end
 
 function clsUser:getDiamond()
@@ -179,7 +163,6 @@ end
 
 function clsUser:addSumRechargeDiamond(addCnt)
 	self._data._sumRechargeDiamond = self._data._sumRechargeDiamond + addCnt
-	self:saveField("_sumRechargeDiamond")
 end
 
 function clsUser:getSumRechargeDiamond()
@@ -190,13 +173,11 @@ function clsUser:addRealDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
 	assert(reasonList[1] == CONST.FLOW_REASON.RECHARGE or reasonList[1] == CONST.FLOW_REASON.WIZ)
 	self._data._realDiamond = self._data._realDiamond + addCnt
-	self:saveField("_realDiamond")
 end
 
 function clsUser:addGiftDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
 	self._data._giftDiamond = self._data._giftDiamond + addCnt
-	self:saveField("_giftDiamond")
 end
 
 function clsUser:addRealDiamondAndSync(addCnt, reasonList)
@@ -222,7 +203,6 @@ end
 function clsUser:addDiamond(addCnt, reasonList)
 	assert(addCnt >= 0)
 	self._data._realDiamond = self._data._realDiamond + addCnt
-	self:saveField("_realDiamond")
 end
 
 function clsUser:subDiamond(sumSubCnt, reasonList)
@@ -237,12 +217,6 @@ function clsUser:subDiamond(sumSubCnt, reasonList)
 		self._data._realDiamond = 0
 		subGift = sumSubCnt - subReal
 		self._data._giftDiamond = self._data._giftDiamond - subGift
-	end
-	if subReal > 0 then
-		self:saveField("_realDiamond")
-	end
-	if subGift > 0 then
-		self:saveField("_giftDiamond")
 	end
 end
 
@@ -261,7 +235,6 @@ end
 
 function clsUser:setHeadIcon(headIcon)
 	self._data._headIcon = headIcon
-	self:saveField("_headIcon")
 end
 
 function clsUser:getClientPTOInfo()
@@ -284,5 +257,4 @@ end
 
 function clsUser:setLotteryTimes(lotteryTimes)
 	self._data._lotteryTimes = lotteryTimes
-	self:saveField("_lotteryTimes")
 end

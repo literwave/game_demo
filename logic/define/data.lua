@@ -1,11 +1,15 @@
-local skynet = require "skynet"
 local sharedata = require "skynet.sharedata"
-DATA_REPORT = nil
-DATA_SERVER_GROUP = nil
-DATA_HERO = nil
-DATA_BUILD_DETAIL = nil
-DATA_BUILD_LEVEL = nil
-DATA_BUILD_CONF = nil
+
+local DATA_HERO = sharedata.query("Hero")
+local DATA_REPORT = sharedata.query("ReportInfo")
+local DATA_SERVER_GROUP = sharedata.query("ServerGroup")
+local DATA_GLOBAL = sharedata.query("Global")
+local DATA_BUILD_DETAIL = sharedata.query("BuildingDetail")
+local DATA_BUILD_LEVEL = sharedata.query("BuildingLv")
+local DATA_BUILD_CONF = sharedata.query("innerCity")
+local DATA_HEAD_ICON = sharedata.query("HeadIcon")
+local DATA_LOTTERY = sharedata.query("Lottery")
+local DATA_ITEM = sharedata.query("Item")
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -21,20 +25,7 @@ local function initConfigData()
 		table.insert(initBuildList, conf.InitLev)
 	end
 end
-
-skynet.init(function()
-	DATA_HERO = sharedata.query("Hero")
-	DATA_REPORT = sharedata.query("ReportInfo")
-	DATA_SERVER_GROUP = sharedata.query("ServerGroup")
-	DATA_GLOBAL = sharedata.query("Global")
-	DATA_BUILD_DETAIL = sharedata.query("BuildingDetail")
-	DATA_BUILD_LEVEL = sharedata.query("BuildingLv")
-	DATA_BUILD_CONF = sharedata.query("innerCity")
-	DATA_HEAD_ICON = sharedata.query("HeadIcon")
-	DATA_LOTTERY = sharedata.query("Lottery")
-	DATA_ITEM = sharedata.query("Item")
-	initConfigData()
-end)
+initConfigData()
 
 function getValueByKey(key)
 	return DATA_GLOBAL[key].value2

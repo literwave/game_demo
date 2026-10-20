@@ -7,16 +7,7 @@ function clsHero:__init__(oci)
 	else
 		self._data = ORM.create(ORM.CLS_HERO_DATA, oci)
 	end
-end
-
--- 英雄挂在 dat._heroes 下（integer key map），字段更新统一整包落 _heroes，避免数字路径段
-function clsHero:saveField(field)
-	assert(type(field) == "string", "saveField only accepts string field name")
-	HERO_MGR.persistUserHeroes(self:getUserId())
-end
-
-function clsHero:saveToDB()
-	HERO_MGR.persistUserHeroes(self:getUserId())
+	ORM.put(MONGO_SLAVE.COL.USER_HERO, self._data._userId, "_heroes", self._data._heroType, self._data)
 end
 
 function clsHero:getUserId()
@@ -29,7 +20,6 @@ end
 
 function clsHero:setNewTag(newTag)
 	self._data._newTag = newTag and true or false
-	self:saveField("_newTag")
 end
 
 function clsHero:getHeroType()
@@ -70,7 +60,6 @@ end
 
 function clsHero:setSkillLv(skillId, skillLv)
 	self._data._skillTbl[skillId] = skillLv
-	self:saveField("_skillTbl")
 end
 
 function clsHero:getEquipTbl()

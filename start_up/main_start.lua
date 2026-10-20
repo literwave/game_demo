@@ -1,8 +1,13 @@
 local skynet = require "skynet"
+local cluster = require "skynet.cluster"
 
 skynet.start(function()
 	skynet.error("server start")
-	skynet.newservice("debug_console", 8000)
+	local nodename = (skynet.getenv("nodename") or "game") .. skynet.getenv("host_id")
+	cluster.open(nodename)
+	skynet.error("cluster open", nodename)
+
+	skynet.newservice("debug_console", skynet.getenv("console_port") or 8000)
 	skynet.newservice("gamelog") -- save file not save db
 	skynet.newservice("load_xls") -- 配置进 sharedata，须先于业务服务
 	skynet.newservice("logind") -- login service

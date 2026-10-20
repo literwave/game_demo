@@ -1,24 +1,72 @@
 local skynet = require "skynet"
+local orm = require "orm"
 
-localEnvDoFile("../logic/service/mail/save_col.lua")
+COL = {
+	USER_INFO = "userInfoCol",
+	USER_HERO = "userHeroCol",
+	USER_BUILD = "userBuildCol",
+	USER_ITEM = "userItemCol",
+	QUEUE = "queueCol",
+	GAME_SID = "gameSidCol",
+	MAIL = "mailCol",
+	USER_MAIL = "userMailCol",
+	SVR_MAIL = "svrMailCol",
+}
 
-flushCB = nil
+local flushCB = nil
 local flushCd = 5
-allCmdTbl = {}
+local allCmdTbl = {}
+local flushScheduled = false
+local flushing = false
 
-function flush()
-	if next(allCmdTbl) then
-		skynet.send(".mongodb", "lua", "saveData", allCmdTbl)
-	end
-	allCmdTbl = {}
-end
-
-local function pushCmd(col, cmd)
+local function enqueue(col, cmd)
 	if not allCmdTbl[col] then
 		allCmdTbl[col] = {}
 	end
 	table.insert(allCmdTbl[col], cmd)
-	flush()
+end
+
+local function scheduleFlush()
+	if flushScheduled or flushing then
+		return
+	end
+	flushScheduled = true
+	skynet.timeout(0, function()
+		flushScheduled = false
+		flush()
+	end)
+end
+
+orm.on_dirty = scheduleFlush
+
+function flush()
+	if flushing then
+		return
+	end
+	flushing = true
+	local dirty = orm.drain_dirty()
+	for _, item in ipairs(dirty) do
+		enqueue(item.col, {
+			key = item.key,
+			opType = "$set",
+			fieldStr = "dat",
+			value = orm.dump(item.obj),
+		})
+	end
+	local sending = allCmdTbl
+	allCmdTbl = {}
+	flushing = false
+	if next(sending) then
+		skynet.send(".mongodb", "lua", "saveData", sending)
+	end
+	if orm.has_dirty() then
+		scheduleFlush()
+	end
+end
+
+local function pushCmd(col, cmd)
+	enqueue(col, cmd)
+	scheduleFlush()
 end
 
 function commonLoadSingle(col, key)
@@ -60,8 +108,11 @@ function commonLoadMany(col, keyList)
 	return ret
 end
 
+-- 整包覆盖 dat（map 的 number key 由 ORM.dump 转成字符串）
 function saveDoc(col, key, dumped)
-	assert(col and key and type(dumped) == "table")
+	assert(col)
+	assert(key)
+	assert(type(dumped) == "table")
 	pushCmd(col, {
 		key = key,
 		opType = "$set",
@@ -70,8 +121,11 @@ function saveDoc(col, key, dumped)
 	})
 end
 
+-- 子树字段更新：field 必须是非纯数字的 string 字段名
 function saveDocField(col, key, field, value)
-	assert(type(field) == "string")
+	assert(col)
+	assert(key)
+	assert(type(field) == "string", "saveDocField field must be string")
 	assert(not tonumber(field), "saveDocField field must not be numeric string")
 	pushCmd(col, {
 		key = key,
@@ -82,6 +136,8 @@ function saveDocField(col, key, field, value)
 end
 
 function delDoc(col, key)
+	assert(col)
+	assert(key)
 	pushCmd(col, {
 		key = key,
 		opType = "delDoc",
@@ -90,16 +146,12 @@ function delDoc(col, key)
 	})
 end
 
-function commonSaveTbl(col, tbl)
+function commonSaveMany(col, tbl)
 	for key, dat in pairs(tbl) do
 		if type(dat) == "table" then
 			saveDoc(col, key, dat)
 		end
 	end
-end
-
-function commonSaveMany(col, tbl)
-	commonSaveTbl(col, tbl)
 end
 
 function commonDelMany(col, keyTbl)
@@ -112,5 +164,4 @@ function systemStartup()
 	if not flushCB then
 		flushCB = CALL_OUT.callFre("MONGO_SLAVE", "flush", flushCd)
 	end
-	initMailMongo()
 end

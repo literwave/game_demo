@@ -7,22 +7,14 @@ function clsQueue:__init__(oci)
 	else
 		self._data = ORM.create(ORM.CLS_QUEUE_DATA, oci)
 	end
+	ORM.put(MONGO_SLAVE.COL.QUEUE, self._data._userId, "_queues", self._data._queueIdx, self._data)
 	QUEUE_MGR.refQueue(self)
 end
 
 function clsQueue:release()
+	ORM.remove(MONGO_SLAVE.COL.QUEUE, self:getUserId(), "_queues", self:getQueueIdx())
 	QUEUE_MGR.unrefQueue(self)
-	QUEUE_MGR.persistUserQueues(self:getUserId())
 	Super(clsQueue).release(self)
-end
-
-function clsQueue:saveField(field)
-	assert(type(field) == "string", "saveField only accepts string field name")
-	QUEUE_MGR.persistUserQueues(self:getUserId())
-end
-
-function clsQueue:saveToDB()
-	QUEUE_MGR.persistUserQueues(self:getUserId())
 end
 
 function clsQueue:getUserId()
@@ -63,12 +55,10 @@ end
 
 function clsQueue:setWorkIdx(workIdx)
 	self._data._workIdx = workIdx or 0
-	self:saveField("_workIdx")
 end
 
 function clsQueue:setExpireTime(expireTime)
 	self._data._expireTime = expireTime or 0
-	self:saveField("_expireTime")
 end
 
 function clsQueue:checkIsExpired()
@@ -78,7 +68,6 @@ end
 
 function clsQueue:removeQueueData(queueIdx)
 	self._data._queueTbl[queueIdx] = nil
-	self:saveField("_queueTbl")
 end
 
 function clsQueue:addNewWork(targetId, cancelRewardList)
@@ -92,7 +81,6 @@ function clsQueue:addNewWork(targetId, cancelRewardList)
 	queueTbl[nextQueueIdx] = {
 		targetId = targetId,
 	}
-	self:saveField("_queueTbl")
 end
 
 function clsQueue:getQueueFrontData()
@@ -125,7 +113,6 @@ function clsQueue:onExpired()
 			tbl[queueIdx] = nil
 		end
 	end
-	self:saveField("_queueTbl")
 	return true
 end
 
@@ -185,7 +172,6 @@ function clsQueue:onWorkFinish(targetId)
 	assert(nowWorkTargetId == targetId)
 	local workIdx = self:getWorkIdx()
 	self._data._queueTbl[workIdx] = nil
-	self:saveField("_queueTbl")
 	self:setWorkIdx(nil)
 end
 

@@ -30,22 +30,12 @@ local function createBuild(oci)
 	return BUILD_BASE.clsBuild:New(oci)
 end
 
-function persistUserBuilds(userId)
-	assert(userId)
-	local buildTbl = allUserBuildTbl[userId] or {}
-	local bagData = {}
-	for bid, build in pairs(buildTbl) do
-		bagData[bid] = build._data
-	end
-	local doc = ORM.create(ORM.CLS_USER_BUILD_DOC, { _builds = bagData })
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_BUILD_COL, userId, ORM.dump(doc))
-end
-
 local function tryInitUserBuilds(userId)
-	if not allUserBuildTbl[userId] then
-		allUserBuildTbl[userId] = {}
-		local raw = MONGO_SLAVE.loadSingleUserBuild(userId) or {}
+	if not ORM.get(MONGO_SLAVE.COL.USER_BUILD, userId) then
+		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.USER_BUILD, userId) or {}
 		local doc = ORM.create(ORM.CLS_USER_BUILD_DOC, raw)
+		ORM.hold(doc, MONGO_SLAVE.COL.USER_BUILD, userId)
+		allUserBuildTbl[userId] = {}
 		for _, buildData in pairs(doc._builds) do
 			if ORM.is_cls(buildData, ORM.CLS_BUILD_DATA) then
 				createBuild(buildData)
@@ -76,7 +66,6 @@ local function initUserBuilds(userId)
 			end
 		end
 	end
-	persistUserBuilds(userId)
 end
 
 function onUserLogin(user, isFirstLogin)
@@ -87,9 +76,10 @@ function onUserLogin(user, isFirstLogin)
 end
 
 function onUserLogout(userId)
-	if allUserBuildTbl[userId] then
-		persistUserBuilds(userId)
+	if ORM.get(MONGO_SLAVE.COL.USER_BUILD, userId) then
+		MONGO_SLAVE.flush()
 		allUserBuildTbl[userId] = nil
+		ORM.forget(MONGO_SLAVE.COL.USER_BUILD, userId)
 	end
 end
 
@@ -125,7 +115,6 @@ local function onCreateBuild(fd, packet)
 		_bid = bid,
 		_level = 1,
 	})
-	build:saveToDB()
 	build:syncToClient()
 end
 

@@ -44,10 +44,10 @@
 
 ## 技术栈
 
-- **运行时**：Skynet v1.4.0（Lua 5.4.2，`skynet/` 为 submodule）
+- **运行时**：Skynet v1.6.0（Lua 5.4.5，`skynet/` 为 submodule）
 - **传输**：WebSocket
 - **协议**：Protobuf（`game_common/pb`、`game_common/proto`，协议号在 `game_common/server/net_pb.lua`）
-- **存储**：MongoDB、Redis（登录 token 等）
+- **存储**：MongoDB 3.6 及以上（驱动为 OP_MSG）、Redis（登录 token 等）
 - **数据模型**：ORM（`lualib/orm` + `orm/schema/*.td`）
 - **大地图寻路**：JPS（`vendor/slg-navigation` submodule）
 
@@ -157,7 +157,8 @@ game_demo/
 ├── start_up/                 # Skynet 启动脚本
 │   └── main_start.lua
 ├── config/                   # 节点配置
-│   ├── main_node             # 主节点
+│   ├── main_node             # 120 服
+│   ├── clustername.lua       # Skynet cluster 节点地址
 │   └── test_node             # 测试节点
 ├── shell/                    # 启停 / 编译 / 清库脚本
 ├── logic/
@@ -180,7 +181,7 @@ game_demo/
 │   └── protobuf.lua
 ├── vendor/pbc/               # pbc 源码（protobuf C 实现）
 ├── vendor/slg-navigation/    # submodule：SLG JPS 寻路
-├── skynet/                   # submodule：cloudwu/skynet（当前 v1.4.0）
+├── skynet/                   # submodule：cloudwu/skynet（当前 v1.6.0）
 ├── game_common/              # submodule：协议、pb、导表（literwave/game_common）
 ├── res/innerCity.lua         # 本服内城布局，不在 game_common 里
 ├── docs/                     # 专题设计文档
@@ -195,9 +196,9 @@ game_demo/
 |------|------|
 | OS | Linux / macOS；Windows 请用 **WSL2** |
 | 编译器 | gcc、make、autoconf（Skynet 的 jemalloc 需要） |
-| 依赖服务 | Redis、MongoDB（本机无鉴权即可跑通默认配置） |
+| 依赖服务 | Redis；MongoDB **3.6 及以上**（本机无鉴权即可跑通默认配置） |
 | Git | 能拉 GitHub SSH（`skynet` / `game_common` 子模块地址是 `git@github.com:...`） |
-| 网络 | 默认本机：`login 33021` / `gate 33022` / `http 33023` / console `8000` |
+| 网络 | 120 服：`login 33021` / `gate 33022` / `http 33023` / console `8000` / cluster `2528` |
 
 Ubuntu / Debian / WSL2 编译依赖：
 
@@ -210,7 +211,7 @@ sudo apt install -y git build-essential autoconf
 
 ## 安装步骤
 
-Skynet 来自 [cloudwu/skynet](https://github.com/cloudwu/skynet)，当前钉在 **v1.4.0**（Lua 5.4.2）。协议和导表来自 [game_common](https://github.com/literwave/game_common)，应对齐 **master**。工作区只检出 `pb/`、`proto/`、`server/`（`net_pb.lua` 和 `server/res`）。上游 README、客户端 JSON、`tsv/`、导表工具不会检出。
+Skynet 来自 [cloudwu/skynet](https://github.com/cloudwu/skynet)，当前钉在 **v1.6.0**（Lua 5.4.5）。协议和导表来自 [game_common](https://github.com/literwave/game_common)，应对齐 **master**。工作区只检出 `pb/`、`proto/`、`server/`（`net_pb.lua` 和 `server/res`）。上游 README、客户端 JSON、`tsv/`、导表工具不会检出。
 
 ### 1. 安装 Redis
 
@@ -229,7 +230,7 @@ redis-cli ping    # 应返回 PONG
 
 默认配置 `mongodb_user` / `mongodb_password` 为空，本机 Mongo **不要开鉴权**，监听 `127.0.0.1:27017`。
 
-Skynet 1.4 自带的 Mongo 驱动走旧协议（OP_QUERY）。**MongoDB 8 无法正常 find**，本地建议用 **4.4 / 5.x**。
+Skynet v1.6.0 的 Mongo 驱动使用 OP_MSG，find、update、insert 都走它。MongoDB 从 **3.6** 起支持这套协议，**5.1** 起只接受它。本仓库可连 **3.6 及以上**，包括 6、7、8。
 
 安装后确认：
 
@@ -271,7 +272,7 @@ git -C game_common sparse-checkout set '/pb/' '/pb/**' '/proto/' '/proto/**' '/s
 git submodule update --init --remote game_common
 ```
 
-**不要**对 `skynet` 使用 `--remote`，否则会离开 v1.4.0。
+**不要**对 `skynet` 使用 `--remote`，否则会离开 v1.6.0。
 
 确认：
 
@@ -342,6 +343,7 @@ sh shell/runtest.sh
 | 配置项 | 含义 |
 |--------|------|
 | `host_id` | 本服 ID |
+| `nodename` / `cluster` | 节点前缀，启动时拼上 `host_id`；以及 `config/clustername.lua` 路径 |
 | `gate_port` / `login_port` / `http_port` | 网关 / 登录 / HTTP |
 | `agent_init_cnt` | 启动时预创建 agent 数 |
 | `agent_max_user_cnt` | 单 agent 建议承载上限 |
@@ -350,6 +352,17 @@ sh shell/runtest.sh
 | `rootdir` / `workdir` | 工程与 logic 相对路径 |
 
 测试配置见 `config/test_node`。
+
+### Cluster
+
+`config/clustername.lua` 里每个服一行，键是 `nodename` 拼上 `host_id`。当前只有 120 服：`nodename` 是 `game`，打开 `game120`，监听 `127.0.0.1:2528`。调用时用拼出来的名字：
+
+```lua
+local cluster = require "skynet.cluster"
+cluster.call("game120", ".mail", ...)
+```
+
+`__nowaiting = true` 时，对方还没起来，`cluster.call` 会失败而不是一直等。再加服时，在 `clustername.lua` 加一行，并另起一个进程，改它的 `host_id` 和端口。`nodename` 保持 `game`。
 
 ---
 
@@ -368,15 +381,15 @@ sh shell/runtest.sh
 2. **不要**在 `$set` 路径中使用纯数字段（如 `dat.1001.xxx`）；用户英雄等挂在 `dat._heroes` 下整包更新  
 3. 不兼容旧版 `@` 数字前缀存档；换库或清集合后使用  
 
-示例（概念）：
+加载或创建文档后绑上集合和 `_id`。之后改字段会标脏，刷盘时整包写回：
 
 ```lua
 self._data = ORM.create(ORM.CLS_USER_DATA, oci)
-MONGO_SLAVE.saveDoc(col, userId, ORM.dump(self._data))
-MONGO_SLAVE.saveDocField(col, userId, "_name", ORM.dump_field(self._data, "_name"))
+ORM.bind(self._data, MONGO_SLAVE.COL.USER_INFO, self._data._userId)
+self._data._name = name
 ```
 
-新增可存盘类型：先写 `orm/schema/xxx.td`，再在 `orm/init.lua` 的 `SCHEMA_FILES` 中注册。
+新建文档如果之后没有赋值，调用 `ORM.touch(doc)` 标一次脏。新增可存盘类型：先写 `orm/schema/xxx.td`，再在 `orm/init.lua` 的 `SCHEMA_FILES` 中注册。
 
 ---
 
@@ -392,7 +405,7 @@ MONGO_SLAVE.saveDocField(col, userId, "_name", ORM.dump_field(self._data, "_name
 
 1. 在 `logic/service/agent/module/<mod>/` 增加 `base.lua` / `mgr.lua`  
 2. 在 `logic/service/agent/global.lua` 中 `Import` 挂到全局（如 `FOO_MGR = Import(...)`）  
-3. 需要落库时：补 `.td` → `self._data` → `saveDoc` / `saveDocField`  
+3. 需要落库时：补 `.td` → `self._data` → `ORM.bind`。改字段即标脏  
 
 ### 进程间通信
 
@@ -441,6 +454,7 @@ MONGO_SLAVE.saveDocField(col, userId, "_name", ORM.dump_field(self._data, "_name
 - 大型 MMO 需补监控、压测与工程化  
 - Redis 登录 token 默认约 **300s** 过期（以登录服实现为准）  
 - 多 Gate 分配策略相对简单，扩展见 `docs/GATE_SCALING.md`
+- Cluster 已监听，玩法仍在同一进程；拆节点时再把对应服务挪出去
 
 ---
 

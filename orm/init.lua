@@ -1,5 +1,6 @@
--- 游戏侧 ORM 入口：加载 orm/schema/*.td，转发到 lualib/orm
+-- 游戏侧 ORM 入口：加载 schema_path 下的 *.td，转发到 lualib/orm
 
+local skynet = require "skynet"
 local core = require "orm"
 local typedef = require "orm.typedef"
 
@@ -30,21 +31,9 @@ local SCHEMA_FILES = {
 	"build.td",
 }
 
-local function schema_dir()
-	local root = nil
-	local ok, skynet = pcall(require, "skynet")
-	if ok and skynet.getenv then
-		root = skynet.getenv("rootdir")
-	end
-	root = root or "../"
-	if root:sub(-1) ~= "/" then
-		root = root .. "/"
-	end
-	return root .. "orm/schema"
-end
-
 local function load_schemas()
-	local dir = schema_dir()
+	local dir = skynet.getenv("schema_path")
+	assert(dir and dir ~= "", "schema_path is empty")
 	local type_list = {}
 	for _, file in ipairs(SCHEMA_FILES) do
 		local list = typedef.parse(file, dir)
@@ -59,6 +48,34 @@ load_schemas()
 
 function create(cls_name, data)
 	return core.create(cls_name, data)
+end
+
+function bind(obj, col, key)
+	return core.bind(obj, col, key)
+end
+
+function hold(obj, col, key)
+	return core.hold(obj, col, key)
+end
+
+function get(col, key)
+	return core.get(col, key)
+end
+
+function forget(col, key)
+	return core.forget(col, key)
+end
+
+function put(col, key, field, map_key, child)
+	return core.put(col, key, field, map_key, child)
+end
+
+function remove(col, key, field, map_key)
+	return core.remove(col, key, field, map_key)
+end
+
+function touch(obj)
+	return core.touch(obj)
 end
 
 function dump(obj)

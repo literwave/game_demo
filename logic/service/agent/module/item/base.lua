@@ -7,15 +7,7 @@ function clsItem:__init__(oci)
 	else
 		self._data = ORM.create(ORM.CLS_ITEM_DATA, oci)
 	end
-end
-
-function clsItem:saveField(field)
-	assert(type(field) == "string", "saveField only accepts string field name")
-	ITEM_MGR.persistUserItems(self:getUserId())
-end
-
-function clsItem:saveToDB()
-	ITEM_MGR.persistUserItems(self:getUserId())
+	ORM.put(MONGO_SLAVE.COL.USER_ITEM, self._data._userId, "_items", self._data._itemId, self._data)
 end
 
 function clsItem:getItemId()
@@ -38,13 +30,11 @@ function clsItem:addCnt(cnt)
 	assert(DATA_COMMON.canOverlap(self:getItemType()))
 	assert(cnt > 0)
 	self._data._itemCnt = self._data._itemCnt + cnt
-	self:saveField("_itemCnt")
 end
 
 function clsItem:subCnt(cnt)
 	assert(cnt > 0 and cnt <= self._data._itemCnt)
 	self._data._itemCnt = self._data._itemCnt - cnt
-	self:saveField("_itemCnt")
 end
 
 function clsItem:getItemPTOInfo()
@@ -68,9 +58,8 @@ function clsItem:canUse(userId, useCnt)
 end
 
 function clsItem:release()
-	local userId = self:getUserId()
+	ORM.remove(MONGO_SLAVE.COL.USER_ITEM, self:getUserId(), "_items", self:getItemId())
 	ITEM_MGR.unrefItem(self)
-	ITEM_MGR.persistUserItems(userId)
 	Super(clsItem).release(self)
 end
 

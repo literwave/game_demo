@@ -15,7 +15,7 @@ ORM		= Import("../orm/init.lua")
 USER_BASE	= Import("../logic/service/agent/module/user/base.lua")
 USER_MGR	= Import("../logic/service/agent/module/user/mgr.lua")
 JSON4LUA	= Import("../common/json.lua")
-MONGO_SLAVE	= Import("../logic/service/agent/mongo_slave.lua")
+MONGO_SLAVE	= Import("../logic/base/mongo_slave.lua")
 LMDB		= Import("../logic/service/agent/lua_mdb.lua")
 
 CLS_HERO	= Import("../logic/service/agent/module/hero/base.lua")

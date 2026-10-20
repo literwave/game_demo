@@ -66,7 +66,7 @@ local function persistUserMail(userId)
 	if not info then
 		return
 	end
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_MAIL_COL, userId, dumpUserMailInfo(info))
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.USER_MAIL, userId, dumpUserMailInfo(info))
 end
 
 local function persistSvrMail()
@@ -74,7 +74,7 @@ local function persistSvrMail()
 		globalIdx = svrMailInfo.globalIdx or 0,
 		svrMailTbl = svrMailInfo.svrMailTbl or {},
 	})
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.SVR_MAIL_COL, SVR_MAIL_DOC_KEY, ORM.dump(doc))
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY, ORM.dump(doc))
 end
 
 function saveData()
@@ -84,16 +84,16 @@ function saveData()
 		mail:serialize(info)
 		saveMailTbl[mailId] = info
 	end
-	MONGO_SLAVE.commonSaveMany(MONGO_SLAVE.MAIL_COL, saveMailTbl)
+	MONGO_SLAVE.commonSaveMany(MONGO_SLAVE.COL.MAIL, saveMailTbl)
 	local delMailTbl = {}
 	for mailId in pairs(delMailIdTbl) do
 		if not saveMailTbl[mailId] then
 			delMailTbl[mailId] = true
 		end
 	end
-	MONGO_SLAVE.commonDelMany(MONGO_SLAVE.MAIL_COL, delMailTbl)
+	MONGO_SLAVE.commonDelMany(MONGO_SLAVE.COL.MAIL, delMailTbl)
 	for userId, info in pairs(userMailInfoTbl) do
-		MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_MAIL_COL, userId, dumpUserMailInfo(info))
+		MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.USER_MAIL, userId, dumpUserMailInfo(info))
 	end
 	persistSvrMail()
 end
@@ -107,7 +107,7 @@ end
 
 function loadData()
 	userMailInfoTbl = {}
-	local rawUserTbl = MONGO_SLAVE.commonLoadTbl(MONGO_SLAVE.USER_MAIL_COL) or {}
+	local rawUserTbl = MONGO_SLAVE.commonLoadTbl(MONGO_SLAVE.COL.USER_MAIL) or {}
 	for userId, raw in pairs(rawUserTbl) do
 		local doc = ORM.create(ORM.CLS_USER_MAIL_DOC, raw)
 		local info = {
@@ -130,7 +130,7 @@ function loadData()
 		userMailInfoTbl[userId] = info
 	end
 
-	local rawSvr = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.SVR_MAIL_COL, SVR_MAIL_DOC_KEY) or {}
+	local rawSvr = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY) or {}
 	local svrDoc = ORM.create(ORM.CLS_SVR_MAIL_DOC, rawSvr)
 	svrMailInfo = {
 		globalIdx = svrDoc.globalIdx or 0,
@@ -174,7 +174,7 @@ local function tryInitMailTbl(mailIdList)
 		end
 	end
 	if #queryList > 0 then
-		local dataTbl = MONGO_SLAVE.commonLoadMany(MONGO_SLAVE.MAIL_COL, queryList)
+		local dataTbl = MONGO_SLAVE.commonLoadMany(MONGO_SLAVE.COL.MAIL, queryList)
 		for mailId, data in pairs(dataTbl) do
 			local mail = createMail(data)
 			allMailTbl[mailId] = mail
@@ -186,7 +186,7 @@ end
 
 function tryInitMail(mailId)
 	if not allMailTbl[mailId] then
-		local saveTbl = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.MAIL_COL, mailId)
+		local saveTbl = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.MAIL, mailId)
 		if not saveTbl or not next(saveTbl) then
 			return
 		end

@@ -25,24 +25,36 @@ function clsMongoDb:disconnect()
 	self.mongoClient:disconnect()
 end
 
+local function check_write(op, args, ok, err)
+	if ok then
+		return
+	end
+	local key = args.selector and args.selector._id
+	skynet.error(string.format("mongo %s failed db=%s col=%s id=%s err=%s",
+		op, tostring(args.database), tostring(args.collection), tostring(key), tostring(err)))
+end
+
 function clsMongoDb:insert(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
-	c:safe_insert(args.doc)
+	local ok, err = c:safe_insert(args.doc)
+	check_write("insert", args, ok, err)
 end
 
 function clsMongoDb:insertBatch(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
 	for _, doc in ipairs(args.docs) do
-		c:safe_insert(doc)
+		local ok, err = c:safe_insert(doc)
+		check_write("insert", args, ok, err)
 	end
 end
 
 function clsMongoDb:delete(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
-	c:safe_delete(args.selector, args.single)
+	local ok, err = c:safe_delete(args.selector, args.single)
+	check_write("delete", args, ok, err)
 end
 
 function clsMongoDb:drop(args)
@@ -75,6 +87,10 @@ function clsMongoDb:findOne(args)
 	local db = self.mongoClient:getDB(args.database)
 	args.limit = 1
 	local r = find_command(db, args)
+	if r and r.ok == 0 then
+		skynet.error(string.format("mongo findOne failed db=%s col=%s err=%s",
+			tostring(args.database), tostring(args.collection), tostring(r.errmsg)))
+	end
 	if r and r.cursor and r.cursor.firstBatch then
 		return r.cursor.firstBatch[1]
 	end
@@ -84,6 +100,10 @@ end
 function clsMongoDb:findAll(args)
 	local db = self.mongoClient:getDB(args.database)
 	local r = find_command(db, args)
+	if r and r.ok == 0 then
+		skynet.error(string.format("mongo findAll failed db=%s col=%s err=%s",
+			tostring(args.database), tostring(args.collection), tostring(r.errmsg)))
+	end
 	if r and r.cursor then
 		return r.cursor.firstBatch or {}
 	end
@@ -93,7 +113,8 @@ end
 function clsMongoDb:update(args)
 	local db = self.mongoClient:getDB(args.database)
 	local c = db:getCollection(args.collection)
-	c:safe_update(args.selector, args.update, args.upsert, args.multi)
+	local ok, err = c:safe_update(args.selector, args.update, args.upsert, args.multi)
+	check_write("update", args, ok, err)
 end
 
 function clsMongoDb:createIndex(args)

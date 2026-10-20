@@ -26,7 +26,6 @@ end
 
 function clsItem:setPutOnHeroType(heroType)
 	self._data._putOnHeroType = heroType or 0
-	self:saveField("_putOnHeroType")
 end
 
 function clsItem:getPutOnHeroType()
@@ -43,7 +42,6 @@ end
 
 function clsItem:setStrengthenLv(strengthenLv)
 	self._data._strengthenLv = strengthenLv
-	self:saveField("_strengthenLv")
 end
 
 function clsItem:getStrengthenExp()
@@ -52,7 +50,6 @@ end
 
 function clsItem:setStrengthenExp(strengthenExp)
 	self._data._strengthenExp = strengthenExp
-	self:saveField("_strengthenExp")
 end
 
 function clsItem:getForgeLv()
@@ -61,7 +58,6 @@ end
 
 function clsItem:setForgeLv(forgeLv)
 	self._data._forgeLv = forgeLv
-	self:saveField("_forgeLv")
 end
 
 function clsItem:getLv()

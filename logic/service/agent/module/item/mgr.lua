@@ -152,22 +152,12 @@ function unrefItem(item)
 	end
 end
 
-function persistUserItems(userId)
-	assert(userId)
-	local itemTbl = allItemIdTbl[userId] or {}
-	local bagData = {}
-	for itemId, item in pairs(itemTbl) do
-		bagData[itemId] = item._data
-	end
-	local doc = ORM.create(ORM.CLS_USER_ITEM_DOC, { _items = bagData })
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_ITEM_COL, userId, ORM.dump(doc))
-end
-
 local function tryInitUserData(userId)
-	if not allItemIdTbl[userId] then
-		local raw = MONGO_SLAVE.loadSingleUserItem(userId) or {}
-		allItemIdTbl[userId] = {}
+	if not ORM.get(MONGO_SLAVE.COL.USER_ITEM, userId) then
+		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.USER_ITEM, userId) or {}
 		local doc = ORM.create(ORM.CLS_USER_ITEM_DOC, raw)
+		ORM.hold(doc, MONGO_SLAVE.COL.USER_ITEM, userId)
+		allItemIdTbl[userId] = {}
 		for _, itemData in pairs(doc._items) do
 			if ORM.is_cls(itemData, ORM.CLS_ITEM_DATA) then
 				createItem(itemData)
@@ -175,10 +165,6 @@ local function tryInitUserData(userId)
 		end
 	end
 	return allItemIdTbl[userId]
-end
-
-local function saveItem(item)
-	persistUserItems(item:getUserId())
 end
 
 local function generateItem(userId, itemType, cnt)
@@ -189,9 +175,9 @@ local function generateItem(userId, itemType, cnt)
 		_userId = userId,
 		_itemCnt = cnt or 1,
 	}
+	tryInitUserData(userId)
 	local item = createItem(oci)
 	item:afterGenerate()
-	saveItem(item)
 	return item
 end
 

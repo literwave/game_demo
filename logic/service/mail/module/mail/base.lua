@@ -48,7 +48,7 @@ function clsMail:__init__(oci)
 end
 
 function clsMail:release()
-	MONGO_SLAVE.delDoc(MONGO_SLAVE.MAIL_COL, self._mailId)
+	MONGO_SLAVE.delDoc(MONGO_SLAVE.COL.MAIL, self._mailId)
 	Super(clsMail).release(self)
 end
 
@@ -67,7 +67,7 @@ end
 function clsMail:saveToDB()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.MAIL_COL, self._mailId, info)
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.MAIL, self._mailId, info)
 end
 
 function clsMail:getDetail()

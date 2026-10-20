@@ -7,16 +7,8 @@ function clsBuild:__init__(oci)
 	else
 		self._data = ORM.create(ORM.CLS_BUILD_DATA, oci)
 	end
+	ORM.put(MONGO_SLAVE.COL.USER_BUILD, self._data._userId, "_builds", self._data._bid, self._data)
 	BUILD_MGR.refBuild(self)
-end
-
-function clsBuild:saveField(field)
-	assert(type(field) == "string", "saveField only accepts string field name")
-	BUILD_MGR.persistUserBuilds(self:getUserId())
-end
-
-function clsBuild:saveToDB()
-	BUILD_MGR.persistUserBuilds(self:getUserId())
 end
 
 function clsBuild:getUserId()
@@ -33,7 +25,6 @@ end
 
 function clsBuild:setLevel(level)
 	self._data._level = level
-	self:saveField("_level")
 end
 
 function clsBuild:getBuildType()

@@ -60,7 +60,7 @@ end
 
 function disconnect(fd, userId)
 	local user = getUserById(userId)
-	user:saveToDB()
+	MONGO_SLAVE.flush()
 	allUserTbl[userId] = nil
 	delUserIdByVfd(fd)
 	userIdToFd[userId] = nil
@@ -71,7 +71,7 @@ function isNewUser(userId)
 	local user = allUserTbl[userId]
 	local isNewUser = false
 	if not user then
-		local saveTbl = MONGO_SLAVE.loadSingleUserInfo(userId) or {}
+		local saveTbl = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.USER_INFO, userId) or {}
 		if table.isEmpty(saveTbl) then
 			isNewUser = true
 		end
@@ -82,7 +82,7 @@ end
 function tryInitUser(userId)
 	local user = allUserTbl[userId]
 	if not user then
-		local saveTbl = MONGO_SLAVE.loadSingleUserInfo(userId) or {}
+		local saveTbl = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.USER_INFO, userId) or {}
 		user = USER_BASE.clsUser:New(saveTbl)
 		allUserTbl[userId] = user
 	end
@@ -115,7 +115,7 @@ function createNewUser(gateSrv, fd, userId, serverId)
 	-- user:setGateSrv(gateSrv)
 	-- local userName = RANDOM_NAME.genNewUserName()
 	-- user:setName(userName)
-	user:saveToDB()
+	ORM.touch(user._data)
 	user:setFd(fd)
 	user:setGateSrv(gateSrv)
 	-- WORK_QUEUE_MGR.initUserWorkQueue(userId)

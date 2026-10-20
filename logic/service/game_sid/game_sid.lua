@@ -9,15 +9,17 @@ local SID_VAR_NAME_LIST = {
 GAME_SID_TBL = {}
 
 local GAME_SID_COL_KEY = "1"
+local sidData
 
 local function loadGameData()
-	local raw = MONGO_SLAVE.loadAllGameSidInfo(GAME_SID_COL_KEY) or {}
-	local data = ORM.create(ORM.CLS_GAME_SID_DATA, raw)
+	local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.GAME_SID, GAME_SID_COL_KEY) or {}
+	sidData = ORM.create(ORM.CLS_GAME_SID_DATA, raw)
+	ORM.bind(sidData, MONGO_SLAVE.COL.GAME_SID, GAME_SID_COL_KEY)
 	for _, varName in pairs(SID_VAR_NAME_LIST) do
-		_G[varName] = data[varName] or 0
+		_G[varName] = sidData[varName] or 0
 	end
 	GAME_SID_TBL = {
-		userNumId = data.userNumId,
+		userNumId = sidData.userNumId,
 	}
 end
 
@@ -28,10 +30,9 @@ end
 
 function CMD.fetchUserId()
 	userNumId = userNumId + 1
+	sidData.userNumId = userNumId
 	local userId = convertToGlobalSID(userNumId)
 	GAME_SID_TBL.userNumId = userNumId
-	local dumped = ORM.dump(ORM.create(ORM.CLS_GAME_SID_DATA, {userNumId = userNumId}))
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.GAME_SID_COL, GAME_SID_COL_KEY, dumped)
 	return userId
 end
 

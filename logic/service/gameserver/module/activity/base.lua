@@ -27,7 +27,7 @@ end
 function clsAct:saveField(field, val)
 	assert(type(field) == "string", "saveField only accepts string field name")
 	self[field] = val
-	MONGO_SLAVE.saveDocField(MONGO_SLAVE.USER_INFO_COL, self._userId, field, val)
+	MONGO_SLAVE.saveDocField(MONGO_SLAVE.COL.USER_INFO, self._userId, field, val)
 end
 
 function clsAct:getUserId()
@@ -77,7 +77,7 @@ end
 function clsAct:saveToDB()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_INFO_COL, self._userId, info)
+	MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.USER_INFO, self._userId, info)
 end
 
 function clsAct:setSdkParamTbl(paramTbl)

@@ -20,8 +20,8 @@ description: >-
 2. 若有「id 当 key 的包」，用命名字段挂 map，例如 `_items` / `_heroes` / `_queues`
 3. 把文件名加入 `orm/init.lua` 的 `SCHEMA_FILES`，并导出 `CLS_*` 常量
 4. `clsXxx:__init__`：`self._data = ORM.create(CLS_*, oci)`（已是 orm 对象则直接挂）
-5. `saveField` / `saveToDB`：整包 `MGR.persist*(userId)` → `MONGO_SLAVE.saveDoc(col, id, ORM.dump(doc))`
-6. 标量字段局部写：仅 `saveDocField(col, id, "fieldName", value)`，`fieldName` 不得 `tonumber` 成功
+5. 加载时 `ORM.hold(doc, MONGO_SLAVE.COL.XXX, id)`。集合名只用 `logic/base/mongo_slave.lua` 里的 `COL` 枚举。子对象在 `__init__` 里 `ORM.put` 挂进文档，删除用 `ORM.remove`。不要在模块里再存一份 doc 表。改字段会把根标脏，`flush` 整包写回
+6. 不要再写 `save_col.lua`、`persist*` 或在 setter 里 `saveField`。删整份独立文档仍用 `delDoc`
 
 ## 禁止
 
@@ -39,3 +39,4 @@ UserBuildDoc { _builds <number, BuildData> }
 ```
 
 核心库：`lualib/orm`；游戏入口：`Import("../orm/init.lua")` → `ORM`。
+落库：`ORM.bind` 之后标脏，由 `logic/base/mongo_slave.lua` 刷出。

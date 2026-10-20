@@ -20,23 +20,12 @@ function createHero(oci)
 	return hero
 end
 
--- 将内存中该玩家全部英雄 dump 为 UserHeroDoc 写入 mongo（路径只用 _heroes）
-function persistUserHeroes(userId)
-	assert(userId)
-	local heroTbl = userHeroTbl[userId] or {}
-	local bagData = {}
-	for heroType, hero in pairs(heroTbl) do
-		bagData[heroType] = hero._data
-	end
-	local doc = ORM.create(ORM.CLS_USER_HERO_DOC, { _heroes = bagData })
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.USER_HERO_COL, userId, ORM.dump(doc))
-end
-
 local function tryInitUserHeroData(userId)
-	if not userHeroTbl[userId] then
-		local raw = MONGO_SLAVE.loadSingleUserHero(userId) or {}
-		userHeroTbl[userId] = {}
+	if not ORM.get(MONGO_SLAVE.COL.USER_HERO, userId) then
+		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.USER_HERO, userId) or {}
 		local doc = ORM.create(ORM.CLS_USER_HERO_DOC, raw)
+		ORM.hold(doc, MONGO_SLAVE.COL.USER_HERO, userId)
+		userHeroTbl[userId] = {}
 		for _, heroData in pairs(doc._heroes) do
 			if ORM.is_cls(heroData, ORM.CLS_HERO_DATA) then
 				createHero(heroData)
@@ -56,9 +45,7 @@ function getHeroByType(userId, heroType)
 end
 
 function saveData()
-	for userId in pairs(userHeroTbl) do
-		persistUserHeroes(userId)
-	end
+	MONGO_SLAVE.flush()
 end
 
 function addHero(userId, heroType, reasonList)
@@ -77,7 +64,6 @@ function addHero(userId, heroType, reasonList)
 		_star = 1,
 	}
 	local hero = createHero(oci)
-	hero:saveToDB()
 	hero:syncToClient()
 	return hero
 end
