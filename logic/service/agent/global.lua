@@ -41,3 +41,5 @@ CLS_HERO_EQUIP_ITEM = Import("../logic/service/agent/module/item/hero_equip.lua"
 
 QUEUE_BASE = Import("../logic/service/agent/module/queue/base.lua")
 QUEUE_MGR = Import("../logic/service/agent/module/queue/mgr.lua")
+
+GM = Import("../logic/service/agent/module/gm/gm.lua")

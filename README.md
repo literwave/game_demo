@@ -266,13 +266,13 @@ git -C game_common sparse-checkout set '/pb/' '/pb/**' '/proto/' '/proto/**' '/s
 
 这样工作区里不会有上游 README、`client/`、`tsv/`、`ptotools/`、`vis_conf/`。
 
-要对齐 **master** 上的协议和导表：
+要对齐 **master** 上的协议和导表，路径必须写上 `game_common`：
 
 ```bash
 git submodule update --init --remote game_common
 ```
 
-**不要**对 `skynet` 使用 `--remote`，否则会离开 v1.6.0。
+不要运行不带路径的 `git submodule update --remote`。它会更新每一个子模块。`skynet` 在 `.gitmodules` 里没有 `branch`，Git 会跟远程默认分支，也就是上游 master，从而离开钉住的 **v1.6.0**。`skynet` 只随父仓库记录的提交走：`git submodule update skynet`。
 
 确认：
 

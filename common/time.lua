@@ -11,6 +11,14 @@ function osBJSec()
 	return os.time() + offset
 end
 
+function addOffset(sec)
+	offset = offset + sec
+end
+
+function resetOffset()
+	offset = 0
+end
+
 function getRelaDayNo(time)
 	local Standard = TIME_BASE
 	if not time then

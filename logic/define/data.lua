@@ -28,7 +28,7 @@ end
 initConfigData()
 
 function getValueByKey(key)
-	return DATA_GLOBAL[key].value2
+	return DATA_GLOBAL[key].value1 or DATA_GLOBAL[key].value2 or DATA_GLOBAL[key].value3
 end
 
 local function getReportInfo(reportId)
@@ -52,6 +52,14 @@ end
 
 function getHeroInfoByType(heroType)
 	return DATA_HERO[heroType]
+end
+
+function getAllHeroTypes()
+	local list = {}
+	for heroType in pairs(DATA_HERO) do
+		table.insert(list, heroType)
+	end
+	return list
 end
 
 function getItemKindByType(itemType)

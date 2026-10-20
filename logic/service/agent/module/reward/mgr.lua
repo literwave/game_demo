@@ -80,10 +80,25 @@ end
 
 function showReward(userId, rewardList, showTypeList)
 	local fd = USER_MGR.getFdByUserId(userId)
-	if fd then
-		showTypeList = showTypeList or {CONST.REWARD_SHOW_TYPE.WINDOW}
-		for_caller.c_show_reward(fd, rewardList, showTypeList)
+	if not fd then
+		return
 	end
+	if not showTypeList then
+		local rewardShowType = DATA_COMMON.getValueByKey(5)
+		showTypeList = { rewardShowType.windows }
+	end
+	local list = {}
+	for _, info in ipairs(rewardList) do
+		table.insert(list, {
+			rewardType = info.rewardType or info.reward_type,
+			itemType = info.itemType or info.item_type,
+			itemCount = info.itemCount or info.item_count,
+		})
+	end
+	for_caller.s2c_show_reward(fd, {
+		rewardList = list,
+		showTypeList = showTypeList,
+	})
 end
 
 function rewardUserAndShow(userId, rewardList, reasonList, showTypeList)

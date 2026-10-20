@@ -50,6 +50,10 @@ function getBuildByBid(userId, bid)
 	return buildTbl[bid]
 end
 
+function getUserBuildTbl(userId)
+	return tryInitUserBuilds(userId)
+end
+
 local function initUserBuilds(userId)
 	tryInitUserBuilds(userId)
 	if next(allUserBuildTbl[userId]) then

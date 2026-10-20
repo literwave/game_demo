@@ -19,11 +19,19 @@ local function writefile(pfile, mod, args, fileName)
 		end
 		argsStr = table.concat(args, " ")
 	end
-	local file = io.open(fileName, mod);
+	local file, err = io.open(fileName, mod)
+	if not file then
+		os.execute(string.format("mkdir -p %q", logPath))
+		file, err = io.open(fileName, mod)
+	end
 	local writeStr = pfile..argsStr
 	print(writeStr)
-	file:write(writeStr .. "\n");
-	file:close();
+	if not file then
+		skynet.error("gamelog open failed", fileName, err)
+		return
+	end
+	file:write(writeStr .. "\n")
+	file:close()
 end
 
 function CMD.writefile(level, pfile, args)

@@ -18,9 +18,13 @@ end
 
 function tellMe(userId, msg)
 	local fd = userIdToFd[userId]
-	if fd then
-		for_caller.s2c_tell_me(fd, msg)
+	if not fd then
+		return
 	end
+	if type(msg) == "string" then
+		msg = { msg = msg }
+	end
+	for_caller.s2c_tell_me(fd, msg)
 end
 
 function getUserById(UserId)
