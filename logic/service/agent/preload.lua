@@ -15,12 +15,14 @@ local PROTO_FILE_LIST = {
 	"../game_common/pb/user.pb",
 	"../game_common/pb/lottery.pb",
 	"../game_common/pb/item.pb",
+	"../game_common/pb/systemopen.pb",
 }
 
 function __G__TRACKBACK__(msg)
+	local bt_info = debug.traceback(tostring(msg), 2)
 	print("server lua error", SERVICE_NAME)
+	print(bt_info)
 	if not LOG then
-		print(bt_info)
 		return
 	end
 	LOG._error(bt_info)

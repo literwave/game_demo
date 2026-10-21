@@ -2,6 +2,7 @@
 
 RES_TYPE_MONEY = 1
 USER_HEART_BEAT_TIMEOUT = 60
+USER_LEVEL_UP_EXP = 50
 
 TEST_SERVER_GROUP_TBL = {
 	[99] = true,
@@ -80,4 +81,5 @@ EVENT = {
 	ON_USER_LOGIN = "on_user_login",
 	ON_USER_LOGOUT = "on_user_logout",
 	KICK_USER = "kick_user",
+	ON_SYSTEM_OPEN = "on_system_open",
 }

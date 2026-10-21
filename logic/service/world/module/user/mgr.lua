@@ -1,3 +1,5 @@
+local skynet = require "skynet"
+
 fd_to_user_id = {
 	-- [vfd] = userId
 }
@@ -41,24 +43,28 @@ end
 function ref_login(user_id, fd, gate_srv)
 	user_id_to_fd[user_id] = fd
 	fd_to_user_id[fd] = user_id
-	fd_to_gate_srv[user_id] = gate_srv
+	fd_to_gate_srv[fd] = gate_srv
 end
 
 function module_on_user_login(user, is_first_login)
 end
 
-local function kick_user(fd, user_id)
-	disconnect(fd)
+function on_user_login(user_id, fd, gate_srv, is_first_login)
+	skynet.error("world login success", user_id, gate_srv, is_first_login)
+	ref_login(user_id, fd, gate_srv)
 end
 
-function detect_user_heart_beat(user_id)
-	local user = all_user_tbl[user_id]
-	if not user then
-		return
-	end
-	local last_heart_beat_time = user:get_heart_beat_time()
-	if os.time() - last_heart_beat_time > CONST.USER_HEART_BEAT_TIMEOUT then
-		local fd = get_fd_by_user_id(user_id)
-		kick_user(fd, user_id)
-	end
+function on_user_logout(user_id, fd)
+	skynet.error("world logout success", user_id, fd)
+	disconnect(fd, user_id)
+end
+
+function kick_user(fd, user_id)
+	disconnect(fd, user_id)
+end
+
+function __init__()
+	EVENT.register(CONST.EVENT.ON_USER_LOGIN)
+	EVENT.register(CONST.EVENT.ON_USER_LOGOUT)
+	EVENT.register(CONST.EVENT.KICK_USER)
 end

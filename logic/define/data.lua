@@ -10,6 +10,7 @@ local DATA_BUILD_CONF = sharedata.query("innerCity")
 local DATA_HEAD_ICON = sharedata.query("HeadIcon")
 local DATA_LOTTERY = sharedata.query("Lottery")
 local DATA_ITEM = sharedata.query("Item")
+local DATA_SYSTEM_OPEN = sharedata.query("SystemOpen")
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -25,7 +26,17 @@ local function init_config_data()
 		table.insert(init_build_list, conf.InitLev)
 	end
 end
+
+local function init_system_open_enum()
+	for system_id, conf in pairs(DATA_SYSTEM_OPEN) do
+		local enum_name = conf.Enum
+		assert(not _G[enum_name], enum_name)
+		_G[enum_name] = conf.Id or system_id
+	end
+end
+
 init_config_data()
+init_system_open_enum()
 
 function get_value_by_key(key)
 	return DATA_GLOBAL[key].value1 or DATA_GLOBAL[key].value2 or DATA_GLOBAL[key].value3
@@ -116,4 +127,8 @@ end
 
 function get_build_max_level(b_type)
 	return 1
+end
+
+function get_system_open_tbl()
+	return DATA_SYSTEM_OPEN
 end

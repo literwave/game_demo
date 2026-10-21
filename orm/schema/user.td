@@ -5,6 +5,8 @@ res_map <number, number>
 
 sdk_param_map <string, string>
 
+system_open_map <number, number>
+
 user_data {
     _user_id string
     _birth_time number
@@ -19,4 +21,7 @@ user_data {
     _sum_recharge_diamond number
     _head_icon number
     _lottery_times number
+    _level number
+    _exp number
+    _system_open_tbl system_open_map
 }

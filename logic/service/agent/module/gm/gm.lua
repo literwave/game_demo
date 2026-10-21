@@ -14,6 +14,8 @@ local CMD_DESC = {
 	{ "del_item", "删除道具 [del_item itemType,cnt]" },
 	{ "add_hero", "添加武将 [add_hero heroType]" },
 	{ "full_hero", "获得全部武将 [full_hero]" },
+	{ "add_exp", "增加主角经验 [add_exp exp]" },
+	{ "open_system", "解锁系统 [open_system systemId]，0为全部" },
 }
 
 local function tell(vfd, msg)
@@ -112,6 +114,25 @@ function CMD.full_hero(vfd)
 	for _, hero_type in ipairs(DATA_COMMON.get_all_hero_types()) do
 		HERO_MGR.add_hero(user_id, hero_type, {})
 	end
+end
+
+function CMD.add_exp(vfd, exp)
+	assert(exp and exp > 0)
+	local user = USER_MGR.get_user_by_fd(vfd)
+	assert(user)
+	user:add_exp(exp)
+end
+
+function CMD.open_system(vfd, system_id)
+	assert(system_id)
+	local user = USER_MGR.get_user_by_fd(vfd)
+	assert(user)
+	if system_id == 0 then
+		SYSTEM_OPEN.open_all(user)
+		return
+	end
+	assert(DATA_COMMON.get_system_open_tbl()[system_id], system_id)
+	SYSTEM_OPEN.open_system(user, system_id)
 end
 
 local function on_gm_command(fd, packet)

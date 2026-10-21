@@ -44,6 +44,7 @@ DATA_FILE_LIST = {
 	"../game_common/server/res/HeadIcon.lua",
 	"../game_common/server/res/Item.lua",
 	"../game_common/server/res/Lottery.lua",
+	"../game_common/server/res/SystemOpen.lua",
 	"../res/innerCity.lua",
 }
 

@@ -243,6 +243,8 @@ function cls_user:get_client_pto_info()
 		headIcon = self:get_head_icon(),
 		sex = self:get_sex(),
 		birthTime = self:get_birth_time(),
+		level = self:get_level(),
+		exp = self:get_exp(),
 	}
 end
 
@@ -257,4 +259,46 @@ end
 
 function cls_user:set_lottery_times(lottery_times)
 	self._data._lottery_times = lottery_times
+end
+
+function cls_user:get_level()
+	return self._data._level
+end
+
+function cls_user:get_exp()
+	return self._data._exp
+end
+
+function cls_user:add_exp(exp)
+	local cur_exp = self:get_exp() + exp
+	local need = CONST.USER_LEVEL_UP_EXP
+	local add_level = math.floor(cur_exp / need)
+	self._data._exp = cur_exp % need
+	if add_level > 0 then
+		self._data._level = self:get_level() + add_level
+	end
+	self:sync_user_base_info()
+end
+
+function cls_user:get_system_open_tbl()
+	return self._data._system_open_tbl
+end
+
+function cls_user:get_system_open_time(system_id)
+	local open_tbl = self:get_system_open_tbl()
+	if not open_tbl then
+		return
+	end
+	return open_tbl[system_id]
+end
+
+function cls_user:is_system_open(system_id)
+	return self:get_system_open_time(system_id) ~= nil
+end
+
+function cls_user:set_system_open(system_id)
+	if not self._data._system_open_tbl then
+		self._data._system_open_tbl = {}
+	end
+	self._data._system_open_tbl[system_id] = os.time()
 end

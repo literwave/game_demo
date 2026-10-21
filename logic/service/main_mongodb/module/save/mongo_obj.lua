@@ -91,8 +91,8 @@ function cls_mongo_db:find_one(args)
 		skynet.error(string.format("mongo findOne failed db=%s col=%s err=%s",
 			tostring(args.database), tostring(args.collection), tostring(r.errmsg)))
 	end
-	if r and r.cursor and r.cursor.first_batch then
-		return r.cursor.first_batch[1]
+	if r and r.cursor and r.cursor.firstBatch then
+		return r.cursor.firstBatch[1]
 	end
 	return nil
 end
@@ -105,7 +105,7 @@ function cls_mongo_db:find_all(args)
 			tostring(args.database), tostring(args.collection), tostring(r.errmsg)))
 	end
 	if r and r.cursor then
-		return r.cursor.first_batch or {}
+		return r.cursor.firstBatch or {}
 	end
 	return {}
 end
