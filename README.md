@@ -18,6 +18,7 @@
 - [玩家登录过程](#玩家登录过程)
 - [仓库结构](#仓库结构)
 - [环境要求](#环境要求)
+- [Windows：用 WSL2](#windows用-wsl2)
 - [安装步骤](#安装步骤)
 - [配置说明](#配置说明)
 - [数据与 ORM](#数据与-orm)
@@ -194,7 +195,7 @@ game_demo/
 
 | 项目 | 建议 |
 |------|------|
-| OS | Linux / macOS；Windows 请用 **WSL2** |
+| OS | Linux / macOS。Windows 按 [Windows：用 WSL2](#windows用-wsl2) 装 **Ubuntu 22.04** |
 | 编译器 | gcc、make、autoconf（Skynet 的 jemalloc 需要） |
 | 依赖服务 | Redis；MongoDB **3.6 及以上**（本机无鉴权即可跑通默认配置） |
 | Git | 能拉 GitHub SSH（`skynet` / `game_common` 子模块地址是 `git@github.com:...`） |
@@ -206,6 +207,84 @@ Ubuntu / Debian / WSL2 编译依赖：
 sudo apt update
 sudo apt install -y git build-essential autoconf
 ```
+
+Windows 从这里开始：[Windows：用 WSL2](#windows用-wsl2)。发行版用 **Ubuntu 22.04**。装好后，下面的安装步骤都在这个 WSL 终端里执行。
+
+---
+
+## Windows：用 WSL2
+
+服务端在 WSL2 的 **Ubuntu 22.04** 里编译和启动。Cocos 客户端可以继续留在 Windows。
+
+### 1. 安装 Ubuntu 22.04
+
+用管理员打开 PowerShell：
+
+```powershell
+wsl --install -d Ubuntu-22.04
+```
+
+发行版名字是 `Ubuntu-22.04`，不要装不带版本号的 `Ubuntu`（那是当前最新 LTS）。装完重启，按提示建 Linux 用户。确认版本和 WSL2：
+
+```powershell
+wsl -l -v
+```
+
+`NAME` 为 `Ubuntu-22.04`，`VERSION` 为 `2`。若版本是 `1`：
+
+```powershell
+wsl --set-version Ubuntu-22.04 2
+```
+
+进系统后可以核对：
+
+```bash
+lsb_release -rs    # 22.04
+```
+
+### 2. 打开 systemd
+
+Redis、Mongo 的 `systemctl` 需要它。Ubuntu 22.04 的 WSL 镜像通常已经打开。在 WSL 里执行 `systemctl status`，若提示 systemd 未运行，把下面写进 `/etc/wsl.conf`：
+
+```ini
+[boot]
+systemd=true
+```
+
+然后在 Windows PowerShell 里执行 `wsl --shutdown`，再重新打开 Ubuntu 22.04。
+
+### 3. 仓库放在 Linux 磁盘
+
+克隆到家目录，例如 `~/game_demo`。不要放在 `/mnt/c` 或 `/mnt/d`。Windows 盘在 WSL 里是网络文件系统，Skynet 编译会很慢，权限和文件监视也容易出问题。
+
+Cursor 用 **WSL** 窗口打开这个目录，不要用 Windows 路径打开同一份代码。
+
+### 4. SSH 配在 WSL 里
+
+子模块地址是 `git@github.com:...`。密钥要在 Ubuntu 22.04 里生成并加到 GitHub，Windows 里的 key 不会自动带进来：
+
+```bash
+ssh-keygen -t ed25519 -C "your-email"
+cat ~/.ssh/id_ed25519.pub
+ssh -T git@github.com
+```
+
+### 5. Windows 客户端怎么连
+
+`config/main_node` 监听 `0.0.0.0`。Windows 11 会把 WSL 端口转到本机，客户端填：
+
+- 登录 `ws://127.0.0.1:33021`
+- 网关 `ws://127.0.0.1:33022`
+
+连不上时，在 WSL 里看地址：
+
+```bash
+hostname -I
+```
+
+客户端改用这个 IP。防火墙放行 `33021`、`33022`。
+
+接下来按 [安装步骤](#安装步骤) 在同一个 Ubuntu 22.04 终端里装 Redis、Mongo、编译并启动。
 
 ---
 
