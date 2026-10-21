@@ -24,6 +24,8 @@ skynet.start(function()
 	skynet.newservice("gameserver") -- gameserver can get all userId
 	skynet.newservice("mail")
 	skynet.newservice("world")
+	skynet.newservice("activity")
+	skynet.newservice("union") -- 联盟
 	-- skynet.newservice("battleserver")
 	-- 作为启动成功的logo
 	skynet.error("***       *******   *******   *******   *******     ***     ***       ***     ***   ***    ********")

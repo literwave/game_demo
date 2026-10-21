@@ -11,5 +11,3 @@ MONGO_SLAVE	= Import("../logic/base/mongo_slave.lua")
 LMDB		= Import("../logic/service/gameserver/lua_mdb.lua")
 
 USER_MGR	= Import("../logic/service/gameserver/module/user/mgr.lua")
-ACT_BASE	= Import("../logic/service/gameserver/module/activity/base.lua")
-ACT_MGR		= Import("../logic/service/gameserver/module/activity/mgr.lua")

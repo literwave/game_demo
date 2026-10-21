@@ -57,12 +57,16 @@ function CMD.login(gate_srv, fd, user_id, addr, account, server_id, token)
 	CALL_OUT.call_once("USER_MGR", "module_on_user_next_day", 24, user_id)
 	skynet.send(".gameserver", "lua", "on_user_login", user_id, fd, gate_srv, is_first_login)
 	skynet.send(".mail", "lua", "on_user_login", user_id, fd, gate_srv, is_first_login)
+	skynet.send(".activity", "lua", "on_user_login", user_id, fd, gate_srv, is_first_login)
+	skynet.send(".union", "lua", "on_user_login", user_id, fd, gate_srv, is_first_login)
 end
 
 function CMD.disconnect(fd, user_id)
 	user_queues[user_id] = nil
 	USER_MGR.disconnect(fd, user_id)
 	skynet.send(".gameserver", "lua", "on_user_logout", user_id, fd)
+	skynet.send(".activity", "lua", "on_user_logout", user_id, fd)
+	skynet.send(".union", "lua", "on_user_logout", user_id, fd)
 end
 
 local function sub_item_list_recv(id, taddr, user_id, item_list, reason_list)
