@@ -10,8 +10,8 @@ local CMD_DESC = {
 	{ "add_time", "增加时间 [add_time hour,min,sec]" },
 	{ "reset_time", "重置时间 [reset_time]" },
 	{ "show_time", "显示时间 [show_time]" },
-	{ "add_item", "增加道具 [add_item itemType,cnt]" },
-	{ "del_item", "删除道具 [del_item itemType,cnt]" },
+	{ "add_item", "增加道具 [add_item itemId,cnt]" },
+	{ "del_item", "删除道具 [del_item itemId,cnt]" },
 	{ "add_hero", "添加武将 [add_hero heroType]" },
 	{ "full_hero", "获得全部武将 [full_hero]" },
 	{ "add_exp", "增加主角经验 [add_exp exp]" },
@@ -83,21 +83,21 @@ function CMD.show_time(vfd)
 	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.os_bj_sec()))
 end
 
-function CMD.add_item(vfd, item_type, cnt)
-	assert(item_type and cnt and cnt > 0)
+function CMD.add_item(vfd, item_id, cnt)
+	assert(item_id and cnt and cnt > 0)
 	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
 	REWARD_MGR.reward_user_and_show(user_id, {
-		GLOBAL_FUNC.gen_reward_info(CONST.REWARD_TYPE_ITEM, item_type, cnt),
+		GLOBAL_FUNC.gen_reward_info(CONST.REWARD_TYPE_ITEM, item_id, cnt),
 	}, {})
 end
 
-function CMD.del_item(vfd, item_type, cnt)
-	assert(item_type and cnt and cnt > 0)
+function CMD.del_item(vfd, item_id, cnt)
+	assert(item_id and cnt and cnt > 0)
 	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
 	assert(ITEM_MGR.del_cost_list(user_id, {
 		{
 			cost_type = CONST.COST_TYPE.ITEM,
-			itemId = item_type,
+			itemId = item_id,
 			count = cnt,
 		},
 	}))

@@ -8,7 +8,7 @@ sdk_param_map <string, string>
 system_open_map <number, number>
 
 user_data {
-    _user_id string
+    _user_id number
     _birth_time number
     _login_time number
     _born_server_id number

@@ -1,9 +1,10 @@
 ---
 name: game-demo-orm-persist
 description: >-
-  Guides Game Demo Framework ORM schema and Mongo persistence without @ number-key
-  prefixes. Use when adding/changing .td schemas, clsXxx _data, saveDoc/saveDocField,
-  mongo_slave persist, or migrating modules off opMongoValue/@ paths.
+  Guides Game Demo Framework ORM schema, Mongo persistence, and gameplay Lua style.
+  Use when adding/changing .td schemas, clsXxx _data, saveDoc/saveDocField,
+  mongo_slave persist, migrating modules off opMongoValue/@ paths, or writing
+  game logic that checks protocol fields.
 ---
 
 # Game Demo ORM 存盘
@@ -28,11 +29,12 @@ description: >-
 - `opMongoValue` / `string.format("@%s", field)` / `removePreString`
 - `$set` 路径形如 `dat.1001.xxx` 或 `dat.@1001.xxx`
 - 把玩法方法挂到 orm 对象上，或用 orm 替换 `clsObject`
+- 不要用 `type()` 判断一个变量的类型。协议字段和配置值按约定直接用，范围判断写 `pos < 1` 这种比较即可
 
 ## 参考形状
 
 ```text
-UserItemDoc { _items <string, ItemData> }
+UserItemDoc { _items <number, ItemData> }
 UserHeroDoc { _heroes <number, HeroData> }
 UserQueueDoc { _queues <number, QueueData> }
 UserBuildDoc { _builds <number, BuildData> }

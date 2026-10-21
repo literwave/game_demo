@@ -7,7 +7,7 @@ equip_map <number, number>
 
 hero_data {
     _hero_type number
-    _user_id string
+    _user_id number
     _exp number
     _level number
     _star number

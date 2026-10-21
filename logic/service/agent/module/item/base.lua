@@ -7,15 +7,15 @@ function cls_item:__init__(oci)
 	else
 		self._data = ORM.create(ORM.CLS_ITEM_DATA, oci)
 	end
-	ORM.put(MONGO_SLAVE.COL.USER_ITEM, self._data._user_id, "_items", self._data._item_id, self._data)
+	ORM.put(MONGO_SLAVE.COL.USER_ITEM, self._data._user_id, "_items", self._data._item_uid, self._data)
+end
+
+function cls_item:get_item_uid()
+	return self._data._item_uid
 end
 
 function cls_item:get_item_id()
 	return self._data._item_id
-end
-
-function cls_item:get_item_type()
-	return self._data._item_type
 end
 
 function cls_item:get_user_id()
@@ -27,7 +27,7 @@ function cls_item:get_cnt()
 end
 
 function cls_item:add_cnt(cnt)
-	assert(DATA_COMMON.can_overlap(self:get_item_type()))
+	assert(DATA_COMMON.can_overlap(self:get_item_id()))
 	assert(cnt > 0)
 	self._data._item_cnt = self._data._item_cnt + cnt
 end
@@ -39,8 +39,8 @@ end
 
 function cls_item:get_item_pto_info()
 	return {
+		itemUid = self:get_item_uid(),
 		itemId = self:get_item_id(),
-		itemType = self:get_item_type(),
 		itemCnt = self:get_cnt(),
 	}
 end
@@ -54,11 +54,11 @@ function cls_item:sync_to_client()
 end
 
 function cls_item:can_use(user_id, use_cnt)
-	return DATA_COMMON.get_item_use_info(self:get_item_type()) == 1
+	return DATA_COMMON.get_item_use_info(self:get_item_id()) == 1
 end
 
 function cls_item:release()
-	ORM.remove(MONGO_SLAVE.COL.USER_ITEM, self:get_user_id(), "_items", self:get_item_id())
+	ORM.remove(MONGO_SLAVE.COL.USER_ITEM, self:get_user_id(), "_items", self:get_item_uid())
 	ITEM_MGR.unref_item(self)
 	Super(cls_item).release(self)
 end
@@ -67,5 +67,5 @@ function cls_item:after_generate()
 end
 
 function cls_item:get_item_kind()
-	return DATA_COMMON.get_item_kind_by_type(self:get_item_type())
+	return DATA_COMMON.get_item_kind(self:get_item_id())
 end

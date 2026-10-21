@@ -48,8 +48,8 @@ skynet.start(function()
 	    cchid = "1",
 	    account = "123",
 	    passwd = "456",
-	    serverId = "120",
-	    userId = ""
+	    serverId = 120,
+	    userId = 0
 	}
 	local pack_data = encode_pack(data, 258, "Login.c2s_user_login")
 	print("size1", #pack_data)

@@ -43,7 +43,6 @@ function cls_hero:get_hero_pto_base_info()
 		exp = self._data._exp,
 		lv = self._data._level,
 		star = self:get_star(),
-		state = self._data._state or 0,
 		skillList = skill_list,
 		newTag = self:get_new_tag(),
 	}

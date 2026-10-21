@@ -74,14 +74,15 @@ function handle.message(id, msg)
 	if login_module then
 		login_module.on_user_login(login_info)
 	end
+	login_info.serverId = tonumber(login_info.serverId)
 	local gate_info = try_get_gate_info(login_info.serverId)
 	if not gate_info then
 		skynet.error("auth error: ", login_info.serverId, login_info.userId)
 		websocket.close(id)
 		return
 	end
-	local token = string.format("%s@%s:%s", crypt.base64encode(login_info.userId),
-		crypt.base64encode(login_info.serverId),
+	local token = string.format("%s@%s:%s", crypt.base64encode(tostring(login_info.userId)),
+		crypt.base64encode(tostring(login_info.serverId)),
 		crypt.base64encode(login_info.passwd)
 	)
 	skynet.error("loginInfo: ", login_info.userId)

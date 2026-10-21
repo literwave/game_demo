@@ -34,6 +34,6 @@ end
 
 end
 
-function gen_reward_info(reward_type, item_type, item_count)
-	return {reward_type = reward_type, item_type = item_type, item_count = item_count}
+function gen_reward_info(reward_type, item_id, item_count)
+	return {reward_type = reward_type, item_id = item_id, item_count = item_count}
 end

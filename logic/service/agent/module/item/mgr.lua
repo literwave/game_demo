@@ -1,17 +1,17 @@
 all_item_tbl = {
 --[[
 	[userId] = {
-		[itemType] = {
-			[itemId] = item,
+		[itemId] = {
+			[itemUid] = item,
 		},
 	},
 --]]
 }
 
-all_item_id_tbl = {
+all_item_uid_tbl = {
 --[[
 	[userId] = {
-		[itemId] = item,
+		[itemUid] = item,
 	}
 --]]
 }
@@ -20,7 +20,7 @@ all_item_kind_tbl = {
 --[[
 	[userId] = {
 		[itemKind] = {
-			[itemId] = item,
+			[itemUid] = item,
 		},
 	}
 --]]
@@ -28,27 +28,27 @@ all_item_kind_tbl = {
 
 local function ref_item(item)
 	local user_id = item:get_user_id()
-	local item_type = item:get_item_type()
 	local item_id = item:get_item_id()
+	local item_uid = item:get_item_uid()
 	local item_kind = item:get_item_kind()
 	if not all_item_tbl[user_id] then
 		all_item_tbl[user_id] = {}
 	end
-	if not all_item_tbl[user_id][item_type] then
-		all_item_tbl[user_id][item_type] = {}
+	if not all_item_tbl[user_id][item_id] then
+		all_item_tbl[user_id][item_id] = {}
 	end
-	all_item_tbl[user_id][item_type][item_id] = item
-	if not all_item_id_tbl[user_id] then
-		all_item_id_tbl[user_id] = {}
+	all_item_tbl[user_id][item_id][item_uid] = item
+	if not all_item_uid_tbl[user_id] then
+		all_item_uid_tbl[user_id] = {}
 	end
-	all_item_id_tbl[user_id][item_id] = item
+	all_item_uid_tbl[user_id][item_uid] = item
 	if not all_item_kind_tbl[user_id] then
 		all_item_kind_tbl[user_id] = {}
 	end
 	if not all_item_kind_tbl[user_id][item_kind] then
 		all_item_kind_tbl[user_id][item_kind] = {}
 	end
-	all_item_kind_tbl[user_id][item_kind][item_id] = item
+	all_item_kind_tbl[user_id][item_kind][item_uid] = item
 end
 
 local check_enough_func = {
@@ -118,8 +118,8 @@ function del_cost_list(user_id, cost_list)
 	return true
 end
 
-function get_item_max_add_cnt(item_type)
-	return DATA_COMMON.get_item_overlap(item_type)
+function get_item_max_add_cnt(item_id)
+	return DATA_COMMON.get_item_overlap(item_id)
 end
 
 local ITEM_KIND_TO_MOD = {
@@ -127,9 +127,9 @@ local ITEM_KIND_TO_MOD = {
 }
 
 local function create_item(oci)
-	local item_type = oci._item_type
-	assert(item_type)
-	local kind = DATA_COMMON.get_item_kind_by_type(item_type)
+	local item_id = oci._item_id
+	assert(item_id)
+	local kind = DATA_COMMON.get_item_kind(item_id)
 	local mod = ITEM_KIND_TO_MOD[kind] or CLS_BASE_ITEM
 	local item = mod.cls_item:New(oci)
 	ref_item(item)
@@ -138,17 +138,17 @@ end
 
 function unref_item(item)
 	local user_id = item:get_user_id()
-	local item_type = item:get_item_type()
 	local item_id = item:get_item_id()
+	local item_uid = item:get_item_uid()
 	local item_kind = item:get_item_kind()
-	if all_item_tbl[user_id] and all_item_tbl[user_id][item_type] then
-		all_item_tbl[user_id][item_type][item_id] = nil
+	if all_item_tbl[user_id] and all_item_tbl[user_id][item_id] then
+		all_item_tbl[user_id][item_id][item_uid] = nil
 	end
-	if all_item_id_tbl[user_id] then
-		all_item_id_tbl[user_id][item_id] = nil
+	if all_item_uid_tbl[user_id] then
+		all_item_uid_tbl[user_id][item_uid] = nil
 	end
 	if all_item_kind_tbl[user_id] and all_item_kind_tbl[user_id][item_kind] then
-		all_item_kind_tbl[user_id][item_kind][item_id] = nil
+		all_item_kind_tbl[user_id][item_kind][item_uid] = nil
 	end
 end
 
@@ -157,21 +157,21 @@ local function try_init_user_data(user_id)
 		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.USER_ITEM, user_id) or {}
 		local doc = ORM.create(ORM.CLS_USER_ITEM_DOC, raw)
 		ORM.hold(doc, MONGO_SLAVE.COL.USER_ITEM, user_id)
-		all_item_id_tbl[user_id] = {}
+		all_item_uid_tbl[user_id] = {}
 		for _, item_data in pairs(doc._items) do
 			if ORM.is_cls(item_data, ORM.CLS_ITEM_DATA) then
 				create_item(item_data)
 			end
 		end
 	end
-	return all_item_id_tbl[user_id]
+	return all_item_uid_tbl[user_id]
 end
 
-local function generate_item(user_id, item_type, cnt)
-	local item_id = get_id_by_user_id_and_timestamp(user_id)
+local function generate_item(user_id, item_id, cnt)
+	local item_uid = get_id_by_user_id_and_timestamp(user_id)
 	local oci = {
-		_item_id = tostring(item_id),
-		_item_type = item_type,
+		_item_uid = item_uid,
+		_item_id = item_id,
 		_user_id = user_id,
 		_item_cnt = cnt or 1,
 	}
@@ -182,15 +182,15 @@ local function generate_item(user_id, item_type, cnt)
 end
 
 
-local function do_add_item_cnt_by_type(user_id, item_type, cnt, need_sync, reason_list, new_item_list)
+local function do_add_item_cnt(user_id, item_id, cnt, need_sync, reason_list, new_item_list)
 	assert(cnt > 0)
 	try_init_user_data(user_id)
 	local user_item_tbl = all_item_tbl[user_id] or {}
-	local item_tbl = user_item_tbl[item_type] or {}
-	if DATA_COMMON.can_overlap(item_type) then
+	local item_tbl = user_item_tbl[item_id] or {}
+	if DATA_COMMON.can_overlap(item_id) then
 		local _, item = next(item_tbl)
 		if not item then
-			item = generate_item(user_id, item_type, cnt)
+			item = generate_item(user_id, item_id, cnt)
 		else
 			item:add_cnt(cnt)
 		end
@@ -200,7 +200,7 @@ local function do_add_item_cnt_by_type(user_id, item_type, cnt, need_sync, reaso
 	else
 		assert(cnt < 10000000)
 		for _ = 1, cnt do
-			local item = generate_item(user_id, item_type)
+			local item = generate_item(user_id, item_id)
 			if need_sync then
 				item:sync_to_client()
 			end
@@ -209,19 +209,18 @@ local function do_add_item_cnt_by_type(user_id, item_type, cnt, need_sync, reaso
 			end
 		end
 	end
-	-- LOG.addItem(userId, itemType, cnt, reasonList)
 end
 
-function add_item_cnt_by_type(user_id, item_type, cnt, reason_list)
-	do_add_item_cnt_by_type(user_id, item_type, cnt, true, reason_list)
+function add_item_cnt(user_id, item_id, cnt, reason_list)
+	do_add_item_cnt(user_id, item_id, cnt, true, reason_list)
 end
 
-function add_item_cnt_by_type_no_sync(user_id, item_type, cnt, reason_list, new_item_list)
-	return do_add_item_cnt_by_type(user_id, item_type, cnt, false, reason_list, new_item_list)
+function add_item_cnt_no_sync(user_id, item_id, cnt, reason_list, new_item_list)
+	return do_add_item_cnt(user_id, item_id, cnt, false, reason_list, new_item_list)
 end
 
-local function reward_resource_base(user_id, item_type, cnt, reason_list)
-	add_item_cnt_by_type(user_id, item_type, cnt, reason_list)
+local function reward_resource_base(user_id, item_id, cnt, reason_list)
+	add_item_cnt(user_id, item_id, cnt, reason_list)
 end
 
 local ITEM_KIND_REWARD_FUNC = {
@@ -233,12 +232,12 @@ local ITEM_KIND_REWARD_FUNC = {
 	[CONST.ITEM_KIND.VIP] = reward_resource_base,
 }
 
-function add_item(user_id, item_type, cnt, reason_list)
-	local item_kind = DATA_COMMON.get_item_kind_by_type(item_type)
+function add_item(user_id, item_id, cnt, reason_list)
+	local item_kind = DATA_COMMON.get_item_kind(item_id)
 	local func = ITEM_KIND_REWARD_FUNC[item_kind]
 	if func then
-		func(user_id, item_type, cnt, reason_list)
+		func(user_id, item_id, cnt, reason_list)
 	else
-		add_item_cnt_by_type(user_id, item_type, cnt, reason_list)
+		add_item_cnt(user_id, item_id, cnt, reason_list)
 	end
 end

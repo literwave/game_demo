@@ -42,6 +42,18 @@ function get_value_by_key(key)
 	return DATA_GLOBAL[key].value1 or DATA_GLOBAL[key].value2 or DATA_GLOBAL[key].value3
 end
 
+function get_user_level_up_exp()
+	return get_value_by_key(5)
+end
+
+function get_troop_max_cnt()
+	return get_value_by_key(6)
+end
+
+function get_troop_pos_cnt()
+	return get_value_by_key(7)
+end
+
 local function get_report_info(report_id)
 	return DATA_REPORT[report_id]
 end
@@ -73,8 +85,8 @@ function get_all_hero_types()
 	return list
 end
 
-function get_item_kind_by_type(item_type)
-	local item_kind = DATA_ITEM[item_type].item_kind
+function get_item_kind(item_id)
+	local item_kind = DATA_ITEM[item_id].item_kind
 	return item_kind
 end
 
@@ -98,16 +110,16 @@ end
 function get_lottery_cost(use_lottery_times)
 end
 
-function can_overlap(item_type)
-	return DATA_ITEM[item_type].can_overlap == 1
+function can_overlap(item_id)
+	return DATA_ITEM[item_id].can_overlap == 1
 end
 
-function get_item_overlap(item_type)
-	return DATA_ITEM[item_type].Overlap
+function get_item_overlap(item_id)
+	return DATA_ITEM[item_id].Overlap
 end
 
-function get_item_kind_by_type(item_type)
-	return DATA_ITEM[item_type].Kind
+function get_item_kind(item_id)
+	return DATA_ITEM[item_id].Kind
 end
 
 function can_lock_mail()

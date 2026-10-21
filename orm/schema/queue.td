@@ -7,7 +7,7 @@ queue_work {
 queue_work_map <number, queue_work>
 
 queue_data {
-    _user_id string
+    _user_id number
     _queue_idx number
     _queue_tbl queue_work_map
     _work_idx number

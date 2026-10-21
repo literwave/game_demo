@@ -20,6 +20,9 @@ CLS_GAME_SID_DATA = "game_sid_data"
 CLS_BUILD_DATA = "build_data"
 CLS_BUILD_BAG = "build_bag"
 CLS_USER_BUILD_DOC = "user_build_doc"
+CLS_TROOP_DATA = "troop_data"
+CLS_TROOP_BAG = "troop_bag"
+CLS_USER_TROOP_DOC = "user_troop_doc"
 
 local SCHEMA_FILES = {
 	"user.td",
@@ -29,6 +32,7 @@ local SCHEMA_FILES = {
 	"mail.td",
 	"game_sid.td",
 	"build.td",
+	"troop.td",
 }
 
 local function load_schemas()

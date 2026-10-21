@@ -25,7 +25,7 @@ end
 
 
 local function convert_to_global_sid(local_id)
-	return string.format("%02d%05d%s", GAME.SRV_GROUP_ID, GAME.SERVER_ID, local_id)
+	return tonumber(string.format("%02d%05d%d", GAME.SRV_GROUP_ID, GAME.SERVER_ID, local_id))
 end
 
 function CMD.fetch_user_id()

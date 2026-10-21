@@ -46,7 +46,7 @@ local function dump_user_mail_info(info)
 	for mail_kind, id_map in pairs(info.mail_tbl or {}) do
 		mail_tbl[mail_kind] = {}
 		for mail_id, st in pairs(id_map) do
-			mail_tbl[mail_kind][tostring(mail_id)] = {
+			mail_tbl[mail_kind][mail_id] = {
 				isRead = st.isRead and true or false,
 				isGotReward = st.isGotReward and true or false,
 				isLock = st.isLock and true or false,
@@ -437,12 +437,12 @@ local function check_mail_reward_over_limit(user_id, mail_kind, mail_id)
 	local reward_item_tbl = {}
 	for _, reward_info in pairs(mail:get_reward_list()) do
 		if reward_info.reward_type == CONST.REWARD_TYPE_ITEM then
-			local item_type = reward_info.item_type
-			reward_item_tbl[item_type] = (reward_item_tbl[item_type] or 0) + reward_info.item_count
+			local item_id = reward_info.item_id
+			reward_item_tbl[item_id] = (reward_item_tbl[item_id] or 0) + reward_info.item_count
 		end
 	end
-	for item_type, reward_item_cnt in pairs(reward_item_tbl) do
-		local limit_add_cnt = ITEM_MGR.get_limit_add_cnt(user_id, item_type)
+	for item_id, reward_item_cnt in pairs(reward_item_tbl) do
+		local limit_add_cnt = ITEM_MGR.get_limit_add_cnt(user_id, item_id)
 		if limit_add_cnt and reward_item_cnt > limit_add_cnt then
 			return true
 		end
@@ -594,6 +594,7 @@ local function on_req_mail_list(vfd, mail_kind)
 end
 
 local function on_req_mail_detail(vfd, mail_kind, mail_id)
+	mail_id = tonumber(mail_id)
 	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
 	local tbl = get_user_mail_by_kind(user_id, mail_kind)
 	if tbl and tbl[mail_id] then
@@ -639,6 +640,7 @@ local function on_del_mail_list(vfd, mail_kind, mail_id_list)
 	end
 	local del_mail_id_list = {}
 	for _, mail_id in pairs(mail_id_list) do
+		mail_id = tonumber(mail_id)
 		local info = tbl[mail_id]
 		if info then
 			if try_del_mail(user_id, mail_kind, mail_id, info) then
@@ -650,6 +652,7 @@ local function on_del_mail_list(vfd, mail_kind, mail_id_list)
 end
 
 local function on_set_mail_lock(vfd, mail_kind, mail_id, is_lock)
+	mail_id = tonumber(mail_id)
 	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
 	local tbl = get_user_mail_by_kind(user_id, mail_kind)
 	local info = tbl and tbl[mail_id]
@@ -671,7 +674,7 @@ local function on_get_mail_reward(vfd, mail_kind_id_list)
 	local reward_mail_id_list = {}
 	for _, info in pairs(mail_kind_id_list) do
 		local mail_kind = info.k
-		local mail_id = info.v
+		local mail_id = tonumber(info.v)
 		if check_mail_reward_over_limit(user_id, mail_kind, mail_id) then
 			USER_MGR.tell_me_by_language_id(user_id, 110277)
 		else

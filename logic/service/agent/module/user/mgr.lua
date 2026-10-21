@@ -60,6 +60,7 @@ end
 
 local function module_on_user_logout(user_id)
 	BUILD_MGR.on_user_logout(user_id)
+	TROOP_MGR.on_user_logout(user_id)
 end
 
 function disconnect(fd, user_id)

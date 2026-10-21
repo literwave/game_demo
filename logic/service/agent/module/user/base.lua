@@ -271,7 +271,7 @@ end
 
 function cls_user:add_exp(exp)
 	local cur_exp = self:get_exp() + exp
-	local need = CONST.USER_LEVEL_UP_EXP
+	local need = DATA_COMMON.get_user_level_up_exp()
 	local add_level = math.floor(cur_exp / need)
 	self._data._exp = cur_exp % need
 	if add_level > 0 then

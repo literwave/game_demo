@@ -7,6 +7,7 @@ COL = {
 	USER_BUILD = "user_build_col",
 	USER_ITEM = "user_item_col",
 	QUEUE = "queue_col",
+	USER_TROOP = "user_troop_col",
 	GAME_SID = "game_sid_col",
 	MAIL = "mail_col",
 	USER_MAIL = "user_mail_col",

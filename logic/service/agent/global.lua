@@ -46,3 +46,6 @@ QUEUE_MGR = Import("../logic/service/agent/module/queue/mgr.lua")
 GM = Import("../logic/service/agent/module/gm/gm.lua")
 
 SYSTEM_OPEN = Import("../logic/service/agent/module/system_open/mgr.lua")
+
+TROOP_BASE = Import("../logic/service/agent/module/troop/base.lua")
+TROOP_MGR = Import("../logic/service/agent/module/troop/mgr.lua")

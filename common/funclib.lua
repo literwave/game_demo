@@ -107,10 +107,10 @@ function merge_reward_list(...)
 			if not tbl[info.reward_type] then
 				tbl[info.reward_type] = {}
 			end
-			if not tbl[info.reward_type][info.item_type] then
-				tbl[info.reward_type][info.item_type] = 0
+			if not tbl[info.reward_type][info.item_id] then
+				tbl[info.reward_type][info.item_id] = 0
 			end
-			tbl[info.reward_type][info.item_type] = tbl[info.reward_type][info.item_type] + info.item_count
+			tbl[info.reward_type][info.item_id] = tbl[info.reward_type][info.item_id] + info.item_count
 		end
 	end
 end

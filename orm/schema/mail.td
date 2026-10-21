@@ -7,7 +7,7 @@ user_mail_status {
     lv number
 }
 
-mail_id_status_map <string, user_mail_status>
+mail_id_status_map <number, user_mail_status>
 
 mail_kind_bag <number, mail_id_status_map>
 
@@ -16,7 +16,7 @@ user_mail_doc {
     fetch_svr_idx number
 }
 
-svr_mail_id_map <number, string>
+svr_mail_id_map <number, number>
 
 svr_mail_doc {
     global_idx number

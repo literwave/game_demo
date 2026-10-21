@@ -79,7 +79,7 @@ end
 
 local function first_login(packet, fd)
 	local token = packet.token
-	local user_id = packet.userId
+	local user_id = tonumber(packet.userId)
 	local passwd = packet.passwd
 	local user_info = LREDIS.get_value_by_key(token) or EMPTY_TABLE
 	if user_id ~= user_info.userId or passwd ~= user_info.passwd then

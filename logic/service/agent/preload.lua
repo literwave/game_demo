@@ -16,6 +16,7 @@ local PROTO_FILE_LIST = {
 	"../game_common/pb/lottery.pb",
 	"../game_common/pb/item.pb",
 	"../game_common/pb/systemopen.pb",
+	"../game_common/pb/world.pb",
 }
 
 function __G__TRACKBACK__(msg)

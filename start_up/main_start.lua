@@ -16,7 +16,7 @@ skynet.start(function()
 	skynet.newservice("game_sid")
 	local gate = skynet.newservice("gated")
 	skynet.call(gate, "lua", "open", {
-		serverId = skynet.getenv("host_id"),
+		serverId = tonumber(skynet.getenv("host_id")),
 		address = skynet.getenv("gate_address"),
 		port = skynet.getenv("gate_port"),
 	})

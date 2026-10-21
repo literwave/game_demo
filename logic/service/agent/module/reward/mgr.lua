@@ -7,17 +7,17 @@ end
 local function reward_item(ret, user_id, reward_info_list, reason_list)
 	local over_limit_item_tbl = {}
 	for _, reward_info in ipairs(reward_info_list) do
-		local item_type = reward_info.item_type
+		local item_id = reward_info.item_id
 		local item_count = reward_info.item_count
-		local item_max_add_cnt = ITEM_MGR.get_item_max_add_cnt(item_type)
+		local item_max_add_cnt = ITEM_MGR.get_item_max_add_cnt(item_id)
 		if item_max_add_cnt and item_count > item_max_add_cnt then
-			over_limit_item_tbl[item_type] = (over_limit_item_tbl[item_type] or 0) + item_count - item_max_add_cnt
+			over_limit_item_tbl[item_id] = (over_limit_item_tbl[item_id] or 0) + item_count - item_max_add_cnt
 			reward_info.item_count = item_max_add_cnt
 		end
 		local new_item_count = reward_info.item_count
 		if new_item_count > 0 then
-			ITEM_MGR.add_item(user_id, item_type, new_item_count, reason_list)
-			table.insert(ret, GLOBAL_FUNC.gen_reward_info(reward_info.reward_type, item_type, new_item_count))
+			ITEM_MGR.add_item(user_id, item_id, new_item_count, reason_list)
+			table.insert(ret, GLOBAL_FUNC.gen_reward_info(reward_info.reward_type, item_id, new_item_count))
 		end
 		-- todo -- 这是溢出的要发邮件
 	end
@@ -25,7 +25,7 @@ end
 
 local function reward_resource(ret, user_id, reward_info_list, reason_list)
 	for _, reward_info in pairs(reward_info_list) do
-		local res_type = reward_info.item_type
+		local res_type = reward_info.item_id
 		local cnt = reward_info.item_count
 		add_res_and_sync(user_id, res_type, cnt, reason_list)
 		table.insert(ret, reward_info)
@@ -34,7 +34,7 @@ end
 
 local function reward_hero(ret, user_id, reward_info_list, reason_list)
 	for _, reward_info in pairs(reward_info_list) do
-		local hero_type = reward_info.item_type
+		local hero_type = reward_info.item_id
 		HERO_MGR.add_hero(user_id, hero_type, reason_list)
 		table.insert(ret, reward_info)
 	end
@@ -84,14 +84,13 @@ function show_reward(user_id, reward_list, show_type_list)
 		return
 	end
 	if not show_type_list then
-		local reward_show_type = DATA_COMMON.get_value_by_key(5)
-		show_type_list = { reward_show_type.windows }
+		show_type_list = {}
 	end
 	local list = {}
 	for _, info in ipairs(reward_list) do
 		table.insert(list, {
 			rewardType = info.rewardType or info.reward_type,
-			itemType = info.itemType or info.item_type,
+			itemId = info.itemId or info.item_id,
 			itemCount = info.itemCount or info.item_count,
 		})
 	end
