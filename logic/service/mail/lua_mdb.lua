@@ -1,43 +1,43 @@
 local skynet = require "skynet"
 local mongo = require "skynet.db.mongo"
 
-mongoClient = nil
-local function getMongoClient()
-	if not mongoClient then
-		mongoClient = mongo.client({
+mongo_client = nil
+local function get_mongo_client()
+	if not mongo_client then
+		mongo_client = mongo.client({
 			host = skynet.getenv("mongodb_host"),
 			port = skynet.getenv("mongodb_port"),
 			username = skynet.getenv("mongodb_user"),
 			password = skynet.getenv("mongodb_password"),
 		})
 	end
-	return mongoClient
+	return mongo_client
 end
 
-function updateDocByTbl(col, tbl)
-	mongoClient = getMongoClient()
-	local db = mongoClient:getDB(GAME.getDataBase())
+function update_doc_by_tbl(col, tbl)
+	mongo_client = get_mongo_client()
+	local db = mongo_client:getDB(GAME.get_data_base())
 	local c = db:getCollection(col)
 	c:update(selector, update, true)
 end
 
-function insertDocByTbl(col, tbl)
-	mongoClient = getMongoClient()
-	local db = mongoClient:getDB(GAME.getDataBase())
+function insert_doc_by_tbl(col, tbl)
+	mongo_client = get_mongo_client()
+	local db = mongo_client:getDB(GAME.get_data_base())
 	local c = db:getCollection(col)
 	c:insert(tbl)
 end
 
-function commonLoadSingle(col, key)
-	mongoClient = getMongoClient()
-	local db = mongoClient:getDB(GAME.getDataBase())
+function common_load_single(col, key)
+	mongo_client = get_mongo_client()
+	local db = mongo_client:getDB(GAME.get_data_base())
 	local c = db:getCollection(col)
 	return c:findOne({_id = key})
 end
 
-function commonLoadTbl(col)
-	mongoClient = getMongoClient()
-	local db = mongoClient:getDB(GAME.getDataBase())
+function common_load_tbl(col)
+	mongo_client = get_mongo_client()
+	local db = mongo_client:getDB(GAME.get_data_base())
 	local c = db:getCollection(col)
 	local tbl = {}
 	local cursor = c:find()

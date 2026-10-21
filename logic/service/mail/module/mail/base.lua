@@ -1,144 +1,144 @@
 
-local saveFieldTbl = {
-	_mailId = function()
+local save_field_tbl = {
+	_mail_id = function()
 		return nil
 	end,
-	_mailKind = function()
+	_mail_kind = function()
 		return nil
 	end,
-	_mailType = function()
+	_mail_type = function()
 		return nil
 	end,
-	_startTime = function()
+	_start_time = function()
 		return nil
 	end,
-	_endTime = function()
+	_end_time = function()
 		return nil
 	end,
 	_title = function()
 		return nil
 	end,
-	_contentTbl = function()
+	_content_tbl = function()
 		return nil
 	end,
-	_detailList = function()
+	_detail_list = function()
 		return {}
 	end,
-	_rewardList = function()
+	_reward_list = function()
 		return {}
 	end,
-	_isBattleMail = function()
+	_is_battle_mail = function()
 		return false
 	end,
 }
 
-clsMail = clsObject:Inherit()
+cls_mail = cls_object:Inherit()
 
-function clsMail:__init__(oci)
-	Super(clsMail).__init__(self, oci)
-	for k, func in pairs(saveFieldTbl) do
+function cls_mail:__init__(oci)
+	Super(cls_mail).__init__(self, oci)
+	for k, func in pairs(save_field_tbl) do
 		if oci[k] == nil then
 			self[k] = func()
 		else
 			self[k] = oci[k]
 		end
 	end
-	assert(self._mailKind)
-	assert(self._mailType)
+	assert(self._mail_kind)
+	assert(self._mail_type)
 end
 
-function clsMail:release()
-	MONGO_SLAVE.delDoc(MONGO_SLAVE.COL.MAIL, self._mailId)
-	Super(clsMail).release(self)
+function cls_mail:release()
+	MONGO_SLAVE.del_doc(MONGO_SLAVE.COL.MAIL, self._mail_id)
+	Super(cls_mail).release(self)
 end
 
-function clsMail:serialize(tbl)
-	for key, _ in pairs(saveFieldTbl) do
+function cls_mail:serialize(tbl)
+	for key, _ in pairs(save_field_tbl) do
 		tbl[key] = self[key]
 	end
 end
 
-function clsMail:saveField(field, val)
+function cls_mail:save_field(field, val)
 	assert(type(field) == "string")
 	self[field] = val
-	self:saveToDB()
+	self:save_to_db()
 end
 
-function clsMail:saveToDB()
+function cls_mail:save_to_db()
 	local info = {}
 	self:serialize(info)
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.MAIL, self._mailId, info)
+	MONGO_SLAVE.save_doc(MONGO_SLAVE.COL.MAIL, self._mail_id, info)
 end
 
-function clsMail:getDetail()
-	return self._detailTbl
+function cls_mail:get_detail()
+	return self._detail_tbl
 end
 
-function clsMail:getEndTime()
-	return self._endTime
+function cls_mail:get_end_time()
+	return self._end_time
 end
 
-function clsMail:getRewardList()
-	return self._rewardList
+function cls_mail:get_reward_list()
+	return self._reward_list
 end
 
-function clsMail:getMailId()
-	return self._mailId
+function cls_mail:get_mail_id()
+	return self._mail_id
 end
 
-function clsMail:getMailAvatarType()
-	return self._mailAvatarType or 0
+function cls_mail:get_mail_avatar_type()
+	return self._mail_avatar_type or 0
 end
 
-function clsMail:genContentStr()
-	return COMMON_FUNC.serialize(self._contentTbl)
+function cls_mail:gen_content_str()
+	return COMMON_FUNC.serialize(self._content_tbl)
 end
 
-function clsMail:genShareContentStr()
-	local shareContentTbl = COMMON_FUNC.table_deepcopy(self._contentTbl)
-	local mailInfo = DATA_COMMON.getMailInfo(self._mailType)
-	if shareContentTbl.text and mailInfo and mailInfo.ShareDes then
-		shareContentTbl.text[1] = mailInfo.ShareDes
+function cls_mail:gen_share_content_str()
+	local share_content_tbl = COMMON_FUNC.table_deepcopy(self._content_tbl)
+	local mail_info = DATA_COMMON.get_mail_info(self._mail_type)
+	if share_content_tbl.text and mail_info and mail_info.share_des then
+		share_content_tbl.text[1] = mail_info.share_des
 	end
-	return COMMON_FUNC.serialize(shareContentTbl)
+	return COMMON_FUNC.serialize(share_content_tbl)
 end
 
-function clsMail:getDetailList()
-	return self._detailList
+function cls_mail:get_detail_list()
+	return self._detail_list
 end
 
-function clsMail:getMailKind()
-	return self._mailKind
+function cls_mail:get_mail_kind()
+	return self._mail_kind
 end
 
-function clsMail:getMailType()
-	return self._mailType
+function cls_mail:get_mail_type()
+	return self._mail_type
 end
 
-function clsMail:getStartTime()
-	return self._startTime
+function cls_mail:get_start_time()
+	return self._start_time
 end
 
-function clsMail:isTimeout()
-	if self._endTime == -1 then
+function cls_mail:is_timeout()
+	if self._end_time == -1 then
 		return false
 	end
-	return self._endTime < TIME.osBJSec()
+	return self._end_time < TIME.os_bj_sec()
 end
 
-function clsMail:getTitle()
+function cls_mail:get_title()
 	return self._title
 end
 
-function clsMail:syncDetail(vfd)
-	local ptoTbl = {
-		mailId = self:getMailId(),
-		rewardList = self:getRewardList(),
-		detailList = self:getDetailList(),
+function cls_mail:sync_detail(vfd)
+	local pto_tbl = {
+		mailId = self:get_mail_id(),
+		rewardList = self:get_reward_list(),
+		detailList = self:get_detail_list(),
 	}
-	for_caller.c_req_mail_detail(vfd, ptoTbl)
+	for_caller.c_req_mail_detail(vfd, pto_tbl)
 end
 
-function clsMail:canLock()
-	return DATA_COMMON.canLockMail(self:getMailType())
+function cls_mail:can_lock()
+	return DATA_COMMON.can_lock_mail(self:get_mail_type())
 end

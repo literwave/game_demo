@@ -1,274 +1,274 @@
-allUserQueueTbl = {}
+all_user_queue_tbl = {}
 --[[
 	[userId] = {
 		[queueIdx] = obj,
 	}
 ]]
 
-function refQueue(queueObj)
-	local userId = queueObj:getUserId()
-	local queueIdx = queueObj:getQueueIdx()
-	if not allUserQueueTbl[userId] then
-		allUserQueueTbl[userId] = {}
+function ref_queue(queue_obj)
+	local user_id = queue_obj:get_user_id()
+	local queue_idx = queue_obj:get_queue_idx()
+	if not all_user_queue_tbl[user_id] then
+		all_user_queue_tbl[user_id] = {}
 	end
-	allUserQueueTbl[userId][queueIdx] = queueObj
+	all_user_queue_tbl[user_id][queue_idx] = queue_obj
 end
 
-function unrefQueue(workQueueObj)
-	local userId = workQueueObj:getUserId()
-	local queueIdx = workQueueObj:getQueueIdx()
-	if allUserQueueTbl[userId] then
-		allUserQueueTbl[userId][queueIdx] = nil
-		if table.isEmpty(allUserQueueTbl[userId]) then
-			allUserQueueTbl[userId] = nil
+function unref_queue(work_queue_obj)
+	local user_id = work_queue_obj:get_user_id()
+	local queue_idx = work_queue_obj:get_queue_idx()
+	if all_user_queue_tbl[user_id] then
+		all_user_queue_tbl[user_id][queue_idx] = nil
+		if table.is_empty(all_user_queue_tbl[user_id]) then
+			all_user_queue_tbl[user_id] = nil
 		end
 	end
 end
 
-local function createQueue(oci)
-	return QUEUE_BASE.clsQueue:New(oci)
+local function create_queue(oci)
+	return QUEUE_BASE.cls_queue:New(oci)
 end
 
-local function tryInitUserQueues(userId)
-	if not ORM.get(MONGO_SLAVE.COL.QUEUE, userId) then
-		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.QUEUE, userId) or {}
+local function try_init_user_queues(user_id)
+	if not ORM.get(MONGO_SLAVE.COL.QUEUE, user_id) then
+		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.QUEUE, user_id) or {}
 		local doc = ORM.create(ORM.CLS_USER_QUEUE_DOC, raw)
-		ORM.hold(doc, MONGO_SLAVE.COL.QUEUE, userId)
-		allUserQueueTbl[userId] = {}
-		for _, queueData in pairs(doc._queues) do
-			if ORM.is_cls(queueData, ORM.CLS_QUEUE_DATA) then
-				createQueue(queueData)
+		ORM.hold(doc, MONGO_SLAVE.COL.QUEUE, user_id)
+		all_user_queue_tbl[user_id] = {}
+		for _, queue_data in pairs(doc._queues) do
+			if ORM.is_cls(queue_data, ORM.CLS_QUEUE_DATA) then
+				create_queue(queue_data)
 			end
 		end
 	end
-	return allUserQueueTbl[userId]
+	return all_user_queue_tbl[user_id]
 end
 
-function loadData()
+function load_data()
 end
 
-function saveData()
+function save_data()
 	MONGO_SLAVE.flush()
 end
 
-function systemStartup()
-	local offsetTime = TIME.osBJSec() - GAME.getShutDownTime()
-	if offsetTime <= 0 then
+function system_startup()
+	local offset_time = TIME.os_bj_sec() - GAME.get_shut_down_time()
+	if offset_time <= 0 then
 		return
 	end
-	for _, queueInfoTbl in pairs(allUserQueueTbl) do
-		for _, queueObj in pairs(queueInfoTbl) do
-			queueObj:systemStartup(offsetTime)
+	for _, queue_info_tbl in pairs(all_user_queue_tbl) do
+		for _, queue_obj in pairs(queue_info_tbl) do
+			queue_obj:system_startup(offset_time)
 		end
 	end
 end
 
-local function initUserQueue(userId)
-	tryInitUserQueues(userId)
-	if getUserQueue(userId, CONST.FIRST_QUEUE_IDX) then
+local function init_user_queue(user_id)
+	try_init_user_queues(user_id)
+	if get_user_queue(user_id, CONST.FIRST_QUEUE_IDX) then
 		return
 	end
 	local oci = {
-		_userId = userId,
-		_queueIdx = CONST.FIRST_QUEUE_IDX,
+		_user_id = user_id,
+		_queue_idx = CONST.FIRST_QUEUE_IDX,
 	}
-	createQueue(oci)
+	create_queue(oci)
 end
 
-function onUserLogin(user, isFirstLogin)
-	if not isFirstLogin then
-		tryInitUserQueues(user:getUserId())
+function on_user_login(user, is_first_login)
+	if not is_first_login then
+		try_init_user_queues(user:get_user_id())
 		return
 	end
-	initUserQueue(user:getUserId())
+	init_user_queue(user:get_user_id())
 end
 
-function syncAllQueueInfoToClient(userId)
-	local fd = USER_MGR.getFdByUserId(userId)
+function sync_all_queue_info_to_client(user_id)
+	local fd = USER_MGR.get_fd_by_user_id(user_id)
 	if not fd then
 		return
 	end
-	local allWorkQueueTbl = getUserAllQueueTbl(userId)
+	local all_work_queue_tbl = get_user_all_queue_tbl(user_id)
 	local list = {}
-	for _, queueObj in pairs(allWorkQueueTbl or EMPTY_TABLE) do
-		table.insert(list, queueObj:genClientPTOInfo())
+	for _, queue_obj in pairs(all_work_queue_tbl or EMPTY_TABLE) do
+		table.insert(list, queue_obj:gen_client_pto_info())
 	end
 	for_caller.s2c_sync_all_queue_info(fd, {list = list})
 end
 
-function syncQueueInfoToClient(queueObj)
-	local userId = queueObj:getUserId()
-	local fd = USER_MGR.getFdByUserId(userId)
+function sync_queue_info_to_client(queue_obj)
+	local user_id = queue_obj:get_user_id()
+	local fd = USER_MGR.get_fd_by_user_id(user_id)
 	if fd then
-		for_caller.s2c_sync_queue_info(fd, queueObj:genClientPTOInfo())
+		for_caller.s2c_sync_queue_info(fd, queue_obj:gen_client_pto_info())
 	end
 end
 
-local function tryUpdateUserQueue(userId)
-	local needSyncToClient = false
-	for _, queueObj in pairs(allUserQueueTbl[userId] or {}) do
-		if queueObj:checkIsExpired() then
-			needSyncToClient = queueObj:onExpired()
+local function try_update_user_queue(user_id)
+	local need_sync_to_client = false
+	for _, queue_obj in pairs(all_user_queue_tbl[user_id] or {}) do
+		if queue_obj:check_is_expired() then
+			need_sync_to_client = queue_obj:on_expired()
 		end
 	end
-	if needSyncToClient then
-		syncAllQueueInfoToClient(userId)
+	if need_sync_to_client then
+		sync_all_queue_info_to_client(user_id)
 	end
 end
 
-function getUserAllQueueTbl(userId)
-	tryInitUserQueues(userId)
-	tryUpdateUserQueue(userId)
-	return allUserQueueTbl[userId]
+function get_user_all_queue_tbl(user_id)
+	try_init_user_queues(user_id)
+	try_update_user_queue(user_id)
+	return all_user_queue_tbl[user_id]
 end
 
-function getUserQueueTbl(userId)
-	return getUserAllQueueTbl(userId)
+function get_user_queue_tbl(user_id)
+	return get_user_all_queue_tbl(user_id)
 end
 
-function getUserQueue(userId, queueIdx)
-	local queueTbl = getUserQueueTbl(userId)
-	return queueTbl and queueTbl[queueIdx]
+function get_user_queue(user_id, queue_idx)
+	local queue_tbl = get_user_queue_tbl(user_id)
+	return queue_tbl and queue_tbl[queue_idx]
 end
 
-function createUserQueue(userId, queueIdx, expireTime)
-	if getUserQueue(userId, queueIdx) then
+function create_user_queue(user_id, queue_idx, expire_time)
+	if get_user_queue(user_id, queue_idx) then
 		return
 	end
 	local oci = {
-		_userId = userId,
-		_queueIdx = queueIdx,
-		_expireTime = expireTime,
+		_user_id = user_id,
+		_queue_idx = queue_idx,
+		_expire_time = expire_time,
 	}
-	createQueue(oci)
+	create_queue(oci)
 end
 
-function getIdleBuildQueue(userId, targetId)
-	for _, queueIdx in ipairs(CONST.QUEUE_PRIORITY) do
-		local queueObj = getUserQueue(userId, queueIdx)
-		if queueObj and queueObj:checkCanAddNewWork(targetId) then
-			return queueObj
+function get_idle_build_queue(user_id, target_id)
+	for _, queue_idx in ipairs(CONST.QUEUE_PRIORITY) do
+		local queue_obj = get_user_queue(user_id, queue_idx)
+		if queue_obj and queue_obj:check_can_add_new_work(target_id) then
+			return queue_obj
 		end
 	end
 end
 
-function checkWorkIsExist(userId, targetId)
-	local queueTbl = getUserQueueTbl(userId)
-	if not queueTbl then
+function check_work_is_exist(user_id, target_id)
+	local queue_tbl = get_user_queue_tbl(user_id)
+	if not queue_tbl then
 		return false
 	end
-	for _, queueObj in pairs(queueTbl) do
-		if queueObj:checkTargetIsInQueue(targetId) then
+	for _, queue_obj in pairs(queue_tbl) do
+		if queue_obj:check_target_is_in_queue(target_id) then
 			return true
 		end
 	end
 	return false
 end
 
-function checkCanAddNewWork(userId, targetId)
-	local isExist = checkWorkIsExist(userId, targetId)
-	if isExist then
+function check_can_add_new_work(user_id, target_id)
+	local is_exist = check_work_is_exist(user_id, target_id)
+	if is_exist then
 		return false, 350044
 	end
-	local queueObj = getIdleBuildQueue(userId, targetId)
-	if not queueObj then
+	local queue_obj = get_idle_build_queue(user_id, target_id)
+	if not queue_obj then
 		return false, 350144
 	end
 	return true, nil
 end
 
-function getTargetWorkQueueInfo(userId, targetId)
-	local queueTbl = getUserQueueTbl(userId)
-	if not queueTbl then
+function get_target_work_queue_info(user_id, target_id)
+	local queue_tbl = get_user_queue_tbl(user_id)
+	if not queue_tbl then
 		return
 	end
-	for _, queueObj in pairs(queueTbl) do
-		local isExist, queueIdx = queueObj:checkTargetIsInQueue(targetId)
-		if isExist then
-			return queueTbl, queueIdx
+	for _, queue_obj in pairs(queue_tbl) do
+		local is_exist, queue_idx = queue_obj:check_target_is_in_queue(target_id)
+		if is_exist then
+			return queue_tbl, queue_idx
 		end
 	end
 	return false
 end
 
-function tryAddNewWork(userId, targetId, cancelRewardList)
-	local ret, msgId = checkCanAddNewWork(userId, targetId)
+function try_add_new_work(user_id, target_id, cancel_reward_list)
+	local ret, msg_id = check_can_add_new_work(user_id, target_id)
 	if not ret then
-		return false, msgId
+		return false, msg_id
 	end
-	local queueObj = getIdleBuildQueue(userId, targetId)
-	queueObj:addNewWork(targetId, cancelRewardList)
-	local startQueueIdx, startTargetId = queueObj:tryStartWork()
-	queueObj:afterStartWork(startQueueIdx, startTargetId)
-	syncQueueInfoToClient(queueObj)
+	local queue_obj = get_idle_build_queue(user_id, target_id)
+	queue_obj:add_new_work(target_id, cancel_reward_list)
+	local start_queue_idx, start_target_id = queue_obj:try_start_work()
+	queue_obj:after_start_work(start_queue_idx, start_target_id)
+	sync_queue_info_to_client(queue_obj)
 	return true
 end
 
-function tryRemoveWork(userId, queueIdx, targetId)
-	if not queueIdx then
+function try_remove_work(user_id, queue_idx, target_id)
+	if not queue_idx then
 		return
 	end
-	local queueObj = getUserQueue(userId, queueIdx)
-	if not queueObj then
+	local queue_obj = get_user_queue(user_id, queue_idx)
+	if not queue_obj then
 		return
 	end
-	queueObj:onWorkFinish(targetId)
-	local startQueueIdx, startTargetId = queueObj:tryStartWork()
-	queueObj:afterStartWork(startQueueIdx, startTargetId)
-	syncQueueInfoToClient(queueObj)
+	queue_obj:on_work_finish(target_id)
+	local start_queue_idx, start_target_id = queue_obj:try_start_work()
+	queue_obj:after_start_work(start_queue_idx, start_target_id)
+	sync_queue_info_to_client(queue_obj)
 end
 
-local function onReqBuyQueue(fd, tbl)
-	local buyQueueIdx, buyCnt = tbl.buyQueueIdx, tbl.buyCnt
-	if buyCnt <= 0 then
+local function on_req_buy_queue(fd, tbl)
+	local buy_queue_idx, buy_cnt = tbl.buy_queue_idx, tbl.buy_cnt
+	if buy_cnt <= 0 then
 		return
 	end
-	local queueTbl = DATA_COMMON.getValueByKey(1)
-	local queueBuyInfo = queueTbl[buyQueueIdx]
-	if not queueBuyInfo then
+	local queue_tbl = DATA_COMMON.get_value_by_key(1)
+	local queue_buy_info = queue_tbl[buy_queue_idx]
+	if not queue_buy_info then
 		return
 	end
-	local _, costYb = table.unpack(queueBuyInfo)
-	local userId = USER_MGR.getUserIdByFd(fd)
-	local user = USER_MGR.getUserByFd(fd)
-	if not user:checkCanUseDiamond(costYb * buyCnt) then
+	local _, cost_yb = table.unpack(queue_buy_info)
+	local user_id = USER_MGR.get_user_id_by_fd(fd)
+	local user = USER_MGR.get_user_by_fd(fd)
+	if not user:check_can_use_diamond(cost_yb * buy_cnt) then
 		return
 	end
-	user:subDiamondAndSync(costYb * buyCnt, {CONST.REASON_BUY_BUILD_QUEUE, buyCnt})
-	local queue = getUserQueue(userId, buyQueueIdx)
+	user:sub_diamond_and_sync(cost_yb * buy_cnt, {CONST.REASON_BUY_BUILD_QUEUE, buy_cnt})
+	local queue = get_user_queue(user_id, buy_queue_idx)
 	if queue then
-		local expireTime = queue:getExpireTime()
-		queue:setExpireTime(expireTime + CONST.ONE_HOUR_SEC * buyCnt)
+		local expire_time = queue:get_expire_time()
+		queue:set_expire_time(expire_time + CONST.ONE_HOUR_SEC * buy_cnt)
 	else
-		createUserQueue(userId, buyQueueIdx, TIME.osBJSec() + CONST.ONE_HOUR_SEC * buyCnt)
+		create_user_queue(user_id, buy_queue_idx, TIME.os_bj_sec() + CONST.ONE_HOUR_SEC * buy_cnt)
 	end
-	syncAllQueueInfoToClient(userId)
-	for_caller.s2c_buy_build_queue(fd, {buyQueueIdx = buyQueueIdx, buyCnt = buyCnt})
+	sync_all_queue_info_to_client(user_id)
+	for_caller.s2c_buy_build_queue(fd, {buy_queue_idx = buy_queue_idx, buy_cnt = buy_cnt})
 end
 
-local function onReqAllWorkQueueInfo(fd)
-	local userId = USER_MGR.getUserIdByFd(fd)
-	syncAllQueueInfoToClient(userId)
+local function on_req_all_work_queue_info(fd)
+	local user_id = USER_MGR.get_user_id_by_fd(fd)
+	sync_all_queue_info_to_client(user_id)
 end
 
-local function onCancelBuildWork(fd, tbl)
-	local workIdx, queueIdx = tbl.idx, tbl.queueIdx
-	local userId = USER_MGR.getUserIdByFd(fd)
-	local queueObj = getUserQueue(userId, queueIdx)
-	if not queueObj then
+local function on_cancel_build_work(fd, tbl)
+	local work_idx, queue_idx = tbl.idx, tbl.queue_idx
+	local user_id = USER_MGR.get_user_id_by_fd(fd)
+	local queue_obj = get_user_queue(user_id, queue_idx)
+	if not queue_obj then
 		return
 	end
-	if queueObj:getWorkIdx() == workIdx then
+	if queue_obj:get_work_idx() == work_idx then
 		return
 	end
-	if not queueObj:onCancel(workIdx) then
+	if not queue_obj:on_cancel(work_idx) then
 		return
 	end
-	syncQueueInfoToClient(queueObj)
+	sync_queue_info_to_client(queue_obj)
 end
 
 function __init__()
-	for_maker.c2s_buy_build_queue = onReqBuyQueue
-	for_maker.c2s_req_all_queue_info = onReqAllWorkQueueInfo
-	for_maker.c2s_cancel_build_work = onCancelBuildWork
+	for_maker.c2s_buy_build_queue = on_req_buy_queue
+	for_maker.c2s_req_all_queue_info = on_req_all_work_queue_info
+	for_maker.c2s_cancel_build_work = on_cancel_build_work
 end

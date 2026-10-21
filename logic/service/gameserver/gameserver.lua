@@ -8,14 +8,14 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
-function CMD.onUserLogin(userId, fd, gateSrv, isFirstLogin)
-	skynet.error("gameserver login success", userId, gateSrv, isFirstLogin)
-	USER_MGR.refLogin(userId, fd, gateSrv)
+function CMD.on_user_login(user_id, fd, gate_srv, is_first_login)
+	skynet.error("gameserver login success", user_id, gate_srv, is_first_login)
+	USER_MGR.ref_login(user_id, fd, gate_srv)
 end
 
-function CMD.onUserLogout(userId, fd)
-	skynet.error("gameserver logout success", userId, fd)
-	USER_MGR.disconnect(userId, fd)
+function CMD.on_user_logout(user_id, fd)
+	skynet.error("gameserver logout success", user_id, fd)
+	USER_MGR.disconnect(user_id, fd)
 end
 
 skynet.register_protocol {
@@ -24,8 +24,8 @@ skynet.register_protocol {
 	unpack = skynet.unpack
 }
 
-function RPC_CMD.subItemList(id, ret, userId)
-	return GLOBAL_FUNC.subItemList(id, ret, userId)
+function RPC_CMD.sub_item_list(id, ret, user_id)
+	return GLOBAL_FUNC.sub_item_list(id, ret, user_id)
 end
 
 skynet.start(function()

@@ -1,24 +1,24 @@
 # hero persist schema (agent USER_HERO_COL.dat)
-# 文档形状: { _heroes: { "heroType": HeroData, ... } }
+# 文档形状: { _heroes: { "hero_type": hero_data, ... } }
 # map 的 number key 落库为字符串，加载时按类型还原，路径中不出现数字段
 
-SkillMap <number, number>
-EquipMap <number, number>
+skill_map <number, number>
+equip_map <number, number>
 
-HeroData {
-    _heroType number
-    _userId string
+hero_data {
+    _hero_type number
+    _user_id string
     _exp number
     _level number
     _star number
-    _equipTbl EquipMap
-    _skillTbl SkillMap
-    _newTag boolean
+    _equip_tbl equip_map
+    _skill_tbl skill_map
+    _new_tag boolean
     _state number
 }
 
-HeroBag <number, HeroData>
+hero_bag <number, hero_data>
 
-UserHeroDoc {
-    _heroes HeroBag
+user_hero_doc {
+    _heroes hero_bag
 }

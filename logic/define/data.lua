@@ -19,101 +19,101 @@ local DATA_ITEM = sharedata.query("Item")
 -- }
 
 -- 二次处理配置表的内容
-initBuildList = {}
-local function initConfigData()
+init_build_list = {}
+local function init_config_data()
 	for _, conf in pairs(DATA_BUILD_DETAIL) do
-		table.insert(initBuildList, conf.InitLev)
+		table.insert(init_build_list, conf.InitLev)
 	end
 end
-initConfigData()
+init_config_data()
 
-function getValueByKey(key)
+function get_value_by_key(key)
 	return DATA_GLOBAL[key].value1 or DATA_GLOBAL[key].value2 or DATA_GLOBAL[key].value3
 end
 
-local function getReportInfo(reportId)
-	return DATA_REPORT[reportId]
+local function get_report_info(report_id)
+	return DATA_REPORT[report_id]
 end
 
-local function getReportInfoBySrvGroup(groupId)
-	local reportId = DATA_SERVER_GROUP[groupId].reportId
-	return getReportInfo(reportId)
+local function get_report_info_by_srv_group(group_id)
+	local report_id = DATA_SERVER_GROUP[group_id].reportId
+	return get_report_info(report_id)
 end
 
-function getLoginAddressBySrvGroup(groupId)
-	local info = getReportInfoBySrvGroup(groupId)
+function get_login_address_by_srv_group(group_id)
+	local info = get_report_info_by_srv_group(group_id)
 	return info.LoginDomain, info.HttpPort, info.HttpsPort
 end
 
-function getFirstNameList(language)
-	local nameTbl = conf[language]()
-	return nameTbl[1]
+function get_first_name_list(language)
+	local name_tbl = conf[language]()
+	return name_tbl[1]
 end
 
-function getHeroInfoByType(heroType)
-	return DATA_HERO[heroType]
+function get_hero_info_by_type(hero_type)
+	return DATA_HERO[hero_type]
 end
 
-function getAllHeroTypes()
+function get_all_hero_types()
 	local list = {}
-	for heroType in pairs(DATA_HERO) do
-		table.insert(list, heroType)
+	for hero_type in pairs(DATA_HERO) do
+		table.insert(list, hero_type)
 	end
 	return list
 end
 
-function getItemKindByType(itemType)
-	local itemKind = DATA_ITEM[itemType].itemKind
-	return itemKind
+function get_item_kind_by_type(item_type)
+	local item_kind = DATA_ITEM[item_type].item_kind
+	return item_kind
 end
 
-function getInitialBuildList()
-	return initBuildList
+function get_initial_build_list()
+	return init_build_list
 end
 
-function getBuildTypeById(bid)
-	return DATA_BUILD_CONF.builds[bid].buildType
+function get_build_type_by_id(bid)
+	return DATA_BUILD_CONF.builds[bid].build_type
 end
 
-function getLotteryCommonPools(useLotteryTimes)
+function get_lottery_common_pools(use_lottery_times)
 end
 
-function getLotteryHeroPools(useLotteryTimes)
+function get_lottery_hero_pools(use_lottery_times)
 end
 
-function getUpHeroItemLotteryTimes(useLotteryTimes)
+function get_up_hero_item_lottery_times(use_lottery_times)
 end
 
-function getLotteryCost(useLotteryTimes)
+function get_lottery_cost(use_lottery_times)
 end
 
-function canOverlap(itemType)
-	return DATA_ITEM[itemType].canOverlap == 1
+function can_overlap(item_type)
+	return DATA_ITEM[item_type].can_overlap == 1
 end
 
-function getItemOverlap(itemType)
-	return DATA_ITEM[itemType].Overlap
+function get_item_overlap(item_type)
+	return DATA_ITEM[item_type].Overlap
 end
 
-function getItemKindByType(itemType)
-	return DATA_ITEM[itemType].Kind
+function get_item_kind_by_type(item_type)
+	return DATA_ITEM[item_type].Kind
 end
 
-function canLockMail()
+function can_lock_mail()
 end
 
-function getQueueCapacity()
+function get_queue_capacity()
 	return 5
 end
 
-function getBuildLevelUpLimit()
+function get_build_level_up_limit()
 	return {}
 end
 
-function getBuildCreateLimit()
+function get_build_create_limit()
 	return {}
 end
 
-function getBuildMaxLevel(bType)
+function get_build_max_level(b_type)
 	return 1
 end

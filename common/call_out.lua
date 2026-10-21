@@ -1,87 +1,87 @@
 local skynet = require "skynet"
-needRefCalloutTbl = {}
+need_ref_callout_tbl = {}
 
-noStopCBTbl = {}
+no_stop_cb_tbl = {}
 
 
-local function doCB(id)
-	local profile = GAME.getProfile()
+local function do_cb(id)
+	local profile = GAME.get_profile()
 	if profile then
 		profile.start()
 	end
-	local info = CB_MGR.getCBInfo(id)
-	local f = _G[info.modName][info.funcName]
+	local info = CB_MGR.get_cb_info(id)
+	local f = _G[info.mod_name][info.func_name]
 	local ret = xpcall(function()
-		f(table.unpack(info.paramTbl))
+		f(table.unpack(info.param_tbl))
 	end, __G__TRACKBACK__)
 	if profile then
-		local modName = info.modName
-		local funcName = info.funcName
-		if modName == "SLICE_TASK" then
-			local taskTbl = info.paramTbl[2]
-			if taskTbl then
-				modName = taskTbl.moduleName or info.modName
-				funcName = taskTbl.funcName or info.funcName
+		local mod_name = info.mod_name
+		local func_name = info.func_name
+		if mod_name == "SLICE_TASK" then
+			local task_tbl = info.param_tbl[2]
+			if task_tbl then
+				mod_name = task_tbl.module_name or info.mod_name
+				func_name = task_tbl.func_name or info.func_name
 			end
 		end
-		profile.stop(modName, funcName)
+		profile.stop(mod_name, func_name)
 	end
 end
 
-local function luaMultiCB(id, time)
-	if not noStopCBTbl[id] then
+local function lua_multi_cb(id, time)
+	if not no_stop_cb_tbl[id] then
 		return
 	end
-	doCB(id)
+	do_cb(id)
 	skynet.timeout(time, function()
-		luaMultiCB(id)
+		lua_multi_cb(id)
 	end)
 end
 
-local function luaOnceCB(id)
-	if not noStopCBTbl[id] then
+local function lua_once_cb(id)
+	if not no_stop_cb_tbl[id] then
 		return
 	end
-	doCB(id)
-	CB_MGR.clearCBInfo(id)
-	noStopCBTbl[id] = nil
-	needRefCalloutTbl[id] = nil
+	do_cb(id)
+	CB_MGR.clear_cb_info(id)
+	no_stop_cb_tbl[id] = nil
+	need_ref_callout_tbl[id] = nil
 end
 
-function callOnce(modName, funcName, time, ...)
-	local m = _G[modName]
+function call_once(mod_name, func_name, time, ...)
+	local m = _G[mod_name]
 	assert(m)
-	assert(m[funcName])
+	assert(m[func_name])
 	time = time * 100
 	if time <= 0 then
 		time = 0.1
 	end
-	local id = CB_MGR.fetchCallbackId(modName, funcName, ...)
+	local id = CB_MGR.fetch_callback_id(mod_name, func_name, ...)
 	skynet.timeout(time, function()
-		luaMultiCB(id, time)
+		lua_multi_cb(id, time)
 	end)
 
-	needRefCalloutTbl[id] = os.time() + time
+	need_ref_callout_tbl[id] = os.time() + time
 
 	return id
 end
 
-function callFre(modName, funcName, time, ...)
-	local m = _G[modName]
+function call_fre(mod_name, func_name, time, ...)
+	local m = _G[mod_name]
 	assert(m)
-	assert(m[funcName])
-	local id = CB_MGR.fetchCallbackId(modName, funcName, ...)
+	assert(m[func_name])
+	local id = CB_MGR.fetch_callback_id(mod_name, func_name, ...)
 	skynet.timeout(time * 100, function ()
-		luaOnceCB(id)
+		lua_once_cb(id)
 	end)
 
 	return id
 end
 
-function removeCallOut(idx)
-	CB_MGR.clearCBInfo(idx)
-	noStopCBTbl[idx] = nil
-	needRefCalloutTbl[idx] = nil
+function remove_call_out(idx)
+	CB_MGR.clear_cb_info(idx)
+	no_stop_cb_tbl[idx] = nil
+	need_ref_callout_tbl[idx] = nil
 end
 
 -- function wizRefCallOut()

@@ -1,18 +1,18 @@
 # item persist (agent USER_ITEM_COL.dat)
 
-ItemData {
-    _itemId string
-    _itemType number
-    _userId string
-    _itemCnt number
-    _strengthenLv number
-    _strengthenExp number
-    _forgeLv number
-    _putOnHeroType number
+item_data {
+    _item_id string
+    _item_type number
+    _user_id string
+    _item_cnt number
+    _strengthen_lv number
+    _strengthen_exp number
+    _forge_lv number
+    _put_on_hero_type number
 }
 
-ItemBag <string, ItemData>
+item_bag <string, item_data>
 
-UserItemDoc {
-    _items ItemBag
+user_item_doc {
+    _items item_bag
 }

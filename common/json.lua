@@ -45,16 +45,16 @@ local base = _G
 -- Public functions
 
 -- Private functions
-local decode_scanArray
-local decode_scanComment
-local decode_scanConstant
-local decode_scanNumber
-local decode_scanObject
-local decode_scanString
-local decode_scanWhitespace
-local encodeString
-local isArray
-local isEncodable
+local decode_scan_array
+local decode_scan_comment
+local decode_scan_constant
+local decode_scan_number
+local decode_scan_object
+local decode_scan_string
+local decode_scan_whitespace
+local encode_string
+local is_array
+local is_encodable
 
 -----------------------------------------------------------------------------
 -- PUBLIC FUNCTIONS
@@ -72,7 +72,7 @@ function encode (v)
 
   -- Handle strings
   if vtype=='string' then    
-	return '"' .. encodeString(v) .. '"'	    -- Need to handle encoding in string
+	return '"' .. encode_string(v) .. '"'	    -- Need to handle encoding in string
   end
   
   -- Handle booleans
@@ -84,19 +84,19 @@ function encode (v)
   if vtype=='table' then
 	local rval = {}
 	-- Consider arrays separately
-	local bArray, maxCount = isArray(v)
-	if bArray then
-	  for i = 1,maxCount do
+	local b_array, max_count = is_array(v)
+	if b_array then
+	  for i = 1,max_count do
 	    table.insert(rval, encode(v[i]))
 	  end
 	else	-- An object, not an array
 	  for i,j in base.pairs(v) do
-	    if isEncodable(i) and isEncodable(j) then
-	      table.insert(rval, '"' .. encodeString(i) .. '":' .. encode(j))
+	    if is_encodable(i) and is_encodable(j) then
+	      table.insert(rval, '"' .. encode_string(i) .. '":' .. encode(j))
 	    end
 	  end
 	end
-	if bArray then
+	if b_array then
 	  return '[' .. table.concat(rval,',') ..']'
 	else
 	  return '{' .. table.concat(rval,',') .. '}'
@@ -136,7 +136,7 @@ end
 -- @param s The string to return as a JSON encoded (i.e. backquoted string)
 -- @return The string appropriately escaped.
 local qrep = {["\\"]="\\\\", ['"']='\\"',['\n']='\\n',['\t']='\\t'}
-function encodeString(s)
+function encode_string(s)
   return tostring(s):gsub('["\\\n\t]',qrep)
 end
 
@@ -148,23 +148,23 @@ end
 -- @return boolean, number True if the table can be represented as an array, false otherwise. If true,
 -- the second returned value is the maximum
 -- number of indexed elements in the array. 
-function isArray(t)
+function is_array(t)
   -- Next we count all the elements, ensuring that any non-indexed elements are not-encodable 
   -- (with the possible exception of 'n')
-  local maxIndex = 0
+  local max_index = 0
   for k,v in base.pairs(t) do
 	if (base.type(k)=='number' and math.floor(k)==k and 1<=k) then	-- k,v is an indexed pair
-	  if (not isEncodable(v)) then return false end	-- All array elements must be encodable
-	  maxIndex = math.max(maxIndex,k)
+	  if (not is_encodable(v)) then return false end	-- All array elements must be encodable
+	  max_index = math.max(max_index,k)
 	else
 	  if (k=='n') then
 	    if v ~= table.getn(t) then return false end  -- False if n does not hold the number of elements
 	  else -- Else of (k=='n')
-	    if isEncodable(v) then return false end
+	    if is_encodable(v) then return false end
 	  end  -- End of (k~='n')
 	end -- End of k,v not an indexed pair
   end  -- End of loop across all pairs
-  return true, maxIndex
+  return true, max_index
 end
 
 --- Determines whether the given Lua object / table / variable can be JSON encoded. The only
@@ -172,7 +172,7 @@ end
 -- In this implementation, all other types are ignored.
 -- @param o The object to examine.
 -- @return boolean True if the object should be JSON encoded, false if it should be ignored.
-function isEncodable(o)
+function is_encodable(o)
   local t = base.type(o)
   return (t=='string' or t=='boolean' or t=='number' or t=='nil' or t=='table') or (t=='function' and o==null) 
 end
@@ -524,7 +524,7 @@ do
 	end
 end
 
-function safeDecode(data)
+function safe_decode(data)
 	local ret, tbl = pcall(decode, data)
 	if ret then
 		return tbl

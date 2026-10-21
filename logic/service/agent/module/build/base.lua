@@ -1,46 +1,46 @@
-clsBuild = clsObject:Inherit()
+cls_build = cls_object:Inherit()
 
-function clsBuild:__init__(oci)
-	Super(clsBuild).__init__(self, oci)
+function cls_build:__init__(oci)
+	Super(cls_build).__init__(self, oci)
 	if ORM.is_cls(oci, ORM.CLS_BUILD_DATA) then
 		self._data = oci
 	else
 		self._data = ORM.create(ORM.CLS_BUILD_DATA, oci)
 	end
-	ORM.put(MONGO_SLAVE.COL.USER_BUILD, self._data._userId, "_builds", self._data._bid, self._data)
-	BUILD_MGR.refBuild(self)
+	ORM.put(MONGO_SLAVE.COL.USER_BUILD, self._data._user_id, "_builds", self._data._bid, self._data)
+	BUILD_MGR.ref_build(self)
 end
 
-function clsBuild:getUserId()
-	return self._data._userId
+function cls_build:get_user_id()
+	return self._data._user_id
 end
 
-function clsBuild:getBid()
+function cls_build:get_bid()
 	return self._data._bid
 end
 
-function clsBuild:getLevel()
+function cls_build:get_level()
 	return self._data._level
 end
 
-function clsBuild:setLevel(level)
+function cls_build:set_level(level)
 	self._data._level = level
 end
 
-function clsBuild:getBuildType()
-	return DATA_COMMON.getBuildTypeById(self:getBid())
+function cls_build:get_build_type()
+	return DATA_COMMON.get_build_type_by_id(self:get_bid())
 end
 
-function clsBuild:getBuildPTOInfo()
+function cls_build:get_build_pto_info()
 	return {
-		bid = self:getBid(),
-		level = self:getLevel(),
+		bid = self:get_bid(),
+		level = self:get_level(),
 	}
 end
 
-function clsBuild:syncToClient()
-	local fd = USER_MGR.getFdByUserId(self:getUserId())
+function cls_build:sync_to_client()
+	local fd = USER_MGR.get_fd_by_user_id(self:get_user_id())
 	if fd then
-		for_caller.s2c_sync_build(fd, self:getBuildPTOInfo())
+		for_caller.s2c_sync_build(fd, self:get_build_pto_info())
 	end
 end

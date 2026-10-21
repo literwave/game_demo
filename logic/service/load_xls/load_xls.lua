@@ -9,7 +9,7 @@ FILE_MODIFY_TIME_TBL = {
 
 -- 星图导出的表是 { {Id=...}, ... }，业务按 Id 取值，加载时转成 [Id] = row。
 -- 不是这种形状的表（例如内城布局）原样放进 sharedata。
-local function indexById(data)
+local function index_by_id(data)
 	local first = data[1]
 	if type(first) ~= "table" or first.Id == nil then
 		return data
@@ -23,14 +23,14 @@ local function indexById(data)
 	return indexed
 end
 
-local function loadConfig(path)
+local function load_config(path)
 	local chunk, err = loadfile(path)
 	if not chunk then
 		error(string.format("load config failed: %s (%s)", path, tostring(err)))
 	end
 	local data = chunk()
 	assert(type(data) == "table", "config must return a table: " .. path)
-	return indexById(data)
+	return index_by_id(data)
 end
 
 -- 这里先这样手动加载数据，后续优化成遍历dir目录下的文件，然后new
@@ -51,30 +51,30 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
-function CMD.hotUpdate()
+function CMD.hot_update()
 	for file in lfs.dir(CONFIG_PATH) do
 		local filename = file:sub(1, -5)
-		local fileAttr = lfs.attributes(CONFIG_PATH .. file)
+		local file_attr = lfs.attributes(CONFIG_PATH .. file)
 		if not FILE_MODIFY_TIME_TBL[filename] then
-			local temdata = loadConfig(CONFIG_PATH .. file)
+			local temdata = load_config(CONFIG_PATH .. file)
 			sharedata.new(filename, temdata)
-			FILE_MODIFY_TIME_TBL[filename] = fileAttr.modification
+			FILE_MODIFY_TIME_TBL[filename] = file_attr.modification
 		else
-			local oldModification = FILE_MODIFY_TIME_TBL[filename]
-			if oldModification ~= fileAttr.modification then
-				local temdata = loadConfig(CONFIG_PATH .. file)
+			local old_modification = FILE_MODIFY_TIME_TBL[filename]
+			if old_modification ~= file_attr.modification then
+				local temdata = load_config(CONFIG_PATH .. file)
 				sharedata.update(filename, temdata)
-				FILE_MODIFY_TIME_TBL[filename] = fileAttr.modification
+				FILE_MODIFY_TIME_TBL[filename] = file_attr.modification
 			end
 		end
 	end
 end
 
-local function loadDataFile()
+local function load_data_file()
 	for _, file in ipairs(DATA_FILE_LIST) do
 		local filename = file:match("([^/\\]+)%.lua$")
 		assert(filename, "bad config path: " .. tostring(file))
-		local data = loadConfig(file)
+		local data = load_config(file)
 		sharedata.new(filename, data)
 		FILE_MODIFY_TIME_TBL[filename] = os.time()
 		skynet.error("sharedata loaded:", filename)
@@ -83,7 +83,7 @@ end
 
 -- 待做，类似于协议初始化
 skynet.start(function()
-	loadDataFile()
+	load_data_file()
 	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
 		assert(CMD[cmd])
 		local f = CMD[cmd]

@@ -1,103 +1,103 @@
-clsItem = CLS_BASE_ITEM.clsItem:Inherit()
+cls_item = CLS_BASE_ITEM.cls_item:Inherit()
 
-function clsItem:__init__(oci)
-	Super(clsItem).__init__(self, oci)
+function cls_item:__init__(oci)
+	Super(cls_item).__init__(self, oci)
 end
 
-function clsItem:getItemPTOInfo()
+function cls_item:get_item_pto_info()
 	local d = self._data
 	return {
-		itemId = self:getItemId(),
-		itemType = self:getItemType(),
-		itemCnt = self:getCnt(),
-		strengthenLv = d._strengthenLv,
-		strengthenExp = d._strengthenExp,
-		forgeLv = d._forgeLv,
+		itemId = self:get_item_id(),
+		itemType = self:get_item_type(),
+		itemCnt = self:get_cnt(),
+		strengthen_lv = d._strengthen_lv,
+		strengthen_exp = d._strengthen_exp,
+		forge_lv = d._forge_lv,
 	}
 end
 
-function clsItem:syncToClient()
-	local info = self:getItemPTOInfo()
-	local fd = USER_MGR.getFdByUserId(self:getUserId())
+function cls_item:sync_to_client()
+	local info = self:get_item_pto_info()
+	local fd = USER_MGR.get_fd_by_user_id(self:get_user_id())
 	if fd then
 		for_caller.s2c_sync_item_data(fd, info)
 	end
 end
 
-function clsItem:setPutOnHeroType(heroType)
-	self._data._putOnHeroType = heroType or 0
+function cls_item:set_put_on_hero_type(hero_type)
+	self._data._put_on_hero_type = hero_type or 0
 end
 
-function clsItem:getPutOnHeroType()
-	local v = self._data._putOnHeroType
+function cls_item:get_put_on_hero_type()
+	local v = self._data._put_on_hero_type
 	if v == 0 then
 		return nil
 	end
 	return v
 end
 
-function clsItem:getStrengthenLv()
-	return self._data._strengthenLv
+function cls_item:get_strengthen_lv()
+	return self._data._strengthen_lv
 end
 
-function clsItem:setStrengthenLv(strengthenLv)
-	self._data._strengthenLv = strengthenLv
+function cls_item:set_strengthen_lv(strengthen_lv)
+	self._data._strengthen_lv = strengthen_lv
 end
 
-function clsItem:getStrengthenExp()
-	return self._data._strengthenExp
+function cls_item:get_strengthen_exp()
+	return self._data._strengthen_exp
 end
 
-function clsItem:setStrengthenExp(strengthenExp)
-	self._data._strengthenExp = strengthenExp
+function cls_item:set_strengthen_exp(strengthen_exp)
+	self._data._strengthen_exp = strengthen_exp
 end
 
-function clsItem:getForgeLv()
-	return self._data._forgeLv
+function cls_item:get_forge_lv()
+	return self._data._forge_lv
 end
 
-function clsItem:setForgeLv(forgeLv)
-	self._data._forgeLv = forgeLv
+function cls_item:set_forge_lv(forge_lv)
+	self._data._forge_lv = forge_lv
 end
 
-function clsItem:getLv()
-	return self._data._strengthenLv
+function cls_item:get_lv()
+	return self._data._strengthen_lv
 end
 
-function clsItem:getPower()
-	local strengthenPower = DATA_COMMON.getItemStrengthenPower(self:getStrengthenLv(), self:getEquipQuality()) or 0
-	local forgePower = DATA_COMMON.getItemForgePower(self:getForgeLv()) or 0
-	return strengthenPower + forgePower
+function cls_item:get_power()
+	local strengthen_power = DATA_COMMON.get_item_strengthen_power(self:get_strengthen_lv(), self:get_equip_quality()) or 0
+	local forge_power = DATA_COMMON.get_item_forge_power(self:get_forge_lv()) or 0
+	return strengthen_power + forge_power
 end
 
-function clsItem:getAtt()
-	local baseAtt = DATA_COMMON.getItemAtt(self:getItemType()) or 0
-	local levelAtt = DATA_COMMON.getItemLevelAtt(self:getItemType(), self:getStrengthenLv()) or 0
-	local forgeAdd = DATA_COMMON.getItemForgeGradeAtt(self:getForgeLv()) or 0
-	return (baseAtt + levelAtt) * (1 + forgeAdd)
+function cls_item:get_att()
+	local base_att = DATA_COMMON.get_item_att(self:get_item_type()) or 0
+	local level_att = DATA_COMMON.get_item_level_att(self:get_item_type(), self:get_strengthen_lv()) or 0
+	local forge_add = DATA_COMMON.get_item_forge_grade_att(self:get_forge_lv()) or 0
+	return (base_att + level_att) * (1 + forge_add)
 end
 
-function clsItem:getDef()
-	local baseDef = DATA_COMMON.getItemDef(self:getItemType()) or 0
-	local levelDef = DATA_COMMON.getItemLevelDef(self:getItemType(), self:getStrengthenLv()) or 0
-	local forgeAdd = DATA_COMMON.getItemForgeGradeAtt(self:getForgeLv()) or 0
-	return (baseDef + levelDef) * (1 + forgeAdd)
+function cls_item:get_def()
+	local base_def = DATA_COMMON.get_item_def(self:get_item_type()) or 0
+	local level_def = DATA_COMMON.get_item_level_def(self:get_item_type(), self:get_strengthen_lv()) or 0
+	local forge_add = DATA_COMMON.get_item_forge_grade_att(self:get_forge_lv()) or 0
+	return (base_def + level_def) * (1 + forge_add)
 end
 
-function clsItem:getLife()
-	local baseLife = DATA_COMMON.getItemLife(self:getItemType()) or 0
-	local levelLife = DATA_COMMON.getItemLevelLife(self:getItemType(), self:getStrengthenLv()) or 0
-	local forgeAdd = DATA_COMMON.getItemForgeGradeAtt(self:getForgeLv()) or 0
-	return (baseLife + levelLife) * (1 + forgeAdd)
+function cls_item:get_life()
+	local base_life = DATA_COMMON.get_item_life(self:get_item_type()) or 0
+	local level_life = DATA_COMMON.get_item_level_life(self:get_item_type(), self:get_strengthen_lv()) or 0
+	local forge_add = DATA_COMMON.get_item_forge_grade_att(self:get_forge_lv()) or 0
+	return (base_life + level_life) * (1 + forge_add)
 end
 
-function clsItem:getLethality()
-	local baseLethality = DATA_COMMON.getItemLethality(self:getItemType()) or 0
-	local levelLethality = DATA_COMMON.getItemLevelLethality(self:getItemType(), self:getStrengthenLv()) or 0
-	local forgeAdd = DATA_COMMON.getItemForgeGradeAtt(self:getForgeLv()) or 0
-	return (baseLethality + levelLethality) * (1 + forgeAdd)
+function cls_item:get_lethality()
+	local base_lethality = DATA_COMMON.get_item_lethality(self:get_item_type()) or 0
+	local level_lethality = DATA_COMMON.get_item_level_lethality(self:get_item_type(), self:get_strengthen_lv()) or 0
+	local forge_add = DATA_COMMON.get_item_forge_grade_att(self:get_forge_lv()) or 0
+	return (base_lethality + level_lethality) * (1 + forge_add)
 end
 
-function clsItem:getEquipQuality()
-	return DATA_COMMON.getEquipQuality(self:getItemType())
+function cls_item:get_equip_quality()
+	return DATA_COMMON.get_equip_quality(self:get_item_type())
 end

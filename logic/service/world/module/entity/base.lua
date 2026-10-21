@@ -1,12 +1,12 @@
 
-local saveFieldTbl = {
+local save_field_tbl = {
 }
 
-clsEntity = clsObject:Inherit()
+cls_entity = cls_object:Inherit()
 
-function clsEntity:__init__(oci)
-	Super(clsEntity).__init__(self)
-	for k, func in pairs(saveFieldTbl) do
+function cls_entity:__init__(oci)
+	Super(cls_entity).__init__(self)
+	for k, func in pairs(save_field_tbl) do
 		if oci[k] == nil then
 			self[k] = func()
 		else

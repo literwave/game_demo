@@ -7,18 +7,18 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
-function CMD.onUserLogin(userId, fd, gateSrv, isFirstLogin)
-	skynet.error("world login success", userId, gateSrv, isFirstLogin)
-	USER_MGR.refLogin(userId, fd, gateSrv)
+function CMD.on_user_login(user_id, fd, gate_srv, is_first_login)
+	skynet.error("world login success", user_id, gate_srv, is_first_login)
+	USER_MGR.ref_login(user_id, fd, gate_srv)
 end
 
-function CMD.onUserLogout(userId, fd)
-	skynet.error("world logout success", userId, fd)
-	USER_MGR.disconnect(userId, fd)
+function CMD.on_user_logout(user_id, fd)
+	skynet.error("world logout success", user_id, fd)
+	USER_MGR.disconnect(user_id, fd)
 end
 
-function CMD.syncToMap(oci)
-	ENTITY_MGR.syncToMap(oci)
+function CMD.sync_to_map(oci)
+	ENTITY_MGR.sync_to_map(oci)
 end
 
 skynet.start(function()

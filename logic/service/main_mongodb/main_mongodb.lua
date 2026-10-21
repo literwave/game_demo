@@ -10,72 +10,72 @@ function CMD.shutdown()
 end
 
 function CMD.start()
-	MONGODB = MONGO_OBJ.clsMongoDb:New()
+	MONGODB = MONGO_OBJ.cls_mongo_db:New()
 end
 
 function CMD.insert(args)
 	MONGODB:insert(args)
 end
 
-function CMD.insertBatch(args)
-	MONGODB:insertBatch(args)
+function CMD.insert_batch(args)
+	MONGODB:insert_batch(args)
 end
 
 function CMD.delete(args)
 	MONGODB:delete(args)
 end
 
-function CMD.findOne(args)
-	return MONGODB:findOne(args)
+function CMD.find_one(args)
+	return MONGODB:find_one(args)
 end
 
-function CMD.findAll(args)
-	return MONGODB:findAll(args)
+function CMD.find_all(args)
+	return MONGODB:find_all(args)
 end
 
 function CMD.update(args)
 	MONGODB:update(args)
 end
 
-function CMD.saveData(allCmdTbl)
-	local dataBase = GAME.getDataBase()
+function CMD.save_data(all_cmd_tbl)
+	local data_base = GAME.get_data_base()
 	local args = {
-		database = dataBase
+		database = data_base
 	}
-	for col, cmdList in pairs(allCmdTbl) do
-		for _, cmd in ipairs(cmdList) do
+	for col, cmd_list in pairs(all_cmd_tbl) do
+		for _, cmd in ipairs(cmd_list) do
 			args.collection = col
 			args.selector = {["_id"] = cmd.key,}
-			if cmd.opType == "delDoc" then
+			if cmd.op_type == "del_doc" then
 				MONGODB:delete(args)
-			elseif cmd.opType == "$set" then
-				local splitList = string.split(cmd.fieldStr, ".")
-				local newValTbl = {}
-				local current = newValTbl
+			elseif cmd.op_type == "$set" then
+				local split_list = string.split(cmd.field_str, ".")
+				local new_val_tbl = {}
+				local current = new_val_tbl
 				-- 构建嵌套结构
-				for i = 1, #splitList - 1 do
-					current[splitList[i]] = {}
-					current = current[splitList[i]]
+				for i = 1, #split_list - 1 do
+					current[split_list[i]] = {}
+					current = current[split_list[i]]
 				end
 				-- 设置最终值
-				current[splitList[#splitList]] = cmd.value
-				args.update = { ["$set"] = { [cmd.fieldStr] = cmd.value} }
+				current[split_list[#split_list]] = cmd.value
+				args.update = { ["$set"] = { [cmd.field_str] = cmd.value} }
 				args.upsert = true
 				args.multi = false
 				MONGODB:update(args)
-			elseif cmd.opType == "$unset" then
-				local splitList = string.split(cmd.fieldStr, ".")
-				local newValTbl = {}
-				local current = newValTbl
+			elseif cmd.op_type == "$unset" then
+				local split_list = string.split(cmd.field_str, ".")
+				local new_val_tbl = {}
+				local current = new_val_tbl
 				
 				-- 构建嵌套结构
-				for i = 1, #splitList - 1 do
-					current[splitList[i]] = {}
-					current = current[splitList[i]]
+				for i = 1, #split_list - 1 do
+					current[split_list[i]] = {}
+					current = current[split_list[i]]
 				end
 				-- 设置删除标记
-				current[splitList[#splitList]] = ""
-				args.update = newValTbl
+				current[split_list[#split_list]] = ""
+				args.update = new_val_tbl
 				args.upsert = false
 				args.multi = false
 				MONGODB:update(args)

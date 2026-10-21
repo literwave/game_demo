@@ -1,19 +1,19 @@
 
-function Super(TmpClass)
-	return TmpClass.__SuperClass
+function Super(tmp_class)
+	return tmp_class.__super_class
 end
 
 ----------------------------------------------------------------- lua class
 --基础类库
 
 --------------------------- class def
-clsObject = {
-	Inherit = __InheritWithCopy,
-	ImplementFrom = __ImlInterFaceWithCopy,
-	__IsClass = true,
+cls_object = {
+	Inherit = __inherit_with_copy,
+	implement_from = __iml_inter_face_with_copy,
+	__is_class = true,
 }
 		
-function clsObject:New(...)
+function cls_object:New(...)
 	local o = {}
 
 	setmetatable(o, { __index = self })
@@ -23,18 +23,18 @@ function clsObject:New(...)
 	return o
 end
 
-function clsObject:moveClassInheritInfo(newClass)
-	__moveClassInheritInfo(self, newClass)
+function cls_object:move_class_inherit_info(new_class)
+	__move_class_inherit_info(self, new_class)
 end
 
-function clsObject:refreshInherit(oldClass) -- 刷新所有的子类把newClass当父类
-	__refreshInherit(self, oldClass)
+function cls_object:refresh_inherit(old_class) -- 刷新所有的子类把newClass当父类
+	__refresh_inherit(self, old_class)
 end
 
 ----------------------------
 
-function clsObject:__init__()
+function cls_object:__init__()
 end
 
-function clsObject:release()
+function cls_object:release()
 end

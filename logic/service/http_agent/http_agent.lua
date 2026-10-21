@@ -4,7 +4,7 @@ local httpd = require "http.httpd"
 local sockethelper = require "http.sockethelper"
 local urllib = require "http.url"
 
-local methodTagTbl = {
+local method_tag_tbl = {
 	[1] = Import("../logic/service/http_agent/shutdown.lua"),
 }
 
@@ -30,10 +30,10 @@ skynet.start(function()
 			table.insert(tmp, string.format("path: %s", path))
 			local ret = "failed"
 			if query then
-				local paramsTbl = urllib.parse_query(query)
-				local methodTag = tonumber(paramsTbl.methodTag)
-				local mod = methodTagTbl[methodTag]
-				mod.onHttpRequest(fd, paramsTbl, body)
+				local params_tbl = urllib.parse_query(query)
+				local method_tag = tonumber(params_tbl.method_tag)
+				local mod = method_tag_tbl[method_tag]
+				mod.on_http_request(fd, params_tbl, body)
 			end
 		end
 	end)

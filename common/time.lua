@@ -1,35 +1,35 @@
 local offset = 0
 
-function osBJSecByTbl(tbl)
+function os_bj_sec_by_tbl(tbl)
 	local ret = os.time(tbl)
 	return ret
 end
 
-local TIME_BASE = osBJSecByTbl({year=2004,month=1,day=1,hour=0,min=0,sec=0,})
+local TIME_BASE = os_bj_sec_by_tbl({year=2004,month=1,day=1,hour=0,min=0,sec=0,})
 
-function osBJSec()
+function os_bj_sec()
 	return os.time() + offset
 end
 
-function addOffset(sec)
+function add_offset(sec)
 	offset = offset + sec
 end
 
-function resetOffset()
+function reset_offset()
 	offset = 0
 end
 
-function getRelaDayNo(time)
+function get_rela_day_no(time)
 	local Standard = TIME_BASE
 	if not time then
-		time = osBJSec()
+		time = os_bj_sec()
 	end
 	assert(time > Standard)
-	local totalDay = time / CONST.ONE_HOUR_SEC / CONST.ONE_DAY_HOUR
-	return math.floor(totalDay) + 1
+	local total_day = time / CONST.ONE_HOUR_SEC / CONST.ONE_DAY_HOUR
+	return math.floor(total_day) + 1
 end
 
-function getDiffDay(time1, time2)
+function get_diff_day(time1, time2)
 	local diff = math.abs(time1 - time2)
 	return math.floor(diff / CONST.ONE_HOUR_SEC / CONST.ONE_DAY_HOUR) + 1
 end

@@ -1,6 +1,6 @@
 
-function __ImlInterFaceWithCopy(self, imlClass)
-	for k, v in pairs(imlClass) do
+function __iml_inter_face_with_copy(self, iml_class)
+	for k, v in pairs(iml_class) do
 		assert(not self[k])
 		if not self[k] then
 			self[k]=v
@@ -8,14 +8,14 @@ function __ImlInterFaceWithCopy(self, imlClass)
 	end
 end
 
-function __RemoveInterFace(self, imlClass)
-	for k, v in pairs(imlClass) do
+function __remove_inter_face(self, iml_class)
+	for k, v in pairs(iml_class) do
 		assert(self[k])
 		self[k]=nil
 	end
 end
 
-function __InheritWithCopy(Base, o)
+function __inherit_with_copy(Base, o)
 	o = o or {}
 
 	for k, v in pairs(Base) do
@@ -25,99 +25,99 @@ function __InheritWithCopy(Base, o)
 		end
 	end
 
-	o.__SuperClass = Base
-	o.__SubClass = nil
-	o.__IsClass = true
+	o.__super_class = Base
+	o.__sub_class = nil
+	o.__is_class = true
 
-	if not Base.__SubClass then
-		Base.__SubClass = {}
+	if not Base.__sub_class then
+		Base.__sub_class = {}
 	end
 
-	table.insert(Base.__SubClass, o)
+	table.insert(Base.__sub_class, o)
 
 	return o
 end
 
-function __refreshInherit(self, oldClass)
-	if self.__SubClass then
-		for _, sub_class in pairs(self.__SubClass) do
+function __refresh_inherit(self, old_class)
+	if self.__sub_class then
+		for _, sub_class in pairs(self.__sub_class) do
 			for k, v in pairs(self) do
-				if k ~= "__SubClass" then
+				if k ~= "__sub_class" then
 					if not sub_class[k] then
 						sub_class[k] = v
 					else
-						if oldClass[k] and (oldClass[k] == sub_class[k]) then
+						if old_class[k] and (old_class[k] == sub_class[k]) then
 							sub_class[k] = v
 						end
 					end
 				end
 			end
-			sub_class.__SuperClass = self 
+			sub_class.__super_class = self 
 
-			sub_class:refreshInherit(oldClass)
+			sub_class:refresh_inherit(old_class)
 		end
 	end
 end
 
-function __moveClassInheritInfo(self, newClass)
-	if self.__SuperClass then
-		local parentClass = self.__SuperClass
-		local findIdx = nil
-		for idx, class in pairs(parentClass.__SubClass) do
+function __move_class_inherit_info(self, new_class)
+	if self.__super_class then
+		local parent_class = self.__super_class
+		local find_idx = nil
+		for idx, class in pairs(parent_class.__sub_class) do
 			if class == self then
-				findIdx = idx
+				find_idx = idx
 				break
 			end
 		end
-		table.remove(parentClass.__SubClass, findIdx)
+		table.remove(parent_class.__sub_class, find_idx)
 	end
 
-	if self.__SubClass then
-		newClass.__SubClass = {}
-		for idx, sub_class in pairs(self.__SubClass) do
-			newClass.__SubClass[idx] = sub_class
+	if self.__sub_class then
+		new_class.__sub_class = {}
+		for idx, sub_class in pairs(self.__sub_class) do
+			new_class.__sub_class[idx] = sub_class
 		end
 	end
 end
 
-local function getClassTbl(Module)
-	local classTbl = {}
+local function get_class_tbl(Module)
+	local class_tbl = {}
 	for k, v in pairs(Module) do
-		if type(v) == "table" and v.__IsClass then
-			classTbl[k] = v
+		if type(v) == "table" and v.__is_class then
+			class_tbl[k] = v
 		end
 	end
-	return classTbl
+	return class_tbl
 end
 
-local function refreshSubClassFunc(newClass, oldClassFunc, depth)
+local function refresh_sub_class_func(new_class, old_class_func, depth)
 	assert(depth <= 20)
-	for idx, subClass in pairs(newClass.__SubClass) do
-		for k, v in pairs(newClass) do
+	for idx, sub_class in pairs(new_class.__sub_class) do
+		for k, v in pairs(new_class) do
 			if type(v) == "function" then
-				if not subClass[k] or (subClass[k] == oldClassFunc[k]) then
-					subClass[k] = v
+				if not sub_class[k] or (sub_class[k] == old_class_func[k]) then
+					sub_class[k] = v
 				end
 			end
 		end
-		if subClass.__SubClass then
-			refreshSubClassFunc(subClass, oldClassFunc, depth + 1)
+		if sub_class.__sub_class then
+			refresh_sub_class_func(sub_class, old_class_func, depth + 1)
 		end
 	end
 end
 
-local function doUpdateFileByFunc(PathFile, func, Old)
-	local oldClassTbl = getClassTbl(Old) 
-	local oldModuleData = {}
-	if (PathFile ~= "common/const.lua") and (not string.find(PathFile,  "autocode/")) then
+local function do_update_file_by_func(path_file, func, Old)
+	local old_class_tbl = get_class_tbl(Old) 
+	local old_module_data = {}
+	if (path_file ~= "common/const.lua") and (not string.find(path_file,  "autocode/")) then
 		for k, v in pairs(Old) do
 			if type(v) ~= "function" then
 				if type(v) == "table" then
-					if not rawget(v, "__IsClass") then
-						oldModuleData[k] = v
+					if not rawget(v, "__is_class") then
+						old_module_data[k] = v
 					end
 				else
-					oldModuleData[k] = v
+					old_module_data[k] = v
 				end
 			end
 		end
@@ -126,38 +126,38 @@ local function doUpdateFileByFunc(PathFile, func, Old)
 		class_name = class_tbl,
 	--]]
 	setfenv(func, Old)()
-	local newClassTbl = getClassTbl(Old) 
+	local new_class_tbl = get_class_tbl(Old) 
 
-	for newClassName, newClassIml in pairs(newClassTbl) do
-		local oldClassIml = oldClassTbl[newClassName]
-		if oldClassIml then
-			local oldClassFunc = {}
-			newClassTbl[newClassName] = oldClassIml
-			for k, v in pairs(oldClassIml) do
+	for new_class_name, new_class_iml in pairs(new_class_tbl) do
+		local old_class_iml = old_class_tbl[new_class_name]
+		if old_class_iml then
+			local old_class_func = {}
+			new_class_tbl[new_class_name] = old_class_iml
+			for k, v in pairs(old_class_iml) do
 				if type(v) == "function" then
-					oldClassIml[k] = nil
-					oldClassFunc[k] = v
+					old_class_iml[k] = nil
+					old_class_func[k] = v
 				end
 			end
-			for k, v in pairs(newClassIml) do
+			for k, v in pairs(new_class_iml) do
 				if type(v) == "function" then
-					oldClassIml[k] = v
+					old_class_iml[k] = v
 				end
 			end
-			if oldClassIml.__SubClass then
-				refreshSubClassFunc(oldClassIml, oldClassFunc, 0)
+			if old_class_iml.__sub_class then
+				refresh_sub_class_func(old_class_iml, old_class_func, 0)
 			end
 		end
 	end
 
-	for k, v in pairs(newClassTbl) do
+	for k, v in pairs(new_class_tbl) do
 		Old[k] = v
 	end
 
-	for k, v in pairs(oldModuleData) do
+	for k, v in pairs(old_module_data) do
 		Old[k] = v
-		if LOG and LOG.updateFile then
-			LOG.updateFile(string.format("k=%s,v=%s,type=%s", k, string.sub(tostring(v), 1, 50), type(v)))
+		if LOG and LOG.update_file then
+			LOG.update_file(string.format("k=%s,v=%s,type=%s", k, string.sub(tostring(v), 1, 50), type(v)))
 		end
 	end
 
@@ -165,15 +165,15 @@ local function doUpdateFileByFunc(PathFile, func, Old)
 		Old:__init__()
 	end
 
-	if rawget(Old, "afterInitModule") then
-		Old:afterInitModule()
+	if rawget(Old, "after_init_module") then
+		Old:after_init_module()
 	end
 
 	return true
 end
 
-function __updateImportByContent(importModule, PathFile, content)
-	local Old = importModule[PathFile]
+function __update_import_by_content(import_module, path_file, content)
+	local Old = import_module[path_file]
 	if not Old then
 		return false
 	end
@@ -184,23 +184,23 @@ function __updateImportByContent(importModule, PathFile, content)
 		print(string.format("ERROR!!!\n%s\n%s", err, debug.traceback()))
 		return false
 	end
-	doUpdateFileByFunc(PathFile, func, Old)
+	do_update_file_by_func(path_file, func, Old)
 	return true
 end
 
-function __updateImport(importModule, PathFile, loadLuaFunc)
-	local Old = importModule[PathFile]
+function __update_import(import_module, path_file, load_lua_func)
+	local Old = import_module[path_file]
 	if not Old then
 		return false
 	end
 
-	local func, err = loadLuaFunc(PathFile)
+	local func, err = load_lua_func(path_file)
 
 	if not func then
 		print(string.format("ERROR!!!\n%s\n%s", err, debug.traceback()))
 		return false
 	end
-	doUpdateFileByFunc(PathFile, func, Old)
+	do_update_file_by_func(path_file, func, Old)
 	return true
 end
 

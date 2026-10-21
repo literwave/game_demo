@@ -1,94 +1,94 @@
-local function addResAndSync(userId, resType, cnt, reasonList)
-	local user = USER_MGR.tryInitUser(userId)
-	user:addRes(resType, cnt)
-	user:syncRes(resType)
+local function add_res_and_sync(user_id, res_type, cnt, reason_list)
+	local user = USER_MGR.try_init_user(user_id)
+	user:add_res(res_type, cnt)
+	user:sync_res(res_type)
 end
 
-local function rewardItem(ret, userId, rewardInfoList, reasonList)
-	local overLimitItemTbl = {}
-	for _, rewardInfo in ipairs(rewardInfoList) do
-		local itemType = rewardInfo.item_type
-		local itemCount = rewardInfo.item_count
-		local itemMaxAddCnt = ITEM_MGR.getItemMaxAddCnt(itemType)
-		if itemMaxAddCnt and itemCount > itemMaxAddCnt then
-			overLimitItemTbl[itemType] = (overLimitItemTbl[itemType] or 0) + itemCount - itemMaxAddCnt
-			rewardInfo.item_count = itemMaxAddCnt
+local function reward_item(ret, user_id, reward_info_list, reason_list)
+	local over_limit_item_tbl = {}
+	for _, reward_info in ipairs(reward_info_list) do
+		local item_type = reward_info.item_type
+		local item_count = reward_info.item_count
+		local item_max_add_cnt = ITEM_MGR.get_item_max_add_cnt(item_type)
+		if item_max_add_cnt and item_count > item_max_add_cnt then
+			over_limit_item_tbl[item_type] = (over_limit_item_tbl[item_type] or 0) + item_count - item_max_add_cnt
+			reward_info.item_count = item_max_add_cnt
 		end
-		local newItemCount = rewardInfo.item_count
-		if newItemCount > 0 then
-			ITEM_MGR.addItem(userId, itemType, newItemCount, reasonList)
-			table.insert(ret, GLOBAL_FUNC.genRewardInfo(rewardInfo.reward_type, itemType, newItemCount))
+		local new_item_count = reward_info.item_count
+		if new_item_count > 0 then
+			ITEM_MGR.add_item(user_id, item_type, new_item_count, reason_list)
+			table.insert(ret, GLOBAL_FUNC.gen_reward_info(reward_info.reward_type, item_type, new_item_count))
 		end
 		-- todo -- 这是溢出的要发邮件
 	end
 end
 
-local function rewardResource(ret, userId, rewardInfoList, reasonList)
-	for _, rewardInfo in pairs(rewardInfoList) do
-		local resType = rewardInfo.item_type
-		local cnt = rewardInfo.item_count
-		addResAndSync(userId, resType, cnt, reasonList)
-		table.insert(ret, rewardInfo)
+local function reward_resource(ret, user_id, reward_info_list, reason_list)
+	for _, reward_info in pairs(reward_info_list) do
+		local res_type = reward_info.item_type
+		local cnt = reward_info.item_count
+		add_res_and_sync(user_id, res_type, cnt, reason_list)
+		table.insert(ret, reward_info)
 	end
 end
 
-local function rewardHero(ret, userId, rewardInfoList, reasonList)
-	for _, rewardInfo in pairs(rewardInfoList) do
-		local heroType = rewardInfo.item_type
-		HERO_MGR.addHero(userId, heroType, reasonList)
-		table.insert(ret, rewardInfo)
+local function reward_hero(ret, user_id, reward_info_list, reason_list)
+	for _, reward_info in pairs(reward_info_list) do
+		local hero_type = reward_info.item_type
+		HERO_MGR.add_hero(user_id, hero_type, reason_list)
+		table.insert(ret, reward_info)
 	end
 end
 
-local function rewardDiamond(ret, userId, rewardInfoList, reasonList)
-	local user = USER_MGR.tryInitUser(userId)
-	for _, rewardInfo in pairs(rewardInfoList) do
-		local cnt = rewardInfo.item_count
-		user:addGiftDiamondAndSync(cnt, reasonList)
-		table.insert(ret, rewardInfo)
+local function reward_diamond(ret, user_id, reward_info_list, reason_list)
+	local user = USER_MGR.try_init_user(user_id)
+	for _, reward_info in pairs(reward_info_list) do
+		local cnt = reward_info.item_count
+		user:add_gift_diamond_and_sync(cnt, reason_list)
+		table.insert(ret, reward_info)
 	end
 end
 
 local GIVE_REWARD_FUNC = {
-	[CONST.REWARD_TYPE_ITEM] = rewardItem,
-	[CONST.REWARD_TYPE_RES] = rewardResource,
-	[CONST.REWARD_TYPE_HERO] = rewardHero,
-	[CONST.REWARD_TYPE_DIAMOND] = rewardDiamond,
+	[CONST.REWARD_TYPE_ITEM] = reward_item,
+	[CONST.REWARD_TYPE_RES] = reward_resource,
+	[CONST.REWARD_TYPE_HERO] = reward_hero,
+	[CONST.REWARD_TYPE_DIAMOND] = reward_diamond,
 }
 
-local function giveReward(ret, userId, rewardType, rewardInfoList, reasonList)
-	local giveRewardFunc = GIVE_REWARD_FUNC[rewardType]
-	assert(giveRewardFunc, "invalid reward_type!")
-	return giveRewardFunc(ret, userId, rewardInfoList, reasonList)
+local function give_reward(ret, user_id, reward_type, reward_info_list, reason_list)
+	local give_reward_func = GIVE_REWARD_FUNC[reward_type]
+	assert(give_reward_func, "invalid reward_type!")
+	return give_reward_func(ret, user_id, reward_info_list, reason_list)
 end
 
-function rewardUser(userId, rewardList, reasonList)
-	local rewardTbl = {}
-	for _, rewardInfo in pairs(rewardList) do
-		local rewardType = rewardInfo.reward_type
-		if not rewardTbl[rewardType] then
-			rewardTbl[rewardType] = {}
+function reward_user(user_id, reward_list, reason_list)
+	local reward_tbl = {}
+	for _, reward_info in pairs(reward_list) do
+		local reward_type = reward_info.reward_type
+		if not reward_tbl[reward_type] then
+			reward_tbl[reward_type] = {}
 		end
-		table.insert(rewardTbl[rewardType], table.deepcopy(rewardInfo))
+		table.insert(reward_tbl[reward_type], table.deepcopy(reward_info))
 	end
-	local actualRwdList = {}
-	for rewardType, rewardInfoList in pairs(rewardTbl) do
-		giveReward(actualRwdList, userId, rewardType, rewardInfoList, reasonList)
+	local actual_rwd_list = {}
+	for reward_type, reward_info_list in pairs(reward_tbl) do
+		give_reward(actual_rwd_list, user_id, reward_type, reward_info_list, reason_list)
 	end
-	return actualRwdList
+	return actual_rwd_list
 end
 
-function showReward(userId, rewardList, showTypeList)
-	local fd = USER_MGR.getFdByUserId(userId)
+function show_reward(user_id, reward_list, show_type_list)
+	local fd = USER_MGR.get_fd_by_user_id(user_id)
 	if not fd then
 		return
 	end
-	if not showTypeList then
-		local rewardShowType = DATA_COMMON.getValueByKey(5)
-		showTypeList = { rewardShowType.windows }
+	if not show_type_list then
+		local reward_show_type = DATA_COMMON.get_value_by_key(5)
+		show_type_list = { reward_show_type.windows }
 	end
 	local list = {}
-	for _, info in ipairs(rewardList) do
+	for _, info in ipairs(reward_list) do
 		table.insert(list, {
 			rewardType = info.rewardType or info.reward_type,
 			itemType = info.itemType or info.item_type,
@@ -97,11 +97,11 @@ function showReward(userId, rewardList, showTypeList)
 	end
 	for_caller.s2c_show_reward(fd, {
 		rewardList = list,
-		showTypeList = showTypeList,
+		showTypeList = show_type_list,
 	})
 end
 
-function rewardUserAndShow(userId, rewardList, reasonList, showTypeList)
-	local actualRwdList = rewardUser(userId, rewardList, reasonList)
-	showReward(userId, actualRwdList, showTypeList)
+function reward_user_and_show(user_id, reward_list, reason_list, show_type_list)
+	local actual_rwd_list = reward_user(user_id, reward_list, reason_list)
+	show_reward(user_id, actual_rwd_list, show_type_list)
 end

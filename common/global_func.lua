@@ -4,36 +4,36 @@ if SERVICE_NAME ~= "agent" then
 local CALL_NO = 1
 local CALL_TBL = {}
 RPC_MOD = {}
-local function addCallBackTbl(modName, cb, ...)
-	CALL_TBL[CALL_NO] = {modName = modName, cb = cb, args = {...}}
+local function add_call_back_tbl(mod_name, cb, ...)
+	CALL_TBL[CALL_NO] = {mod_name = mod_name, cb = cb, args = {...}}
 	CALL_NO = CALL_NO % 10000000
 end
 
-local function getCallBackTbl(id)
+local function get_call_back_tbl(id)
 	return CALL_TBL[id]
 end
-function subItemList(userId, cb, itemList, reasonList)
-	local tAddr = USER_MGR.getAgentByUserId(userId)
-	local sAddr = SERVICE_NAME
+function sub_item_list(user_id, cb, item_list, reason_list)
+	local t_addr = USER_MGR.get_agent_by_user_id(user_id)
+	local s_addr = SERVICE_NAME
 	local tbl = {
-		args = itemList,
-		sAddr = sAddr,
+		args = item_list,
+		s_addr = s_addr,
 	}
 	local id = CALL_NO
-	addCallBackTbl(getfenv(2), cb, itemList, reasonList)
-	skynet.send(tAddr, "rpc", "subItemList", id, skynet.self(),userId,tbl)
+	add_call_back_tbl(getfenv(2), cb, item_list, reason_list)
+	skynet.send(t_addr, "rpc", "sub_item_list", id, skynet.self(),user_id,tbl)
 end
 
-function subItemList(id, ok, userId)
-	local tbl = getCallBackTbl(id)
-	local modName = tbl.modName
-	local funcName = tbl.func
-	local ret = _G[modName][funcName](ok, userId)
+function sub_item_list(id, ok, user_id)
+	local tbl = get_call_back_tbl(id)
+	local mod_name = tbl.mod_name
+	local func_name = tbl.func
+	local ret = _G[mod_name][func_name](ok, user_id)
 	return ret
 end
 
 end
 
-function genRewardInfo(rewardType, itemType, itemCount)
-	return {reward_type = rewardType, item_type = itemType, item_count = itemCount}
+function gen_reward_info(reward_type, item_type, item_count)
+	return {reward_type = reward_type, item_type = item_type, item_count = item_count}
 end

@@ -1,4 +1,4 @@
-allEntity = {
+all_entity = {
 	-- [entityId] = entity
 }
 
@@ -7,10 +7,10 @@ local ENTITY_TO_MOD = {
 }
 
 
-function syncToMap(oci)
-	local entityType = oci._type
-	local mod = ENTITY_TO_MOD[entityType]
+function sync_to_map(oci)
+	local entity_type = oci._type
+	local mod = ENTITY_TO_MOD[entity_type]
 	assert(mod)
-	local entity = mod.clsEntity:new(oci)
-	allEntity[oci._id] = entity
+	local entity = mod.cls_entity:new(oci)
+	all_entity[oci._id] = entity
 end

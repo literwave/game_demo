@@ -1,24 +1,24 @@
 # mail persist（邮件正文仍为 plain serialize；用户/全服索引走 schema）
 
-UserMailStatus {
-    isRead boolean
-    isGotReward boolean
-    isLock boolean
+user_mail_status {
+    is_read boolean
+    is_got_reward boolean
+    is_lock boolean
     lv number
 }
 
-MailIdStatusMap <string, UserMailStatus>
+mail_id_status_map <string, user_mail_status>
 
-MailKindBag <number, MailIdStatusMap>
+mail_kind_bag <number, mail_id_status_map>
 
-UserMailDoc {
-    mailTbl MailKindBag
-    fetchSvrIdx number
+user_mail_doc {
+    mail_tbl mail_kind_bag
+    fetch_svr_idx number
 }
 
-SvrMailIdMap <number, string>
+svr_mail_id_map <number, string>
 
-SvrMailDoc {
-    globalIdx number
-    svrMailTbl SvrMailIdMap
+svr_mail_doc {
+    global_idx number
+    svr_mail_tbl svr_mail_id_map
 }

@@ -42,7 +42,7 @@ function import(pathfile)
 	return module
 end
 
-function exModuleStartUp()
+function ex_module_start_up()
 	for _, mod in ipairs(__mod_list__) do
 		mod:__start_up()
 	end

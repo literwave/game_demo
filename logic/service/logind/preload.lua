@@ -8,19 +8,19 @@ local PROTO_FILE_LIST = {
 	"../game_common/pb/login.pb",
 }
 
-local function systemStartUp()
-	LREDIS.systemStartUp()
+local function system_start_up()
+	LREDIS.system_start_up()
 end
 
-local function initDofile()
-	for _, fileName in ipairs(DOFILE_LIST) do
-		dofile(fileName)
+local function init_dofile()
+	for _, file_name in ipairs(DOFILE_LIST) do
+		dofile(file_name)
 	end
-	for _, protoFile in ipairs(PROTO_FILE_LIST) do
-		protobuf.register_file(protoFile)
+	for _, proto_file in ipairs(PROTO_FILE_LIST) do
+		protobuf.register_file(proto_file)
 	end
-	math.randomseed(TIME.osBJSec())
-	systemStartUp()
+	math.randomseed(TIME.os_bj_sec())
+	system_start_up()
 end
 
-initDofile()
+init_dofile()

@@ -1,71 +1,71 @@
-clsItem = clsObject:Inherit()
+cls_item = cls_object:Inherit()
 
-function clsItem:__init__(oci)
-	Super(clsItem).__init__(self)
+function cls_item:__init__(oci)
+	Super(cls_item).__init__(self)
 	if ORM.is_cls(oci, ORM.CLS_ITEM_DATA) then
 		self._data = oci
 	else
 		self._data = ORM.create(ORM.CLS_ITEM_DATA, oci)
 	end
-	ORM.put(MONGO_SLAVE.COL.USER_ITEM, self._data._userId, "_items", self._data._itemId, self._data)
+	ORM.put(MONGO_SLAVE.COL.USER_ITEM, self._data._user_id, "_items", self._data._item_id, self._data)
 end
 
-function clsItem:getItemId()
-	return self._data._itemId
+function cls_item:get_item_id()
+	return self._data._item_id
 end
 
-function clsItem:getItemType()
-	return self._data._itemType
+function cls_item:get_item_type()
+	return self._data._item_type
 end
 
-function clsItem:getUserId()
-	return self._data._userId
+function cls_item:get_user_id()
+	return self._data._user_id
 end
 
-function clsItem:getCnt()
-	return self._data._itemCnt
+function cls_item:get_cnt()
+	return self._data._item_cnt
 end
 
-function clsItem:addCnt(cnt)
-	assert(DATA_COMMON.canOverlap(self:getItemType()))
+function cls_item:add_cnt(cnt)
+	assert(DATA_COMMON.can_overlap(self:get_item_type()))
 	assert(cnt > 0)
-	self._data._itemCnt = self._data._itemCnt + cnt
+	self._data._item_cnt = self._data._item_cnt + cnt
 end
 
-function clsItem:subCnt(cnt)
-	assert(cnt > 0 and cnt <= self._data._itemCnt)
-	self._data._itemCnt = self._data._itemCnt - cnt
+function cls_item:sub_cnt(cnt)
+	assert(cnt > 0 and cnt <= self._data._item_cnt)
+	self._data._item_cnt = self._data._item_cnt - cnt
 end
 
-function clsItem:getItemPTOInfo()
+function cls_item:get_item_pto_info()
 	return {
-		itemId = self:getItemId(),
-		itemType = self:getItemType(),
-		itemCnt = self:getCnt(),
+		itemId = self:get_item_id(),
+		itemType = self:get_item_type(),
+		itemCnt = self:get_cnt(),
 	}
 end
 
-function clsItem:syncToClient()
-	local info = self:getItemPTOInfo()
-	local Fd = USER_MGR.getFdByUserId(self:getUserId())
+function cls_item:sync_to_client()
+	local info = self:get_item_pto_info()
+	local Fd = USER_MGR.get_fd_by_user_id(self:get_user_id())
 	if Fd then
 		for_caller.s2c_sync_item_data(Fd, info)
 	end
 end
 
-function clsItem:canUse(userId, useCnt)
-	return DATA_COMMON.getItemUseInfo(self:getItemType()) == 1
+function cls_item:can_use(user_id, use_cnt)
+	return DATA_COMMON.get_item_use_info(self:get_item_type()) == 1
 end
 
-function clsItem:release()
-	ORM.remove(MONGO_SLAVE.COL.USER_ITEM, self:getUserId(), "_items", self:getItemId())
-	ITEM_MGR.unrefItem(self)
-	Super(clsItem).release(self)
+function cls_item:release()
+	ORM.remove(MONGO_SLAVE.COL.USER_ITEM, self:get_user_id(), "_items", self:get_item_id())
+	ITEM_MGR.unref_item(self)
+	Super(cls_item).release(self)
 end
 
-function clsItem:afterGenerate()
+function cls_item:after_generate()
 end
 
-function clsItem:getItemKind()
-	return DATA_COMMON.getItemKindByType(self:getItemType())
+function cls_item:get_item_kind()
+	return DATA_COMMON.get_item_kind_by_type(self:get_item_type())
 end

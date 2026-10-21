@@ -10,37 +10,37 @@ local PROTO_FILE_LIST = {
 	"../game_common/pb/mail.pb",
 }
 
-local function systemStartUp()
-	MONGO_SLAVE.systemStartup()
+local function system_start_up()
+	MONGO_SLAVE.system_startup()
 end
 
-local function encodePack(msg, id, name)
-	local packData = string.pack(">I2", id) .. protobuf.encode(name, msg)
-	packData = string.pack(">I2", #packData) .. packData
-	return packData
+local function encode_pack(msg, id, name)
+	local pack_data = string.pack(">I2", id) .. protobuf.encode(name, msg)
+	pack_data = string.pack(">I2", #pack_data) .. pack_data
+	return pack_data
 end
 
-local function initDofile()
-	for _, fileInfo in ipairs(DOFILE_LIST) do
-		dofile(fileInfo)
+local function init_dofile()
+	for _, file_info in ipairs(DOFILE_LIST) do
+		dofile(file_info)
 	end
-	for _, protoFile in ipairs(PROTO_FILE_LIST) do
-		protobuf.register_file(protoFile)
+	for _, proto_file in ipairs(PROTO_FILE_LIST) do
+		protobuf.register_file(proto_file)
 	end
 	-- 这里要优化一下前端发给后端的协议不需要加载进table
-	local function createSendMessage(id, packName)
+	local function create_send_message(id, pack_name)
 		return function(fd, data)
-			skynet.error(id, packName)
-			local gateSrv = USER_MGR.getGateSrvByFd(fd)
-			skynet.send(gateSrv, "lua", "sendClientPack", fd, encodePack(data, id, packName))
+			skynet.error(id, pack_name)
+			local gate_srv = USER_MGR.get_gate_srv_by_fd(fd)
+			skynet.send(gate_srv, "lua", "send_client_pack", fd, encode_pack(data, id, pack_name))
 		end
 	end
-	for ptoName, id in pairs(PTONAME_TO_ID) do
-		for_caller[ptoName] = createSendMessage(id, ID_TO_PACK_NAME[id])
+	for pto_name, id in pairs(PTONAME_TO_ID) do
+		for_caller[pto_name] = create_send_message(id, ID_TO_PACK_NAME[id])
 	end
 	math.randomseed(os.time())
-	systemStartUp()
+	system_start_up()
 end
 
-initDofile()
+init_dofile()
 

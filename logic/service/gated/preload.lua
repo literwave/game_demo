@@ -7,20 +7,20 @@ local PROTO_FILE_LIST = {
 	"../game_common/pb/login.pb",
 }
 
-local function systemStartUp()	
+local function system_start_up()	
 end
 
-local function initDofile()
-	for _, fileInfo in ipairs(DOFILE_LIST) do
-		dofile(fileInfo)
+local function init_dofile()
+	for _, file_info in ipairs(DOFILE_LIST) do
+		dofile(file_info)
 	end
-	for _, protoFile in ipairs(PROTO_FILE_LIST) do
-		protobuf.register_file(protoFile)
+	for _, proto_file in ipairs(PROTO_FILE_LIST) do
+		protobuf.register_file(proto_file)
 	end
 	math.randomseed(os.time())
 	-- 这里预加载数据，比如登录的时候拉取账号对应的tbl
-	systemStartUp()
+	system_start_up()
 end
 
-initDofile()
+init_dofile()
 

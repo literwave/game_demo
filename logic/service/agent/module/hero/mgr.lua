@@ -1,82 +1,82 @@
-userHeroTbl = {}
+user_hero_tbl = {}
 --[[
 	[userId] = {
 		[heroType] = hero,
 	}
 --]]
 
-local function refHero(hero)
-	local userId = hero:getUserId()
-	if not userHeroTbl[userId] then
-		userHeroTbl[userId] = {}
+local function ref_hero(hero)
+	local user_id = hero:get_user_id()
+	if not user_hero_tbl[user_id] then
+		user_hero_tbl[user_id] = {}
 	end
-	local heroType = hero:getHeroType()
-	userHeroTbl[userId][heroType] = hero
+	local hero_type = hero:get_hero_type()
+	user_hero_tbl[user_id][hero_type] = hero
 end
 
-function createHero(oci)
-	local hero = CLS_HERO.clsHero:New(oci)
-	refHero(hero)
+function create_hero(oci)
+	local hero = CLS_HERO.cls_hero:New(oci)
+	ref_hero(hero)
 	return hero
 end
 
-local function tryInitUserHeroData(userId)
-	if not ORM.get(MONGO_SLAVE.COL.USER_HERO, userId) then
-		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.USER_HERO, userId) or {}
+local function try_init_user_hero_data(user_id)
+	if not ORM.get(MONGO_SLAVE.COL.USER_HERO, user_id) then
+		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.USER_HERO, user_id) or {}
 		local doc = ORM.create(ORM.CLS_USER_HERO_DOC, raw)
-		ORM.hold(doc, MONGO_SLAVE.COL.USER_HERO, userId)
-		userHeroTbl[userId] = {}
-		for _, heroData in pairs(doc._heroes) do
-			if ORM.is_cls(heroData, ORM.CLS_HERO_DATA) then
-				createHero(heroData)
+		ORM.hold(doc, MONGO_SLAVE.COL.USER_HERO, user_id)
+		user_hero_tbl[user_id] = {}
+		for _, hero_data in pairs(doc._heroes) do
+			if ORM.is_cls(hero_data, ORM.CLS_HERO_DATA) then
+				create_hero(hero_data)
 			end
 		end
 	end
-	return userHeroTbl[userId]
+	return user_hero_tbl[user_id]
 end
 
-function getHeroTblByUserId(userId)
-	return tryInitUserHeroData(userId)
+function get_hero_tbl_by_user_id(user_id)
+	return try_init_user_hero_data(user_id)
 end
 
-function getHeroByType(userId, heroType)
-	local heroTbl = tryInitUserHeroData(userId)
-	return heroTbl[heroType]
+function get_hero_by_type(user_id, hero_type)
+	local hero_tbl = try_init_user_hero_data(user_id)
+	return hero_tbl[hero_type]
 end
 
-function saveData()
+function save_data()
 	MONGO_SLAVE.flush()
 end
 
-function addHero(userId, heroType, reasonList)
-	assert(userId)
-	assert(DATA_COMMON.getHeroInfoByType(heroType))
-	local exist = getHeroByType(userId, heroType)
+function add_hero(user_id, hero_type, reason_list)
+	assert(user_id)
+	assert(DATA_COMMON.get_hero_info_by_type(hero_type))
+	local exist = get_hero_by_type(user_id, hero_type)
 	if exist then
 		return exist
 	end
-	tryInitUserHeroData(userId)
+	try_init_user_hero_data(user_id)
 	local oci = {
-		_userId = userId,
-		_heroType = heroType,
-		_newTag = true,
+		_user_id = user_id,
+		_hero_type = hero_type,
+		_new_tag = true,
 		_level = 1,
 		_star = 1,
 	}
-	local hero = createHero(oci)
-	hero:syncToClient()
+	local hero = create_hero(oci)
+	hero:sync_to_client()
 	return hero
 end
 
-local function OnReqAllHeroBaseInfo(fd)
-	local heroTbl = getHeroTblByUserId(USER_MGR.getUserIdByFd(fd))
-	local heroInfoList = {}
-	for _, hero in pairs(heroTbl) do
-		table.insert(heroInfoList, hero:getHeroPTOBaseInfo())
+local function on_req_all_hero_base_info(fd)
+	local hero_tbl = get_hero_tbl_by_user_id(USER_MGR.get_user_id_by_fd(fd))
+	local hero_info_list = {}
+	for _, hero in pairs(hero_tbl) do
+		table.insert(hero_info_list, hero:get_hero_pto_base_info())
 	end
-	for_caller.s2c_req_all_hero_base_info(fd, {heroInfoList = heroInfoList})
+	for_caller.s2c_req_all_hero_base_info(fd, {heroInfoList = hero_info_list})
 end
 
 function __init__()
-	for_maker.c2s_req_all_hero_base_info = OnReqAllHeroBaseInfo
+	for_maker.c2s_req_all_hero_base_info = on_req_all_hero_base_info
 end

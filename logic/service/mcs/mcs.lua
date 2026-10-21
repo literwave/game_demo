@@ -35,11 +35,11 @@ function CMD.stop()
 	skynet.exit()
 end
 
-function CMD.hotUpdate()
+function CMD.hot_update()
 	-- 先更新配置，不然逻辑服更新取新配置会报错
-	skynet.call(".load_xls", "lua", "hotUpdate")
+	skynet.call(".load_xls", "lua", "hot_update")
 	-- 这里应该要看更新文件的引用服务，如果不这样的话，就要更新单个文件
-	skynet.call(".agent", "lua", "hotUpdate")
+	skynet.call(".agent", "lua", "hot_update")
 end
 
 skynet.start(function()

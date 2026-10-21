@@ -2,16 +2,16 @@ local DOFILE_LIST = {
 	"../logic/service/game_sid/global.lua",
 }
 
-local function systemStartUp()
-	MONGO_SLAVE.systemStartup()
+local function system_start_up()
+	MONGO_SLAVE.system_startup()
 end
 
-local function initDofile()
-	for _, fileInfo in ipairs(DOFILE_LIST) do
-		dofile(fileInfo)
+local function init_dofile()
+	for _, file_info in ipairs(DOFILE_LIST) do
+		dofile(file_info)
 	end
-	systemStartUp()
+	system_start_up()
 end
 
-initDofile()
+init_dofile()
 

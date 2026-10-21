@@ -1,4 +1,4 @@
-allUserBuildTbl = {
+all_user_build_tbl = {
 --[[
 	[userId] = {
 		[bid] = build,
@@ -6,64 +6,64 @@ allUserBuildTbl = {
 ]]
 }
 
-function refBuild(build)
-	local userId = build:getUserId()
-	local bid = build:getBid()
-	if not allUserBuildTbl[userId] then
-		allUserBuildTbl[userId] = {}
+function ref_build(build)
+	local user_id = build:get_user_id()
+	local bid = build:get_bid()
+	if not all_user_build_tbl[user_id] then
+		all_user_build_tbl[user_id] = {}
 	end
-	allUserBuildTbl[userId][bid] = build
+	all_user_build_tbl[user_id][bid] = build
 end
 
-function unrefBuild(build)
-	local userId = build:getUserId()
-	local bid = build:getBid()
-	if allUserBuildTbl[userId] then
-		allUserBuildTbl[userId][bid] = nil
-		if table.isEmpty(allUserBuildTbl[userId]) then
-			allUserBuildTbl[userId] = nil
+function unref_build(build)
+	local user_id = build:get_user_id()
+	local bid = build:get_bid()
+	if all_user_build_tbl[user_id] then
+		all_user_build_tbl[user_id][bid] = nil
+		if table.is_empty(all_user_build_tbl[user_id]) then
+			all_user_build_tbl[user_id] = nil
 		end
 	end
 end
 
-local function createBuild(oci)
-	return BUILD_BASE.clsBuild:New(oci)
+local function create_build(oci)
+	return BUILD_BASE.cls_build:New(oci)
 end
 
-local function tryInitUserBuilds(userId)
-	if not ORM.get(MONGO_SLAVE.COL.USER_BUILD, userId) then
-		local raw = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.USER_BUILD, userId) or {}
+local function try_init_user_builds(user_id)
+	if not ORM.get(MONGO_SLAVE.COL.USER_BUILD, user_id) then
+		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.USER_BUILD, user_id) or {}
 		local doc = ORM.create(ORM.CLS_USER_BUILD_DOC, raw)
-		ORM.hold(doc, MONGO_SLAVE.COL.USER_BUILD, userId)
-		allUserBuildTbl[userId] = {}
-		for _, buildData in pairs(doc._builds) do
-			if ORM.is_cls(buildData, ORM.CLS_BUILD_DATA) then
-				createBuild(buildData)
+		ORM.hold(doc, MONGO_SLAVE.COL.USER_BUILD, user_id)
+		all_user_build_tbl[user_id] = {}
+		for _, build_data in pairs(doc._builds) do
+			if ORM.is_cls(build_data, ORM.CLS_BUILD_DATA) then
+				create_build(build_data)
 			end
 		end
 	end
-	return allUserBuildTbl[userId]
+	return all_user_build_tbl[user_id]
 end
 
-function getBuildByBid(userId, bid)
-	local buildTbl = tryInitUserBuilds(userId)
-	return buildTbl[bid]
+function get_build_by_bid(user_id, bid)
+	local build_tbl = try_init_user_builds(user_id)
+	return build_tbl[bid]
 end
 
-function getUserBuildTbl(userId)
-	return tryInitUserBuilds(userId)
+function get_user_build_tbl(user_id)
+	return try_init_user_builds(user_id)
 end
 
-local function initUserBuilds(userId)
-	tryInitUserBuilds(userId)
-	if next(allUserBuildTbl[userId]) then
+local function init_user_builds(user_id)
+	try_init_user_builds(user_id)
+	if next(all_user_build_tbl[user_id]) then
 		return
 	end
-	for _, initLev in ipairs(DATA_COMMON.getInitialBuildList()) do
-		if type(initLev) == "table" then
-			for bid, level in pairs(initLev) do
-				createBuild({
-					_userId = userId,
+	for _, init_lev in ipairs(DATA_COMMON.get_initial_build_list()) do
+		if type(init_lev) == "table" then
+			for bid, level in pairs(init_lev) do
+				create_build({
+					_user_id = user_id,
 					_bid = bid,
 					_level = level,
 				})
@@ -72,77 +72,77 @@ local function initUserBuilds(userId)
 	end
 end
 
-function onUserLogin(user, isFirstLogin)
-	local userId = user:getUserId()
+function on_user_login(user, is_first_login)
+	local user_id = user:get_user_id()
 	-- 无建筑时补初始建筑（含首次创角中途失败、未 persist 的号）
-	initUserBuilds(userId)
-	syncAllBuildToClient(userId)
+	init_user_builds(user_id)
+	sync_all_build_to_client(user_id)
 end
 
-function onUserLogout(userId)
-	if ORM.get(MONGO_SLAVE.COL.USER_BUILD, userId) then
+function on_user_logout(user_id)
+	if ORM.get(MONGO_SLAVE.COL.USER_BUILD, user_id) then
 		MONGO_SLAVE.flush()
-		allUserBuildTbl[userId] = nil
-		ORM.forget(MONGO_SLAVE.COL.USER_BUILD, userId)
+		all_user_build_tbl[user_id] = nil
+		ORM.forget(MONGO_SLAVE.COL.USER_BUILD, user_id)
 	end
 end
 
-function syncAllBuildToClient(userId)
-	local fd = USER_MGR.getFdByUserId(userId)
+function sync_all_build_to_client(user_id)
+	local fd = USER_MGR.get_fd_by_user_id(user_id)
 	if not fd then
 		return
 	end
-	local buildTbl = tryInitUserBuilds(userId)
-	for _, build in pairs(buildTbl) do
-		build:syncToClient()
+	local build_tbl = try_init_user_builds(user_id)
+	for _, build in pairs(build_tbl) do
+		build:sync_to_client()
 	end
 	for_caller.s2c_req_all_build_end(fd, {})
 end
 
-local function onCreateBuild(fd, packet)
-	local userId = USER_MGR.getUserIdByFd(fd)
+local function on_create_build(fd, packet)
+	local user_id = USER_MGR.get_user_id_by_fd(fd)
 	local bid = packet.bid
-	if getBuildByBid(userId, bid) then
+	if get_build_by_bid(user_id, bid) then
 		return
 	end
-	if not DATA_COMMON.getBuildTypeById(bid) then
+	if not DATA_COMMON.get_build_type_by_id(bid) then
 		return
 	end
 	if not packet.isInstant then
-		local ok = QUEUE_MGR.tryAddNewWork(userId, bid)
+		local ok = QUEUE_MGR.try_add_new_work(user_id, bid)
 		if not ok then
 			return
 		end
 	end
-	local build = createBuild({
-		_userId = userId,
+	local build = create_build({
+		_user_id = user_id,
 		_bid = bid,
 		_level = 1,
 	})
-	build:syncToClient()
+	build:sync_to_client()
 end
 
-local function onUpBuild(fd, packet)
-	local userId = USER_MGR.getUserIdByFd(fd)
-	local build = getBuildByBid(userId, packet.bid)
+local function on_up_build(fd, packet)
+	local user_id = USER_MGR.get_user_id_by_fd(fd)
+	local build = get_build_by_bid(user_id, packet.bid)
 	if not build then
 		return
 	end
-	local maxLv = DATA_COMMON.getBuildMaxLevel(build:getBuildType())
-	if build:getLevel() >= maxLv then
+	local max_lv = DATA_COMMON.get_build_max_level(build:get_build_type())
+	if build:get_level() >= max_lv then
 		return
 	end
 	if not packet.isInstant then
-		local ok = QUEUE_MGR.tryAddNewWork(userId, packet.bid)
+		local ok = QUEUE_MGR.try_add_new_work(user_id, packet.bid)
 		if not ok then
 			return
 		end
 	end
-	build:setLevel(build:getLevel() + 1)
-	build:syncToClient()
+	build:set_level(build:get_level() + 1)
+	build:sync_to_client()
 end
 
 function __init__()
-	for_maker.c2s_create_build = onCreateBuild
-	for_maker.c2s_up_build = onUpBuild
+	for_maker.c2s_create_build = on_create_build
+	for_maker.c2s_up_build = on_up_build
 end

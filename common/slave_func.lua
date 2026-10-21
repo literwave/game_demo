@@ -12,15 +12,15 @@ SERVER_TBL = {
 	-- 	{gateInfo, gateInfo}
 }
 
-local function tryGetGateInfo(serverId)
-	local gateList = SERVER_TBL[serverId]
-	if not gateList then
+local function try_get_gate_info(server_id)
+	local gate_list = SERVER_TBL[server_id]
+	if not gate_list then
 		return nil
 	end
-	return gateList[math.random(1, #gateList)]
+	return gate_list[math.random(1, #gate_list)]
 end
 
-local accType2Module = {
+local acc_type2_module = {
 	[1] = Import("../logic/service/logind/module/login/pc.lua"),
 	-- [2] = Import("../logic/module/login/wechat.lua")
 }
@@ -29,64 +29,64 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
-local function decodePack(msg)
+local function decode_pack(msg)
 	local _, pos = string.unpack(">I4", msg)
-	local loginInfo = protobuf.decode("Login.c2s_user_login", msg:sub(pos))
-	return loginInfo
+	local login_info = protobuf.decode("Login.c2s_user_login", msg:sub(pos))
+	return login_info
 end
 
-local function encodePack(msg)
-	local packName = "Login.s2c_user_login"
-	local packData = string.pack(">I2", PACK_NAME_TO_ID[packName]) .. protobuf.encode(packName, msg)
-	packData = string.pack(">I2", #packData) .. packData
-	return packData
+local function encode_pack(msg)
+	local pack_name = "Login.s2c_user_login"
+	local pack_data = string.pack(">I2", PACK_NAME_TO_ID[pack_name]) .. protobuf.encode(pack_name, msg)
+	pack_data = string.pack(">I2", #pack_data) .. pack_data
+	return pack_data
 end
 
 local handle = {}
 
 function handle.connect(id)
-	print("logind ws connect from: " .. tostring(id))
+	skynet.error("logind ws connect from: " .. tostring(id))
 end
 
 function handle.handshake(id, header, url)
 	local addr = websocket.addrinfo(id)
-	print("logind ws handshake from: " .. tostring(id), "url", url, "addr:", addr)
+	skynet.error("logind ws handshake from: " .. tostring(id), "url", url, "addr:", addr)
 end
 
 function handle.message(id, msg)
-	local loginInfo = decodePack(msg)
-	local loginModule = accType2Module[loginInfo.accountType]
-	if loginModule then
-		loginModule.onUserLogin(loginInfo)
+	local login_info = decode_pack(msg)
+	local login_module = acc_type2_module[login_info.accountType]
+	if login_module then
+		login_module.on_user_login(login_info)
 	end
-	local gateInfo = tryGetGateInfo(loginInfo.serverId)
-	if not gateInfo then
-		skynet.error("auth error: ", loginInfo.serverId, loginInfo.userId)
+	local gate_info = try_get_gate_info(login_info.serverId)
+	if not gate_info then
+		skynet.error("auth error: ", login_info.serverId, login_info.userId)
 	end
-	local token = string.format("%s@%s:%s", crypt.base64encode(loginInfo.userId),
-		crypt.base64encode(loginInfo.serverId),
-		crypt.base64encode(loginInfo.passwd)
+	local token = string.format("%s@%s:%s", crypt.base64encode(login_info.userId),
+		crypt.base64encode(login_info.serverId),
+		crypt.base64encode(login_info.passwd)
 	)
-	print("loginInfo: ", loginInfo.userId)
-	local tokenTbl = {
-		userId = loginInfo.userId,
-		passwd = loginInfo.passwd,
-		serverId = loginInfo.serverId,
-		account = loginInfo.account,
+	print("loginInfo: ", login_info.userId)
+	local token_tbl = {
+		userId = login_info.userId,
+		passwd = login_info.passwd,
+		serverId = login_info.serverId,
+		account = login_info.account,
 	}
-	LREDIS.setValueByKey(token, tokenTbl, TOKEN_EXPIRED_TIME)
+	LREDIS.set_value_by_key(token, token_tbl, TOKEN_EXPIRED_TIME)
 	local pack = {
-		accountType = loginInfo.accountType,
-		appId =  loginInfo.appId,
-		cchid = loginInfo.cchid,
-		account = loginInfo.account,
-		passwd = loginInfo.passwd,
-		gateAddr = gateInfo.addr,
+		accountType = login_info.accountType,
+		appId =  login_info.appId,
+		cchid = login_info.cchid,
+		account = login_info.account,
+		passwd = login_info.passwd,
+		gateAddr = gate_info.addr,
 		token = token,
-		userId = loginInfo.userId,
+		userId = login_info.userId,
 	}
-	websocket.write(id, encodePack(pack), "binary")
-	skynet.error("login succ", loginInfo.userId, token)
+	websocket.write(id, encode_pack(pack), "binary")
+	skynet.error("login succ", login_info.userId, token)
 	websocket.close(id)
 end
 
@@ -109,14 +109,14 @@ function CMD.auth(fd, addr)
 	end)
 end
 
-function CMD.createUserOk(account, userId)
-	ACCOUNT.createAccount(account, userId)
+function CMD.create_user_ok(account, user_id)
+	ACCOUNT.create_account(account, user_id)
 end
 
-function CMD.registerGate(serverId, gateInfo)
-	if not SERVER_TBL[serverId] then
-		SERVER_TBL[serverId] = {}
+function CMD.register_gate(server_id, gate_info)
+	if not SERVER_TBL[server_id] then
+		SERVER_TBL[server_id] = {}
 	end
-	table.insert(SERVER_TBL[serverId], gateInfo)
+	table.insert(SERVER_TBL[server_id], gate_info)
 end
 

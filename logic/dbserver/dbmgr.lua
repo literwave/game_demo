@@ -7,38 +7,38 @@ local mysql = require "skynet.db.mysql"
 require "db.insertable"
 
 
-function createdbmgr(datactrl,LoadSqlStr,SaveSqlStr)
+function createdbmgr(datactrl,load_sql_str,save_sql_str)
 	local self = {}
 	function self.init()
-	     self.m_DataCtrl = datactrl
-	     self.m_SaveSqlStr = SaveSqlStr;
-	     self.m_LoadSqlStr = LoadSqlStr
-	     self.m_bLoding = true
-	     self.m_TempExcute = {} --
-	     self.m_WakeCO = {}
+	     self.m_data_ctrl = datactrl
+	     self.m_save_sql_str = save_sql_str;
+	     self.m_load_sql_str = load_sql_str
+	     self.m_b_loding = true
+	     self.m_temp_excute = {} --
+	     self.m_wake_co = {}
 	end
 	function self.Insert()
 	end
 	function self.Prepare() --
-	    if not self.m_DataCtrl or not self.m_LoadSqlStr then return end;
-	    self.m_bLoding = true
+	    if not self.m_data_ctrl or not self.m_load_sql_str then return end;
+	    self.m_b_loding = true
 	    --log("-----self.m_LoadSqlStr",self.m_LoadSqlStr);
-	    local sql = string.format(self.m_LoadSqlStr , self.m_DataCtrl.m_ID);
+	    local sql = string.format(self.m_load_sql_str , self.m_data_ctrl.m_ID);
 	    local rz = skynet.call(".sql", "lua", "querycb",sql);
 	    --log("------dbmgr.load",rz);
 	    self._Load(rz)
 	end
-	function self.PrepareSync()--
-	    if not self.m_DataCtrl or not self.m_LoadSqlStr then return end;
-	    self.m_bLoding = true
-	    local sql = string.format(self.m_LoadSqlStr , self.m_DataCtrl.m_ID);
+	function self.prepare_sync()--
+	    if not self.m_data_ctrl or not self.m_load_sql_str then return end;
+	    self.m_b_loding = true
+	    local sql = string.format(self.m_load_sql_str , self.m_data_ctrl.m_ID);
 	    skynet.fork(function ()  local rz = skynet.call(".sql", "lua", "querycb",sql); --
 	        self._Load(rz)
 	    end);
 	end
 	function self._Load(rz)
 	    local str=nil
-	    if misc.isEmpty(rz) then
+	    if misc.is_empty(rz) then
 	        self.Insert();--
 	    else
 	        _,str = next(rz[1]);
@@ -56,48 +56,48 @@ function createdbmgr(datactrl,LoadSqlStr,SaveSqlStr)
 	            data = {};
 	        end
 	    end
-	    self.m_bLoding = false;
+	    self.m_b_loding = false;
 	    self.Load(data);
-	    self.LoadFinish()
+	    self.load_finish()
 	end
 	function self.Save()
-	    local tdata = self.m_DataCtrl.Save();
-	    local sdata = g_pickle.serializeTable(tdata);
+	    local tdata = self.m_data_ctrl.Save();
+	    local sdata = g_pickle.serialize_table(tdata);
 	    sdata = mysql.quote_sql_str(sdata) --
-	    local sql = self._GetSaveSql(sdata)
+	    local sql = self._get_save_sql(sdata)
 	    skynet.fork(function () skynet.call(".sql", "lua", "query",sql) end);
 	end
-	function self._GetSaveSql(sdata)
-	    return string.format(self.m_SaveSqlStr , sdata,self.m_DataCtrl.m_ID)
+	function self._get_save_sql(sdata)
+	    return string.format(self.m_save_sql_str , sdata,self.m_data_ctrl.m_ID)
 	end
 	function self.Load(data)
-	    self.m_DataCtrl.Load(data);
+	    self.m_data_ctrl.Load(data);
 	end
-	function self.IsLoading()
-	    return self.m_bLoding
+	function self.is_loading()
+	    return self.m_b_loding
 	end
-	function self.LoadFinish()
+	function self.load_finish()
 	    --co
-	    for i,co in ipairs(self.m_WakeCO) do
+	    for i,co in ipairs(self.m_wake_co) do
 	        skynet.wakeup(co) --
 	    end
-	    self.m_WakeCO = {}
+	    self.m_wake_co = {}
 	    --cb
-	    for k,cb in pairs(self.m_TempExcute) do
+	    for k,cb in pairs(self.m_temp_excute) do
 	        if cb then cb(self); end
 	    end
-	    self.m_TempExcute = {}
+	    self.m_temp_excute = {}
 	end
-	function self.AppendAwakeCO(co)
-	    if self.IsLoading() then
-	        table.insert(self.m_WakeCO,co);
+	function self.append_awake_co(co)
+	    if self.is_loading() then
+	        table.insert(self.m_wake_co,co);
 	    else
 	        skynet.wakeup(co)
 	    end
 	end
 	function self.Excute(cb) --
-	    if self.IsLoading() then
-	        table.insert(self.m_TempExcute,cb);
+	    if self.is_loading() then
+	        table.insert(self.m_temp_excute,cb);
 	    else
 	        if cb then  cb(self);  end
 	    end
@@ -105,11 +105,11 @@ function createdbmgr(datactrl,LoadSqlStr,SaveSqlStr)
 	self.init();
 	return self
 end
-function CPlayInfoDataBaseMgr(datactrl,LoadSqlStr,SaveSqlStr)
-	local self = createdbmgr(datactrl,LoadSqlStr,SaveSqlStr)
+function c_play_info_data_base_mgr(datactrl,load_sql_str,save_sql_str)
+	local self = createdbmgr(datactrl,load_sql_str,save_sql_str)
 	function self.Save()
-	    local sdata = self.m_DataCtrl.Save();
-	    local sql = string.format(self.m_SaveSqlStr ,sdata['name'],sdata['sex'],sdata['sid'],sdata['lv'],self.m_DataCtrl.m_ID)
+	    local sdata = self.m_data_ctrl.Save();
+	    local sql = string.format(self.m_save_sql_str ,sdata['name'],sdata['sex'],sdata['sid'],sdata['lv'],self.m_data_ctrl.m_ID)
 	    skynet.fork(function () skynet.call(".sql", "lua", "query",sql) end);
 	    --log("CPlayInfoDataBaseMgr",sdata);
 	end
@@ -118,10 +118,10 @@ function CPlayInfoDataBaseMgr(datactrl,LoadSqlStr,SaveSqlStr)
 	return self;
 end
 
-function CDataUpdateSaveMgr(datactrl,LoadSqlStr,SaveSqlStr)
-	local self = createdbmgr(datactrl,LoadSqlStr,SaveSqlStr)
-	function self.UpdateSave() 
-	    if self.m_DataCtrl.CheckUpdate()==true then
+function c_data_update_save_mgr(datactrl,load_sql_str,save_sql_str)
+	local self = createdbmgr(datactrl,load_sql_str,save_sql_str)
+	function self.update_save() 
+	    if self.m_data_ctrl.check_update()==true then
 	        self.Save();
 	        --log("---------CDataUpdateSaveMgr");
 	    end

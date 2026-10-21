@@ -1,22 +1,22 @@
 # user persist schema (agent USER_INFO_COL.dat)
 # map key number 落库为字符串，加载时由 orm 按类型还原，无需 @ 前缀
 
-ResMap <number, number>
+res_map <number, number>
 
-SdkParamMap <string, string>
+sdk_param_map <string, string>
 
-UserData {
-    _userId string
-    _birthTime number
-    _loginTime number
-    _bornServerId number
+user_data {
+    _user_id string
+    _birth_time number
+    _login_time number
+    _born_server_id number
     _name string
     _sex number
-    _sdkParamTbl SdkParamMap
-    _resTbl ResMap
-    _realDiamond number
-    _giftDiamond number
-    _sumRechargeDiamond number
-    _headIcon number
-    _lotteryTimes number
+    _sdk_param_tbl sdk_param_map
+    _res_tbl res_map
+    _real_diamond number
+    _gift_diamond number
+    _sum_recharge_diamond number
+    _head_icon number
+    _lottery_times number
 }

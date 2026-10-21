@@ -2,42 +2,42 @@ local skynet = require "skynet"
 local orm = require "orm"
 
 COL = {
-	USER_INFO = "userInfoCol",
-	USER_HERO = "userHeroCol",
-	USER_BUILD = "userBuildCol",
-	USER_ITEM = "userItemCol",
-	QUEUE = "queueCol",
-	GAME_SID = "gameSidCol",
-	MAIL = "mailCol",
-	USER_MAIL = "userMailCol",
-	SVR_MAIL = "svrMailCol",
+	USER_INFO = "user_info_col",
+	USER_HERO = "user_hero_col",
+	USER_BUILD = "user_build_col",
+	USER_ITEM = "user_item_col",
+	QUEUE = "queue_col",
+	GAME_SID = "game_sid_col",
+	MAIL = "mail_col",
+	USER_MAIL = "user_mail_col",
+	SVR_MAIL = "svr_mail_col",
 }
 
-local flushCB = nil
-local flushCd = 5
-local allCmdTbl = {}
-local flushScheduled = false
+local flush_cb = nil
+local flush_cd = 5
+local all_cmd_tbl = {}
+local flush_scheduled = false
 local flushing = false
 
 local function enqueue(col, cmd)
-	if not allCmdTbl[col] then
-		allCmdTbl[col] = {}
+	if not all_cmd_tbl[col] then
+		all_cmd_tbl[col] = {}
 	end
-	table.insert(allCmdTbl[col], cmd)
+	table.insert(all_cmd_tbl[col], cmd)
 end
 
-local function scheduleFlush()
-	if flushScheduled or flushing then
+local function schedule_flush()
+	if flush_scheduled or flushing then
 		return
 	end
-	flushScheduled = true
+	flush_scheduled = true
 	skynet.timeout(0, function()
-		flushScheduled = false
+		flush_scheduled = false
 		flush()
 	end)
 end
 
-orm.on_dirty = scheduleFlush
+orm.on_dirty = schedule_flush
 
 function flush()
 	if flushing then
@@ -48,31 +48,31 @@ function flush()
 	for _, item in ipairs(dirty) do
 		enqueue(item.col, {
 			key = item.key,
-			opType = "$set",
-			fieldStr = "dat",
+			op_type = "$set",
+			field_str = "dat",
 			value = orm.dump(item.obj),
 		})
 	end
-	local sending = allCmdTbl
-	allCmdTbl = {}
+	local sending = all_cmd_tbl
+	all_cmd_tbl = {}
 	flushing = false
 	if next(sending) then
-		skynet.send(".mongodb", "lua", "saveData", sending)
+		skynet.send(".mongodb", "lua", "save_data", sending)
 	end
 	if orm.has_dirty() then
-		scheduleFlush()
+		schedule_flush()
 	end
 end
 
-local function pushCmd(col, cmd)
+local function push_cmd(col, cmd)
 	enqueue(col, cmd)
-	scheduleFlush()
+	schedule_flush()
 end
 
-function commonLoadSingle(col, key)
+function common_load_single(col, key)
 	assert(key)
-	local ret = skynet.call(".mongodb", "lua", "findOne", {
-		database = GAME.getDataBase(),
+	local ret = skynet.call(".mongodb", "lua", "find_one", {
+		database = GAME.get_data_base(),
 		collection = col,
 		query = {_id = key},
 		selector = {dat = 1},
@@ -83,9 +83,9 @@ function commonLoadSingle(col, key)
 	return nil
 end
 
-function commonLoadTbl(col)
-	local list = skynet.call(".mongodb", "lua", "findAll", {
-		database = GAME.getDataBase(),
+function common_load_tbl(col)
+	local list = skynet.call(".mongodb", "lua", "find_all", {
+		database = GAME.get_data_base(),
 		collection = col,
 	}) or {}
 	local tbl = {}
@@ -97,10 +97,10 @@ function commonLoadTbl(col)
 	return tbl
 end
 
-function commonLoadMany(col, keyList)
+function common_load_many(col, key_list)
 	local ret = {}
-	for _, key in pairs(keyList) do
-		local dat = commonLoadSingle(col, key)
+	for _, key in pairs(key_list) do
+		local dat = common_load_single(col, key)
 		if dat then
 			ret[key] = dat
 		end
@@ -109,59 +109,59 @@ function commonLoadMany(col, keyList)
 end
 
 -- 整包覆盖 dat（map 的 number key 由 ORM.dump 转成字符串）
-function saveDoc(col, key, dumped)
+function save_doc(col, key, dumped)
 	assert(col)
 	assert(key)
 	assert(type(dumped) == "table")
-	pushCmd(col, {
+	push_cmd(col, {
 		key = key,
-		opType = "$set",
-		fieldStr = "dat",
+		op_type = "$set",
+		field_str = "dat",
 		value = dumped,
 	})
 end
 
 -- 子树字段更新：field 必须是非纯数字的 string 字段名
-function saveDocField(col, key, field, value)
+function save_doc_field(col, key, field, value)
 	assert(col)
 	assert(key)
 	assert(type(field) == "string", "saveDocField field must be string")
 	assert(not tonumber(field), "saveDocField field must not be numeric string")
-	pushCmd(col, {
+	push_cmd(col, {
 		key = key,
-		opType = "$set",
-		fieldStr = "dat." .. field,
+		op_type = "$set",
+		field_str = "dat." .. field,
 		value = value,
 	})
 end
 
-function delDoc(col, key)
+function del_doc(col, key)
 	assert(col)
 	assert(key)
-	pushCmd(col, {
+	push_cmd(col, {
 		key = key,
-		opType = "delDoc",
-		fieldStr = nil,
+		op_type = "del_doc",
+		field_str = nil,
 		value = "",
 	})
 end
 
-function commonSaveMany(col, tbl)
+function common_save_many(col, tbl)
 	for key, dat in pairs(tbl) do
 		if type(dat) == "table" then
-			saveDoc(col, key, dat)
+			save_doc(col, key, dat)
 		end
 	end
 end
 
-function commonDelMany(col, keyTbl)
-	for key in pairs(keyTbl) do
-		delDoc(col, key)
+function common_del_many(col, key_tbl)
+	for key in pairs(key_tbl) do
+		del_doc(col, key)
 	end
 end
 
-function systemStartup()
-	if not flushCB then
-		flushCB = CALL_OUT.callFre("MONGO_SLAVE", "flush", flushCd)
+function system_startup()
+	if not flush_cb then
+		flush_cb = CALL_OUT.call_fre("MONGO_SLAVE", "flush", flush_cd)
 	end
 end

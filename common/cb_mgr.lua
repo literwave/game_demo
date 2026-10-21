@@ -1,23 +1,23 @@
-local cbGlobalId = 0
+local cb_global_id = 0
 
-local callBackTbl = {}
+local call_back_tbl = {}
 
-function fetchCallbackId(modName, funcName, ...)
-	cbGlobalId = cbGlobalId + 1
+function fetch_callback_id(mod_name, func_name, ...)
+	cb_global_id = cb_global_id + 1
 
-	callBackTbl[cbGlobalId] = {
-		modName = modName,
-		funcName = funcName,
-		paramTbl = {...},
+	call_back_tbl[cb_global_id] = {
+		mod_name = mod_name,
+		func_name = func_name,
+		param_tbl = {...},
 	}
 
-	return cbGlobalId
+	return cb_global_id
 end
 
-function getCBInfo(id)
-	return callBackTbl[id]
+function get_cb_info(id)
+	return call_back_tbl[id]
 end
 
-function clearCBInfo(id)
-	callBackTbl[id] = nil
+function clear_cb_info(id)
+	call_back_tbl[id] = nil
 end

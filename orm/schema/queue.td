@@ -1,21 +1,21 @@
 # queue persist (agent QUEUE_COL.dat)
 
-QueueWork {
-    targetId number
+queue_work {
+    target_id number
 }
 
-QueueWorkMap <number, QueueWork>
+queue_work_map <number, queue_work>
 
-QueueData {
-    _userId string
-    _queueIdx number
-    _queueTbl QueueWorkMap
-    _workIdx number
-    _expireTime number
+queue_data {
+    _user_id string
+    _queue_idx number
+    _queue_tbl queue_work_map
+    _work_idx number
+    _expire_time number
 }
 
-QueueBag <number, QueueData>
+queue_bag <number, queue_data>
 
-UserQueueDoc {
-    _queues QueueBag
+user_queue_doc {
+    _queues queue_bag
 }

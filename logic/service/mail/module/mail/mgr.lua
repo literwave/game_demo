@@ -1,15 +1,15 @@
 
-allMailTbl = {}
+all_mail_tbl = {}
 --[[
 	[mailId] = mail,
 --]]
 
-delMailIdTbl = {}
+del_mail_id_tbl = {}
 --[[
 	[mailId] = true,
 --]]
 
-userMailInfoTbl = {}
+user_mail_info_tbl = {}
 --[[
 	[userId] = {
 		mailTbl = {
@@ -26,7 +26,7 @@ userMailInfoTbl = {}
 	}
 --]]
 
-svrMailInfo = {}
+svr_mail_info = {}
 --[[
 	globalIdx = *,
 	svrMailTbl = {
@@ -34,19 +34,19 @@ svrMailInfo = {}
 	}
 --]]
 
-mailRefTbl = {}
+mail_ref_tbl = {}
 --[[
 	[mailId] = cnt,
 --]]
 
 local SVR_MAIL_DOC_KEY = "1"
 
-local function dumpUserMailInfo(info)
-	local mailTbl = {}
-	for mailKind, idMap in pairs(info.mailTbl or {}) do
-		mailTbl[mailKind] = {}
-		for mailId, st in pairs(idMap) do
-			mailTbl[mailKind][tostring(mailId)] = {
+local function dump_user_mail_info(info)
+	local mail_tbl = {}
+	for mail_kind, id_map in pairs(info.mail_tbl or {}) do
+		mail_tbl[mail_kind] = {}
+		for mail_id, st in pairs(id_map) do
+			mail_tbl[mail_kind][tostring(mail_id)] = {
 				isRead = st.isRead and true or false,
 				isGotReward = st.isGotReward and true or false,
 				isLock = st.isLock and true or false,
@@ -55,70 +55,70 @@ local function dumpUserMailInfo(info)
 		end
 	end
 	local doc = ORM.create(ORM.CLS_USER_MAIL_DOC, {
-		mailTbl = mailTbl,
-		fetchSvrIdx = info.fetchSvrIdx or 0,
+		mail_tbl = mail_tbl,
+		fetch_svr_idx = info.fetch_svr_idx or 0,
 	})
 	return ORM.dump(doc)
 end
 
-local function persistUserMail(userId)
-	local info = userMailInfoTbl[userId]
+local function persist_user_mail(user_id)
+	local info = user_mail_info_tbl[user_id]
 	if not info then
 		return
 	end
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.USER_MAIL, userId, dumpUserMailInfo(info))
+	MONGO_SLAVE.save_doc(MONGO_SLAVE.COL.USER_MAIL, user_id, dump_user_mail_info(info))
 end
 
-local function persistSvrMail()
+local function persist_svr_mail()
 	local doc = ORM.create(ORM.CLS_SVR_MAIL_DOC, {
-		globalIdx = svrMailInfo.globalIdx or 0,
-		svrMailTbl = svrMailInfo.svrMailTbl or {},
+		global_idx = svr_mail_info.global_idx or 0,
+		svr_mail_tbl = svr_mail_info.svr_mail_tbl or {},
 	})
-	MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY, ORM.dump(doc))
+	MONGO_SLAVE.save_doc(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY, ORM.dump(doc))
 end
 
-function saveData()
-	local saveMailTbl = {}
-	for mailId, mail in pairs(allMailTbl) do
+function save_data()
+	local save_mail_tbl = {}
+	for mail_id, mail in pairs(all_mail_tbl) do
 		local info = {}
 		mail:serialize(info)
-		saveMailTbl[mailId] = info
+		save_mail_tbl[mail_id] = info
 	end
-	MONGO_SLAVE.commonSaveMany(MONGO_SLAVE.COL.MAIL, saveMailTbl)
-	local delMailTbl = {}
-	for mailId in pairs(delMailIdTbl) do
-		if not saveMailTbl[mailId] then
-			delMailTbl[mailId] = true
+	MONGO_SLAVE.common_save_many(MONGO_SLAVE.COL.MAIL, save_mail_tbl)
+	local del_mail_tbl = {}
+	for mail_id in pairs(del_mail_id_tbl) do
+		if not save_mail_tbl[mail_id] then
+			del_mail_tbl[mail_id] = true
 		end
 	end
-	MONGO_SLAVE.commonDelMany(MONGO_SLAVE.COL.MAIL, delMailTbl)
-	for userId, info in pairs(userMailInfoTbl) do
-		MONGO_SLAVE.saveDoc(MONGO_SLAVE.COL.USER_MAIL, userId, dumpUserMailInfo(info))
+	MONGO_SLAVE.common_del_many(MONGO_SLAVE.COL.MAIL, del_mail_tbl)
+	for user_id, info in pairs(user_mail_info_tbl) do
+		MONGO_SLAVE.save_doc(MONGO_SLAVE.COL.USER_MAIL, user_id, dump_user_mail_info(info))
 	end
-	persistSvrMail()
+	persist_svr_mail()
 end
 
-local function createMail(oci)
-	if oci._isBattleMail then
-		return MAIL_BATTLE.clsMail:New(oci)
+local function create_mail(oci)
+	if oci._is_battle_mail then
+		return MAIL_BATTLE.cls_mail:New(oci)
 	end
-	return MAIL_BASE.clsMail:New(oci)
+	return MAIL_BASE.cls_mail:New(oci)
 end
 
-function loadData()
-	userMailInfoTbl = {}
-	local rawUserTbl = MONGO_SLAVE.commonLoadTbl(MONGO_SLAVE.COL.USER_MAIL) or {}
-	for userId, raw in pairs(rawUserTbl) do
+function load_data()
+	user_mail_info_tbl = {}
+	local raw_user_tbl = MONGO_SLAVE.common_load_tbl(MONGO_SLAVE.COL.USER_MAIL) or {}
+	for user_id, raw in pairs(raw_user_tbl) do
 		local doc = ORM.create(ORM.CLS_USER_MAIL_DOC, raw)
 		local info = {
-			mailTbl = {},
-			fetchSvrIdx = doc.fetchSvrIdx,
+			mail_tbl = {},
+			fetch_svr_idx = doc.fetch_svr_idx,
 		}
-		for mailKind, idMap in pairs(doc.mailTbl) do
-			info.mailTbl[mailKind] = {}
-			for mailId, st in pairs(idMap) do
+		for mail_kind, id_map in pairs(doc.mail_tbl) do
+			info.mail_tbl[mail_kind] = {}
+			for mail_id, st in pairs(id_map) do
 				if type(st) == "table" then
-					info.mailTbl[mailKind][mailId] = {
+					info.mail_tbl[mail_kind][mail_id] = {
 						isRead = st.isRead,
 						isGotReward = st.isGotReward,
 						isLock = st.isLock,
@@ -127,419 +127,419 @@ function loadData()
 				end
 			end
 		end
-		userMailInfoTbl[userId] = info
+		user_mail_info_tbl[user_id] = info
 	end
 
-	local rawSvr = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY) or {}
-	local svrDoc = ORM.create(ORM.CLS_SVR_MAIL_DOC, rawSvr)
-	svrMailInfo = {
-		globalIdx = svrDoc.globalIdx or 0,
-		svrMailTbl = {},
+	local raw_svr = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY) or {}
+	local svr_doc = ORM.create(ORM.CLS_SVR_MAIL_DOC, raw_svr)
+	svr_mail_info = {
+		global_idx = svr_doc.global_idx or 0,
+		svr_mail_tbl = {},
 	}
-	for idx, mailId in pairs(svrDoc.svrMailTbl) do
-		svrMailInfo.svrMailTbl[idx] = mailId
+	for idx, mail_id in pairs(svr_doc.svr_mail_tbl) do
+		svr_mail_info.svr_mail_tbl[idx] = mail_id
 	end
 
-	for _, mailId in pairs(svrMailInfo.svrMailTbl) do
-		mailRefTbl[mailId] = (mailRefTbl[mailId] or 0) + 1
+	for _, mail_id in pairs(svr_mail_info.svr_mail_tbl) do
+		mail_ref_tbl[mail_id] = (mail_ref_tbl[mail_id] or 0) + 1
 	end
-	for _, userInfo in pairs(userMailInfoTbl) do
-		for _, mailTbl in pairs(userInfo.mailTbl) do
-			for mailId, _ in pairs(mailTbl) do
-				mailRefTbl[mailId] = (mailRefTbl[mailId] or 0) + 1
+	for _, user_info in pairs(user_mail_info_tbl) do
+		for _, mail_tbl in pairs(user_info.mail_tbl) do
+			for mail_id, _ in pairs(mail_tbl) do
+				mail_ref_tbl[mail_id] = (mail_ref_tbl[mail_id] or 0) + 1
 			end
 		end
 	end
 end
 
-local function tryInitUserMailInfo(userId)
-	if not userMailInfoTbl[userId] then
-		userMailInfoTbl[userId] = {
-			mailTbl = {},
-			fetchSvrIdx = svrMailInfo.globalIdx,
+local function try_init_user_mail_info(user_id)
+	if not user_mail_info_tbl[user_id] then
+		user_mail_info_tbl[user_id] = {
+			mail_tbl = {},
+			fetch_svr_idx = svr_mail_info.global_idx,
 		}
-		persistUserMail(userId)
+		persist_user_mail(user_id)
 	end
 end
 
-local function tryInitMailTbl(mailIdList)
+local function try_init_mail_tbl(mail_id_list)
 	local ret = {}
-	local queryList = {}
-	for _, mailId in pairs(mailIdList) do
-		local mail = allMailTbl[mailId]
+	local query_list = {}
+	for _, mail_id in pairs(mail_id_list) do
+		local mail = all_mail_tbl[mail_id]
 		if mail then
-			ret[mailId] = mail
+			ret[mail_id] = mail
 		else
-			table.insert(queryList, mailId)
+			table.insert(query_list, mail_id)
 		end
 	end
-	if #queryList > 0 then
-		local dataTbl = MONGO_SLAVE.commonLoadMany(MONGO_SLAVE.COL.MAIL, queryList)
-		for mailId, data in pairs(dataTbl) do
-			local mail = createMail(data)
-			allMailTbl[mailId] = mail
-			ret[mailId] = mail
+	if #query_list > 0 then
+		local data_tbl = MONGO_SLAVE.common_load_many(MONGO_SLAVE.COL.MAIL, query_list)
+		for mail_id, data in pairs(data_tbl) do
+			local mail = create_mail(data)
+			all_mail_tbl[mail_id] = mail
+			ret[mail_id] = mail
 		end
 	end
 	return ret
 end
 
-function tryInitMail(mailId)
-	if not allMailTbl[mailId] then
-		local saveTbl = MONGO_SLAVE.commonLoadSingle(MONGO_SLAVE.COL.MAIL, mailId)
-		if not saveTbl or not next(saveTbl) then
+function try_init_mail(mail_id)
+	if not all_mail_tbl[mail_id] then
+		local save_tbl = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.MAIL, mail_id)
+		if not save_tbl or not next(save_tbl) then
 			return
 		end
-		allMailTbl[mailId] = createMail(saveTbl)
+		all_mail_tbl[mail_id] = create_mail(save_tbl)
 	end
-	return allMailTbl[mailId]
+	return all_mail_tbl[mail_id]
 end
 
-local function getUserMailTbl(userId)
-	tryInitUserMailInfo(userId)
-	return userMailInfoTbl[userId].mailTbl
+local function get_user_mail_tbl(user_id)
+	try_init_user_mail_info(user_id)
+	return user_mail_info_tbl[user_id].mail_tbl
 end
 
-local function getUserMailByKind(userId, mailKind)
-	local mailTbl = getUserMailTbl(userId)
-	return mailTbl[mailKind]
+local function get_user_mail_by_kind(user_id, mail_kind)
+	local mail_tbl = get_user_mail_tbl(user_id)
+	return mail_tbl[mail_kind]
 end
 
-local function getUserMailInfo(userId, mailKind, mailId)
-	local mailTbl = getUserMailByKind(userId, mailKind)
-	return mailTbl and mailTbl[mailId]
+local function get_user_mail_info(user_id, mail_kind, mail_id)
+	local mail_tbl = get_user_mail_by_kind(user_id, mail_kind)
+	return mail_tbl and mail_tbl[mail_id]
 end
 
-local function setMailReaded(userId, mailKind, mailId)
-	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
-	if not userMailInfo.isRead then
-		userMailInfo.isRead = true
-		persistUserMail(userId)
+local function set_mail_readed(user_id, mail_kind, mail_id)
+	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
+	if not user_mail_info.isRead then
+		user_mail_info.isRead = true
+		persist_user_mail(user_id)
 	end
 end
 
-local function setMailRewarded(userId, mailKind, mailId)
-	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
-	userMailInfo.isGotReward = true
-	persistUserMail(userId)
+local function set_mail_rewarded(user_id, mail_kind, mail_id)
+	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
+	user_mail_info.isGotReward = true
+	persist_user_mail(user_id)
 end
 
-local function setMailLock(userId, mailKind, mailId, isLock)
-	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
-	userMailInfo.isLock = isLock
-	persistUserMail(userId)
+local function set_mail_lock(user_id, mail_kind, mail_id, is_lock)
+	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
+	user_mail_info.isLock = is_lock
+	persist_user_mail(user_id)
 end
 
-local function delMail(mailId)
-	assert(not delMailIdTbl[mailId])
-	local mail = allMailTbl[mailId]
+local function del_mail(mail_id)
+	assert(not del_mail_id_tbl[mail_id])
+	local mail = all_mail_tbl[mail_id]
 	if mail then
-		delMailIdTbl[mailId] = true
+		del_mail_id_tbl[mail_id] = true
 		mail:release()
-		allMailTbl[mailId] = nil
+		all_mail_tbl[mail_id] = nil
 	end
 end
 
-local function incrMailRefCnt(mailId)
-	mailRefTbl[mailId] = (mailRefTbl[mailId] or 0) + 1
+local function incr_mail_ref_cnt(mail_id)
+	mail_ref_tbl[mail_id] = (mail_ref_tbl[mail_id] or 0) + 1
 end
 
-local function descMailRefCnt(mailId)
-	mailRefTbl[mailId] = mailRefTbl[mailId] - 1
-	if mailRefTbl[mailId] <= 0 then
-		delMail(mailId)
-		mailRefTbl[mailId] = nil
+local function desc_mail_ref_cnt(mail_id)
+	mail_ref_tbl[mail_id] = mail_ref_tbl[mail_id] - 1
+	if mail_ref_tbl[mail_id] <= 0 then
+		del_mail(mail_id)
+		mail_ref_tbl[mail_id] = nil
 	end
 end
 
-local function delUserMail(userId, mailKind, mailId)
-	local mailTbl = userMailInfoTbl[userId].mailTbl
-	if mailTbl[mailKind] and mailTbl[mailKind][mailId] then
-		mailTbl[mailKind][mailId] = nil
-		persistUserMail(userId)
-		descMailRefCnt(mailId)
+local function del_user_mail(user_id, mail_kind, mail_id)
+	local mail_tbl = user_mail_info_tbl[user_id].mail_tbl
+	if mail_tbl[mail_kind] and mail_tbl[mail_kind][mail_id] then
+		mail_tbl[mail_kind][mail_id] = nil
+		persist_user_mail(user_id)
+		desc_mail_ref_cnt(mail_id)
 	end
 end
 
-local function addUserMailInfo(userId, mailKind, mailId, userMailInfo)
-	local mailTbl = getUserMailTbl(userId)
-	if not mailTbl[mailKind] then
-		mailTbl[mailKind] = {}
+local function add_user_mail_info(user_id, mail_kind, mail_id, user_mail_info)
+	local mail_tbl = get_user_mail_tbl(user_id)
+	if not mail_tbl[mail_kind] then
+		mail_tbl[mail_kind] = {}
 	end
-	assert(not mailTbl[mailKind][mailId])
-	mailTbl[mailKind][mailId] = userMailInfo
-	persistUserMail(userId)
-	incrMailRefCnt(mailId)
+	assert(not mail_tbl[mail_kind][mail_id])
+	mail_tbl[mail_kind][mail_id] = user_mail_info
+	persist_user_mail(user_id)
+	incr_mail_ref_cnt(mail_id)
 end
 
-local function setUserFetchSvrIdx(userId, idx)
-	userMailInfoTbl[userId].fetchSvrIdx = idx
-	persistUserMail(userId)
+local function set_user_fetch_svr_idx(user_id, idx)
+	user_mail_info_tbl[user_id].fetch_svr_idx = idx
+	persist_user_mail(user_id)
 end
 
-local function addSvrMail(mailId)
-	local idx = svrMailInfo.globalIdx + 1
-	incrMailRefCnt(mailId)
-	svrMailInfo.globalIdx = idx
-	svrMailInfo.svrMailTbl[idx] = mailId
-	persistSvrMail()
+local function add_svr_mail(mail_id)
+	local idx = svr_mail_info.global_idx + 1
+	incr_mail_ref_cnt(mail_id)
+	svr_mail_info.global_idx = idx
+	svr_mail_info.svr_mail_tbl[idx] = mail_id
+	persist_svr_mail()
 end
 
-local function delSvrMail(idx)
-	local mailId = svrMailInfo.svrMailTbl[idx]
-	svrMailInfo.svrMailTbl[idx] = nil
-	persistSvrMail()
-	descMailRefCnt(mailId)
+local function del_svr_mail(idx)
+	local mail_id = svr_mail_info.svr_mail_tbl[idx]
+	svr_mail_info.svr_mail_tbl[idx] = nil
+	persist_svr_mail()
+	desc_mail_ref_cnt(mail_id)
 end
 
-local function tryClearSvrMail()
-	for idx, mailId in pairs(svrMailInfo.svrMailTbl) do
-		local mail = tryInitMail(mailId)
-		if mail:isTimeout() then
-			delSvrMail(idx)
+local function try_clear_svr_mail()
+	for idx, mail_id in pairs(svr_mail_info.svr_mail_tbl) do
+		local mail = try_init_mail(mail_id)
+		if mail:is_timeout() then
+			del_svr_mail(idx)
 		end
 	end
 end
 
-local function genMailSimPto(userId, mailKind, mailId)
-	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
-	local mail = tryInitMail(mailId)
+local function gen_mail_sim_pto(user_id, mail_kind, mail_id)
+	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
+	local mail = try_init_mail(mail_id)
 	local ret = {
-		mailId = mailId,
-		title = mail:getTitle(),
-		content = mail:genContentStr(),
-		startTime = mail:getStartTime(),
-		endTime = mail:getEndTime(),
-		mailType = mail:getMailType(),
-		mailAvatarType = mail:getMailAvatarType(),
-		isRead = userMailInfo.isRead,
-		isLock = userMailInfo.isLock,
-		isGotReward = userMailInfo.isGotReward,
+		mailId = mail_id,
+		title = mail:get_title(),
+		content = mail:gen_content_str(),
+		startTime = mail:get_start_time(),
+		endTime = mail:get_end_time(),
+		mailType = mail:get_mail_type(),
+		mail_avatar_type = mail:get_mail_avatar_type(),
+		isRead = user_mail_info.isRead,
+		isLock = user_mail_info.isLock,
+		isGotReward = user_mail_info.isGotReward,
 	}
 	return ret
 end
 
-local function putMailToUser(userId, mailKind, mailId)
-	local userMailInfo = {
+local function put_mail_to_user(user_id, mail_kind, mail_id)
+	local user_mail_info = {
 		isRead = false,
 		isGotReward = true,
 		isLock = false,
 	}
-	local mail = tryInitMail(mailId)
-	if COMMON_FUNC.hasElement(mail:getRewardList()) then
-		userMailInfo.isGotReward = false
+	local mail = try_init_mail(mail_id)
+	if COMMON_FUNC.has_element(mail:get_reward_list()) then
+		user_mail_info.isGotReward = false
 	end
-	addUserMailInfo(userId, mailKind, mailId, userMailInfo)
+	add_user_mail_info(user_id, mail_kind, mail_id, user_mail_info)
 end
 
-local function putMailToUserAndSync(userId, mailKind, mailId)
-	putMailToUser(userId, mailKind, mailId)
-	local vfd = USER_MGR.getVfdByUserId(userId)
+local function put_mail_to_user_and_sync(user_id, mail_kind, mail_id)
+	put_mail_to_user(user_id, mail_kind, mail_id)
+	local vfd = USER_MGR.get_vfd_by_user_id(user_id)
 	if vfd then
-		local info = genMailSimPto(userId, mailKind, mailId)
-		for_caller.c_sync_new_mail(vfd, mailKind, info)
+		local info = gen_mail_sim_pto(user_id, mail_kind, mail_id)
+		for_caller.c_sync_new_mail(vfd, mail_kind, info)
 	end
 end
 
-local function tryGetSvrMail(userId)
-	tryInitUserMailInfo(userId)
-	local lastFetchIdx = userMailInfoTbl[userId].fetchSvrIdx
-	local allSvrMailTbl = svrMailInfo.svrMailTbl
-	for idx = lastFetchIdx+1, svrMailInfo.globalIdx do
-		setUserFetchSvrIdx(userId, idx)
-		local mailId = allSvrMailTbl[idx]
-		local mail = mailId and tryInitMail(mailId)
-		if mail and not mail:isTimeout() then
-			putMailToUserAndSync(userId, mail:getMailKind(), mailId)
+local function try_get_svr_mail(user_id)
+	try_init_user_mail_info(user_id)
+	local last_fetch_idx = user_mail_info_tbl[user_id].fetch_svr_idx
+	local all_svr_mail_tbl = svr_mail_info.svr_mail_tbl
+	for idx = last_fetch_idx+1, svr_mail_info.global_idx do
+		set_user_fetch_svr_idx(user_id, idx)
+		local mail_id = all_svr_mail_tbl[idx]
+		local mail = mail_id and try_init_mail(mail_id)
+		if mail and not mail:is_timeout() then
+			put_mail_to_user_and_sync(user_id, mail:get_mail_kind(), mail_id)
 		end
 	end
 end
 
-local function createNewMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	assert(lifeSec)
-	local mailId = getIdBySrvIdAndTimestamp()
-	local startTime = TIME.osBJSec()
-	local endTime = -1
-	if lifeSec > 0 then
-		endTime = startTime + lifeSec
+local function create_new_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
+	assert(life_sec)
+	local mail_id = get_id_by_srv_id_and_timestamp()
+	local start_time = TIME.os_bj_sec()
+	local end_time = -1
+	if life_sec > 0 then
+		end_time = start_time + life_sec
 	end
 	local oci = {
-		_mailId = mailId,
-		_mailKind = mailKind,
-		_mailType = mailType,
+		_mail_id = mail_id,
+		_mail_kind = mail_kind,
+		_mail_type = mail_type,
 		_title = title,
-		_contentTbl = contentTbl,
-		_detailTbl = detailTbl,
-		_rewardList = rewardList,
-		_startTime = startTime,
-		_endTime = endTime,
+		_content_tbl = content_tbl,
+		_detail_tbl = detail_tbl,
+		_reward_list = reward_list,
+		_start_time = start_time,
+		_end_time = end_time,
 	}
-	local mail = createMail(oci)
-	mail:saveToDB()
-	allMailTbl[mailId] = mail
-	return mailId
+	local mail = create_mail(oci)
+	mail:save_to_db()
+	all_mail_tbl[mail_id] = mail
+	return mail_id
 end
 
-local function createNewBattleMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, mailBattleRec, lifeSec, mailAvatarType)
-	assert(lifeSec)
-	local mailId = getIdBySrvIdAndTimestamp()
-	local startTime = TIME.osBJSec()
-	local endTime = -1
-	if lifeSec > 0 then
-		endTime = startTime + lifeSec
+local function create_new_battle_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, mail_battle_rec, life_sec, mail_avatar_type)
+	assert(life_sec)
+	local mail_id = get_id_by_srv_id_and_timestamp()
+	local start_time = TIME.os_bj_sec()
+	local end_time = -1
+	if life_sec > 0 then
+		end_time = start_time + life_sec
 	end
 	local oci = {
-		_mailId = mailId,
-		_mailKind = mailKind,
-		_mailType = mailType,
+		_mail_id = mail_id,
+		_mail_kind = mail_kind,
+		_mail_type = mail_type,
 		_title = title,
-		_contentTbl = contentTbl,
-		_detailTbl = detailTbl,
-		_rewardList = rewardList,
-		_startTime = startTime,
-		_endTime = endTime,
-		_mailAvatarType = mailAvatarType,
-		_result = mailBattleRec.result,
-		_campRecTbl = mailBattleRec.campRecTbl,
-		_userRecTbl = mailBattleRec.userRecTbl,
-		_soldierRecList = mailBattleRec.soldierRecList,
-		_heroInfoList = mailBattleRec.heroInfoList,
-		_battleAttrRateList = mailBattleRec.battleAttrRateList,
-		_isBattleMail = true,
+		_content_tbl = content_tbl,
+		_detail_tbl = detail_tbl,
+		_reward_list = reward_list,
+		_start_time = start_time,
+		_end_time = end_time,
+		_mail_avatar_type = mail_avatar_type,
+		_result = mail_battle_rec.result,
+		_camp_rec_tbl = mail_battle_rec.camp_rec_tbl,
+		_user_rec_tbl = mail_battle_rec.user_rec_tbl,
+		_soldier_rec_list = mail_battle_rec.soldier_rec_list,
+		_hero_info_list = mail_battle_rec.heroInfoList,
+		_battle_attr_rate_list = mail_battle_rec.battle_attr_rate_list,
+		_is_battle_mail = true,
 	}
-	local mail = createMail(oci)
-	mail:saveToDB()
-	allMailTbl[mailId] = mail
-	loadedTbl[mailId] = true
-	return mailId
+	local mail = create_mail(oci)
+	mail:save_to_db()
+	all_mail_tbl[mail_id] = mail
+	loaded_tbl[mail_id] = true
+	return mail_id
 end
 
-function sliceGetSvrMail(ulist, pro, paramTbl)
-	local userId = ulist[pro]
-	tryGetSvrMail(userId)
+function slice_get_svr_mail(ulist, pro, param_tbl)
+	local user_id = ulist[pro]
+	try_get_svr_mail(user_id)
 end
 
-function onUserLogin(user)
-	local userId = user:getUserId()
-	tryInitUserMailInfo(userId)
-	tryGetSvrMail(userId)
+function on_user_login(user)
+	local user_id = user:get_user_id()
+	try_init_user_mail_info(user_id)
+	try_get_svr_mail(user_id)
 end
 
-local function checkMailRewardOverLimit(userId, mailKind, mailId)
-	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
-	if not userMailInfo then
+local function check_mail_reward_over_limit(user_id, mail_kind, mail_id)
+	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
+	if not user_mail_info then
 		return false
 	end
-	local mail = tryInitMail(mailId)
+	local mail = try_init_mail(mail_id)
 	if not mail then
 		return false
 	end
-	local rewardItemTbl = {}
-	for _, rewardInfo in pairs(mail:getRewardList()) do
-		if rewardInfo.reward_type == CONST.REWARD_TYPE_ITEM then
-			local itemType = rewardInfo.item_type
-			rewardItemTbl[itemType] = (rewardItemTbl[itemType] or 0) + rewardInfo.item_count
+	local reward_item_tbl = {}
+	for _, reward_info in pairs(mail:get_reward_list()) do
+		if reward_info.reward_type == CONST.REWARD_TYPE_ITEM then
+			local item_type = reward_info.item_type
+			reward_item_tbl[item_type] = (reward_item_tbl[item_type] or 0) + reward_info.item_count
 		end
 	end
-	for itemType, rewardItemCnt in pairs(rewardItemTbl) do
-		local limitAddCnt = ITEM_MGR.getLimitAddCnt(userId, itemType)
-		if limitAddCnt and rewardItemCnt > limitAddCnt then
+	for item_type, reward_item_cnt in pairs(reward_item_tbl) do
+		local limit_add_cnt = ITEM_MGR.get_limit_add_cnt(user_id, item_type)
+		if limit_add_cnt and reward_item_cnt > limit_add_cnt then
 			return true
 		end
 	end
 	return false
 end
 
-local function tryGetMailReward(userId, mailKind, mailId)
-	local userMailInfo = getUserMailInfo(userId, mailKind, mailId)
-	if not userMailInfo then
+local function try_get_mail_reward(user_id, mail_kind, mail_id)
+	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
+	if not user_mail_info then
 		return false
 	end
-	if not userMailInfo.isRead then
-		setMailReaded(userId, mailKind, mailId)
+	if not user_mail_info.isRead then
+		set_mail_readed(user_id, mail_kind, mail_id)
 	end
-	if userMailInfo.isGotReward then
+	if user_mail_info.isGotReward then
 		return false
 	end
-	local mail = tryInitMail(mailId)
+	local mail = try_init_mail(mail_id)
 	if not mail then
 		return false
 	end
-	setMailRewarded(userId, mailKind, mailId)
-	local actualRwdList = REWARD_MGR.rewardUser(userId, mail:getRewardList(), {CONST.FLOW_REASON.MAIL, mail:getMailType()})
-	return true, actualRwdList
+	set_mail_rewarded(user_id, mail_kind, mail_id)
+	local actual_rwd_list = REWARD_MGR.reward_user(user_id, mail:get_reward_list(), {CONST.FLOW_REASON.MAIL, mail:get_mail_type()})
+	return true, actual_rwd_list
 end
 
-local function tryDelUserMailByKind(userId, mailKind)
-	local mailTbl = getUserMailByKind(userId, mailKind)
-	if not mailTbl then
+local function try_del_user_mail_by_kind(user_id, mail_kind)
+	local mail_tbl = get_user_mail_by_kind(user_id, mail_kind)
+	if not mail_tbl then
 		return
 	end
-	local delMailTbl = {}
-	local mailList = {}
-	local queryMailIdList = {}
-	for mailId, info in pairs(mailTbl) do
+	local del_mail_tbl = {}
+	local mail_list = {}
+	local query_mail_id_list = {}
+	for mail_id, info in pairs(mail_tbl) do
 		if not info.isLock then
-			table.insert(queryMailIdList, mailId)
+			table.insert(query_mail_id_list, mail_id)
 		end
 	end
-	local queryMailTbl = tryInitMailTbl(queryMailIdList)
-	for mailId, mail in pairs(queryMailTbl) do
-		if mail:isTimeout(mailId) then
-			delMailTbl[mailId] = true
+	local query_mail_tbl = try_init_mail_tbl(query_mail_id_list)
+	for mail_id, mail in pairs(query_mail_tbl) do
+		if mail:is_timeout(mail_id) then
+			del_mail_tbl[mail_id] = true
 		else
-			table.insert(mailList, mail)
+			table.insert(mail_list, mail)
 		end
 	end
-	local limitCnt = DATA_COMMON.getValueByKey(3)
-	local needDelCnt = #mailList - limitCnt
-	if needDelCnt <= 0 then
+	local limit_cnt = DATA_COMMON.get_value_by_key(3)
+	local need_del_cnt = #mail_list - limit_cnt
+	if need_del_cnt <= 0 then
 		return
 	end
-	table.sort(mailList, function(mail1, mail2)
-		return mail1:getStartTime() < mail2:getStartTime()
+	table.sort(mail_list, function(mail1, mail2)
+		return mail1:get_start_time() < mail2:get_start_time()
 	end)
-	for _, mail in ipairs(mailList) do
-		local mailId = mail:getMailId()
-		delMailTbl[mailId] = true
-		needDelCnt = needDelCnt - 1
-		if needDelCnt <= 0 then
+	for _, mail in ipairs(mail_list) do
+		local mail_id = mail:get_mail_id()
+		del_mail_tbl[mail_id] = true
+		need_del_cnt = need_del_cnt - 1
+		if need_del_cnt <= 0 then
 			break
 		end
 	end
-	local delList = {}
-	for mailId in pairs(delMailTbl) do
-		tryGetMailReward(userId, mailKind, mailId)
-		delUserMail(userId, mailKind, mailId)
-		table.insert(delList, mailId)
+	local del_list = {}
+	for mail_id in pairs(del_mail_tbl) do
+		try_get_mail_reward(user_id, mail_kind, mail_id)
+		del_user_mail(user_id, mail_kind, mail_id)
+		table.insert(del_list, mail_id)
 	end
-	local vfd = USER_MGR.getVfdByUserId(userId)
+	local vfd = USER_MGR.get_vfd_by_user_id(user_id)
 	if vfd then
-		for_caller.s2c_del_mail_list(vfd, mailKind, delList)
+		for_caller.s2c_del_mail_list(vfd, mail_kind, del_list)
 	end
 end
 
-function tryDelMailById(delMailId)
-	if not mailRefTbl[delMailId] then
+function try_del_mail_by_id(del_mail_id)
+	if not mail_ref_tbl[del_mail_id] then
 		return
 	end
-	for idx, mailId in pairs(svrMailInfo.svrMailTbl) do
-		if mailId == delMailId then
-			delSvrMail(idx)
-			if not mailRefTbl[delMailId] then
+	for idx, mail_id in pairs(svr_mail_info.svr_mail_tbl) do
+		if mail_id == del_mail_id then
+			del_svr_mail(idx)
+			if not mail_ref_tbl[del_mail_id] then
 				return
 			end
 		end
 	end
-	for userId, userInfo in pairs(userMailInfoTbl) do
-		for mailKind, mailTbl in pairs(userInfo.mailTbl) do
-			if mailTbl[delMailId] then
-				delUserMail(userId, mailKind, delMailId)
-				local vfd = USER_MGR.getVfdByUserId(userId)
+	for user_id, user_info in pairs(user_mail_info_tbl) do
+		for mail_kind, mail_tbl in pairs(user_info.mail_tbl) do
+			if mail_tbl[del_mail_id] then
+				del_user_mail(user_id, mail_kind, del_mail_id)
+				local vfd = USER_MGR.get_vfd_by_user_id(user_id)
 				if vfd then
-					for_caller.c_del_mail_list(vfd, mailKind, {delMailId})
+					for_caller.c_del_mail_list(vfd, mail_kind, {del_mail_id})
 				end
-				if not mailRefTbl[delMailId] then
+				if not mail_ref_tbl[del_mail_id] then
 					return
 				end
 			end
@@ -547,151 +547,151 @@ function tryDelMailById(delMailId)
 	end
 end
 
-function sendUserMail(userId, mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	local mailId = createNewMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	putMailToUserAndSync(userId, mailKind, mailId)
-	tryDelUserMailByKind(userId, mailKind)
-	return mailId
+function send_user_mail(user_id, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
+	local mail_id = create_new_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
+	put_mail_to_user_and_sync(user_id, mail_kind, mail_id)
+	try_del_user_mail_by_kind(user_id, mail_kind)
+	return mail_id
 end
 
-function sendSrvMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	local mailId = createNewMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	addSvrMail(mailId)
-	local userIdList = COMMON_FUNC.getTblValueList(USER_MGR.getVfdUserIdTbl())
-	SLICE_TASK.sliceFuncNoSave("MAIL_MGR", "sliceGetSvrMail", userIdList, 30)
-	tryClearSvrMail()
-	return mailId
+function send_srv_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
+	local mail_id = create_new_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
+	add_svr_mail(mail_id)
+	local user_id_list = COMMON_FUNC.get_tbl_value_list(USER_MGR.get_vfd_user_id_tbl())
+	SLICE_TASK.slice_func_no_save("MAIL_MGR", "slice_get_svr_mail", user_id_list, 30)
+	try_clear_svr_mail()
+	return mail_id
 end
 
-function sendGroupMail(userIdTbl, mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	local mailId = createNewMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec, mailAvatarType)
-	for userId, _ in pairs(userIdTbl) do
-		putMailToUserAndSync(userId, mailKind, mailId)
-		tryDelUserMailByKind(userId, mailKind)
+function send_group_mail(user_id_tbl, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
+	local mail_id = create_new_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
+	for user_id, _ in pairs(user_id_tbl) do
+		put_mail_to_user_and_sync(user_id, mail_kind, mail_id)
+		try_del_user_mail_by_kind(user_id, mail_kind)
 	end
-	return mailId
+	return mail_id
 end
 
-function sendBattleMail(userIdTbl, mailKind, mailType, title, contentTbl, detailTbl, rewardList, mailBattleRec, lifeSec, mailAvatarType)
-	local mailId = createNewBattleMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, mailBattleRec, lifeSec, mailAvatarType)
-	for userId, _ in pairs(userIdTbl) do
-		putMailToUserAndSync(userId, mailKind, mailId)
-		tryDelUserMailByKind(userId, mailKind)
+function send_battle_mail(user_id_tbl, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, mail_battle_rec, life_sec, mail_avatar_type)
+	local mail_id = create_new_battle_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, mail_battle_rec, life_sec, mail_avatar_type)
+	for user_id, _ in pairs(user_id_tbl) do
+		put_mail_to_user_and_sync(user_id, mail_kind, mail_id)
+		try_del_user_mail_by_kind(user_id, mail_kind)
 	end
 end
 
-local function onReqMailList(vfd, mailKind)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	tryDelUserMailByKind(userId, mailKind)
+local function on_req_mail_list(vfd, mail_kind)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	try_del_user_mail_by_kind(user_id, mail_kind)
 	local list = {}
-	local tbl = getUserMailByKind(userId, mailKind)
+	local tbl = get_user_mail_by_kind(user_id, mail_kind)
 	if tbl then
-		for mailId, _ in pairs(tbl) do
-			table.insert(list, genMailSimPto(userId, mailKind, mailId))
+		for mail_id, _ in pairs(tbl) do
+			table.insert(list, gen_mail_sim_pto(user_id, mail_kind, mail_id))
 		end
 	end
-	for_caller.c_req_mail_list(vfd, mailKind, list)
+	for_caller.c_req_mail_list(vfd, mail_kind, list)
 end
 
-local function onReqMailDetail(vfd, mailKind, mailId)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	local tbl = getUserMailByKind(userId, mailKind)
-	if tbl and tbl[mailId] then
-		setMailReaded(userId, mailKind, mailId)
-		local mail = tryInitMail(mailId)
-		mail:syncDetail(vfd, userId)
+local function on_req_mail_detail(vfd, mail_kind, mail_id)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	local tbl = get_user_mail_by_kind(user_id, mail_kind)
+	if tbl and tbl[mail_id] then
+		set_mail_readed(user_id, mail_kind, mail_id)
+		local mail = try_init_mail(mail_id)
+		mail:sync_detail(vfd, user_id)
 	end
 end
 
-local function onReqUnreadCntList(vfd)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	local mailTbl = getUserMailTbl(userId)
+local function on_req_unread_cnt_list(vfd)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	local mail_tbl = get_user_mail_tbl(user_id)
 	local list = {}
-	for mailKind, tbl in pairs(mailTbl) do
-		local unreadCnt = 0
+	for mail_kind, tbl in pairs(mail_tbl) do
+		local unread_cnt = 0
 		for _, info in pairs(tbl) do
 			if not info.isRead then
-				unreadCnt = unreadCnt + 1
+				unread_cnt = unread_cnt + 1
 			end
 		end
-		table.insert(list, { k = mailKind, v = unreadCnt, })
+		table.insert(list, { k = mail_kind, v = unread_cnt, })
 	end
 	for_caller.c_req_unread_mail_cnt_list(vfd, list)
 end
 
-local function tryDelMail(userId, mailKind, mailId, info)
+local function try_del_mail(user_id, mail_kind, mail_id, info)
 	if info.isLock then
 		return false
 	end
 	if not info.isGotReward then
 		return false
 	end
-	tryInitMail(mailId)
-	delUserMail(userId, mailKind, mailId)
+	try_init_mail(mail_id)
+	del_user_mail(user_id, mail_kind, mail_id)
 	return true
 end
 
-local function onDelMailList(vfd, mailKind, mailIdList)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	local tbl = getUserMailByKind(userId, mailKind)
+local function on_del_mail_list(vfd, mail_kind, mail_id_list)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	local tbl = get_user_mail_by_kind(user_id, mail_kind)
 	if not tbl then
 		return
 	end
-	local delMailIdList = {}
-	for _, mailId in pairs(mailIdList) do
-		local info = tbl[mailId]
+	local del_mail_id_list = {}
+	for _, mail_id in pairs(mail_id_list) do
+		local info = tbl[mail_id]
 		if info then
-			if tryDelMail(userId, mailKind, mailId, info) then
-				table.insert(delMailIdList, mailId)
+			if try_del_mail(user_id, mail_kind, mail_id, info) then
+				table.insert(del_mail_id_list, mail_id)
 			end
 		end
 	end
-	for_caller.s2c_del_mail_list(vfd, mailKind, delMailIdList)
+	for_caller.s2c_del_mail_list(vfd, mail_kind, del_mail_id_list)
 end
 
-local function onSetMailLock(vfd, mailKind, mailId, isLock)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	local tbl = getUserMailByKind(userId, mailKind)
-	local info = tbl and tbl[mailId]
-	if info and info.isLock ~= isLock then
-		if isLock then
-			local mail = tryInitMail(mailId)
-			if not mail:canLock() then
+local function on_set_mail_lock(vfd, mail_kind, mail_id, is_lock)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	local tbl = get_user_mail_by_kind(user_id, mail_kind)
+	local info = tbl and tbl[mail_id]
+	if info and info.isLock ~= is_lock then
+		if is_lock then
+			local mail = try_init_mail(mail_id)
+			if not mail:can_lock() then
 				return
 			end
 		end
-		setMailLock(userId, mailKind, mailId, isLock)
-		for_caller.c_set_mail_lock(vfd, mailKind, mailId, isLock)
+		set_mail_lock(user_id, mail_kind, mail_id, is_lock)
+		for_caller.c_set_mail_lock(vfd, mail_kind, mail_id, is_lock)
 	end
 end
 
-local function onGetMailReward(vfd, mailKindIdList)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	local allRewardList = {}
-	local rewardMailIdList = {}
-	for _, info in pairs(mailKindIdList) do
-		local mailKind = info.k
-		local mailId = info.v
-		if checkMailRewardOverLimit(userId, mailKind, mailId) then
-			USER_MGR.tellMeByLanguageId(userId, 110277)
+local function on_get_mail_reward(vfd, mail_kind_id_list)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	local all_reward_list = {}
+	local reward_mail_id_list = {}
+	for _, info in pairs(mail_kind_id_list) do
+		local mail_kind = info.k
+		local mail_id = info.v
+		if check_mail_reward_over_limit(user_id, mail_kind, mail_id) then
+			USER_MGR.tell_me_by_language_id(user_id, 110277)
 		else
-			local ret, rewardList = tryGetMailReward(userId, mailKind, mailId)
+			local ret, reward_list = try_get_mail_reward(user_id, mail_kind, mail_id)
 			if ret then
-				table.insert(allRewardList, rewardList)
-				table.insert(rewardMailIdList, mailId)
+				table.insert(all_reward_list, reward_list)
+				table.insert(reward_mail_id_list, mail_id)
 			end
 		end
 	end
-	local showRewardList = FUNCLIB.mergeRewardList(table.unpack(allRewardList))
-	REWARD_MGR.showReward(userId, showRewardList)
-	for_caller.c_get_mail_reward(vfd, rewardMailIdList)
+	local show_reward_list = FUNCLIB.merge_reward_list(table.unpack(all_reward_list))
+	REWARD_MGR.show_reward(user_id, show_reward_list)
+	for_caller.c_get_mail_reward(vfd, reward_mail_id_list)
 end
 
 function __init__()
-	for_maker.c2s_req_mail_list = onReqMailList
-	for_maker.c2s_req_mail_detail = onReqMailDetail
-	for_maker.c2s_req_unread_mail_cnt_list = onReqUnreadCntList
-	for_maker.c2s_del_mail_list = onDelMailList
-	for_maker.c2s_set_mail_lock = onSetMailLock
-	for_maker.c2s_get_mail_reward = onGetMailReward
+	for_maker.c2s_req_mail_list = on_req_mail_list
+	for_maker.c2s_req_mail_detail = on_req_mail_detail
+	for_maker.c2s_req_unread_mail_cnt_list = on_req_unread_cnt_list
+	for_maker.c2s_del_mail_list = on_del_mail_list
+	for_maker.c2s_set_mail_lock = on_set_mail_lock
+	for_maker.c2s_get_mail_reward = on_get_mail_reward
 end

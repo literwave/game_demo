@@ -17,15 +17,15 @@ function Pickle:pickle_(root)
   if type(root) ~= "table" then 
 	error("can only pickle tables, not ".. type(root).."s")
   end
-  self._tableToRef = {}
-  self._refToTable = {}
+  self._table_to_ref = {}
+  self._ref_to_table = {}
   local savecount = 0
   self:ref_(root)
   local s = ""
 
-  while #self._refToTable > savecount do
+  while #self._ref_to_table > savecount do
 	savecount = savecount + 1
-	local t = self._refToTable[savecount]
+	local t = self._ref_to_table[savecount]
 	--s = s.."{\n"
 	s = s.."{"
 	for i, v in pairs(t) do
@@ -50,12 +50,12 @@ function Pickle:value_(v)
 end
 
 function Pickle:ref_(t)
-  local ref = self._tableToRef[t]
+  local ref = self._table_to_ref[t]
   if not ref then 
 	if t == self then error("can't pickle the pickle class") end
-	table.insert(self._refToTable, t)
-	ref = #self._refToTable
-	self._tableToRef[t] = ref
+	table.insert(self._ref_to_table, t)
+	ref = #self._ref_to_table
+	self._table_to_ref[t] = ref
   end
   return ref
 end

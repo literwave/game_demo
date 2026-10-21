@@ -1,12 +1,12 @@
 local skynet = require "skynet"
 CMD = {}
 
-function CMD.registerGate(gate, serverId, slaveServiceList)
-	for _, slaveService in ipairs(slaveServiceList) do
-		skynet.send(slaveService, "lua", "registerGate", serverId, gate)
+function CMD.register_gate(gate, server_id, slave_service_list)
+	for _, slave_service in ipairs(slave_service_list) do
+		skynet.send(slave_service, "lua", "register_gate", server_id, gate)
 	end
 end
 
-function accept(slaveService, fd, addr)
-	skynet.send(slaveService, "lua", "auth", fd, addr)
+function accept(slave_service, fd, addr)
+	skynet.send(slave_service, "lua", "auth", fd, addr)
 end

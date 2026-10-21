@@ -1,42 +1,42 @@
 local skynet = require "skynet"
 require "skynet.manager"
-local logPath = skynet.getenv("logpath")
+local log_path = skynet.getenv("logpath")
 -- local cjson = require "cjson"
 
 local CMD = {}
 
 -- 警告日志
-local function writefile(pfile, mod, args, fileName)
+local function writefile(pfile, mod, args, file_name)
 	if not mod then mod = "a+" end
-	local argsStr = table2str(args)
+	local args_str = table2str(args)
 	-- todo
 	if type(args) == "table" then
-		argsStr = table2str(args)
+		args_str = table2str(args)
 	else
 		args = table.pack(args)
 		for i = 1, args.n do
 			args[i] = tostring(args[i])
 		end
-		argsStr = table.concat(args, " ")
+		args_str = table.concat(args, " ")
 	end
-	local file, err = io.open(fileName, mod)
+	local file, err = io.open(file_name, mod)
 	if not file then
-		os.execute(string.format("mkdir -p %q", logPath))
-		file, err = io.open(fileName, mod)
+		os.execute(string.format("mkdir -p %q", log_path))
+		file, err = io.open(file_name, mod)
 	end
-	local writeStr = pfile..argsStr
-	print(writeStr)
+	local write_str = pfile..args_str
+	print(write_str)
 	if not file then
-		skynet.error("gamelog open failed", fileName, err)
+		skynet.error("gamelog open failed", file_name, err)
 		return
 	end
-	file:write(writeStr .. "\n")
+	file:write(write_str .. "\n")
 	file:close()
 end
 
 function CMD.writefile(level, pfile, args)
-	local fileName = logPath .. "/" .. "common_"..level.."_"..os.date("%Y%m%d")..".log"
-	writefile(pfile, nil, args, fileName)
+	local file_name = log_path .. "/" .. "common_"..level.."_"..os.date("%Y%m%d")..".log"
+	writefile(pfile, nil, args, file_name)
 end
 
 function CMD.shutdown()

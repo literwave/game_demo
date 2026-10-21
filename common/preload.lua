@@ -14,10 +14,10 @@ DOFILE_LIST = {
 	"../logic/game.lua",
 }
 
-function initGame()
-	for _, fileInfo in ipairs(DOFILE_LIST) do
-	    dofile(fileInfo)
+function init_game()
+	for _, file_info in ipairs(DOFILE_LIST) do
+	    dofile(file_info)
 	end
 end
 
-initGame()
+init_game()

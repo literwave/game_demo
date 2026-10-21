@@ -2,15 +2,15 @@ local skynet = require "skynet"
 require "skynet.manager"
 
 skynet.start(function()
-	local masterName = ".logind"
-	if skynet.localname(masterName) then
+	local master_name = ".logind"
+	if skynet.localname(master_name) then
 		dofile "../logic/service/logind/preload.lua"
 		dofile "../common/slave_handle.lua"
 		dofile "../common/slave_func.lua"
 	else
-		skynet.register(masterName)
+		skynet.register(master_name)
 		MASTER_HANDLE = Import("../common/master_handle.lua")
 		MASTER_FUNC = Import("../common/master_func.lua")
-		MASTER_HANDLE.startLogin()
+		MASTER_HANDLE.start_login()
 	end
 end)

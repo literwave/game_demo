@@ -1,36 +1,36 @@
 local skynet = require "skynet"
 
-local function getUserTbl(account)
-	return LREDIS.getValueByKey(account) or {}
+local function get_user_tbl(account)
+	return LREDIS.get_value_by_key(account) or {}
 end
 
-function queryUserId(account, userId)
-	local userTbl = getUserTbl(account)
-	return userTbl[userId]
+function query_user_id(account, user_id)
+	local user_tbl = get_user_tbl(account)
+	return user_tbl[user_id]
 end
 
-function createAccount(account, userId)
-	local userTbl = getUserTbl(account)
-	userTbl[userId] = 1
-	LREDIS.setValueByKey(account, userTbl)
+function create_account(account, user_id)
+	local user_tbl = get_user_tbl(account)
+	user_tbl[user_id] = 1
+	LREDIS.set_value_by_key(account, user_tbl)
 end
 
-local function fetchUserId()
-	return skynet.call(".game_sid", "lua", "fetchUserId")
+local function fetch_user_id()
+	return skynet.call(".game_sid", "lua", "fetch_user_id")
 end
 
-function sdkLoginOk(loginInfo)
-	local account = loginInfo.account
+function sdk_login_ok(login_info)
+	local account = login_info.account
 	-- local userId = loginInfo.userId
-	local userTbl = getUserTbl(account)
-	local userId = next(userTbl)
-	if not userId then
-		skynet.error("user create")
-		userId = fetchUserId()
-		loginInfo.userId = userId
-		createAccount(account, userId)
+	local user_tbl = get_user_tbl(account)
+	local user_id = next(user_tbl)
+	if not user_id then
+		skynet.error("user new create")
+		user_id = fetch_user_id()
+		login_info.userId = user_id
+		create_account(account, user_id)
 	else
-		loginInfo.userId = userId
+		login_info.userId = user_id
 	end
 	-- 先不支持一个账号多个用户，先预留功能吧
 	-- if userId == "" then

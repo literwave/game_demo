@@ -7,4 +7,4 @@ TIME		= Import("../common/time.lua")
 
 LREDIS		= Import("../logic/service/logind/lua_redis.lua")
 -- REDIS_KEY	= Import("../logic/service/logind/redis_key.lua")
-JSON4LUA	= Import("../common/json.lua")
+json4_lua	= Import("../common/json.lua")

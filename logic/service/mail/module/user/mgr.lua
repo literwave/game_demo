@@ -1,61 +1,61 @@
-fdToUserId = {
+fd_to_user_id = {
 	-- [vfd] = userId
 }
-userIdToFd = {
+user_id_to_fd = {
 	-- [userId] = fd
 }
-fdToGateSrv = {
+fd_to_gate_srv = {
 	-- [fd] = gateSrv
 }
 
-function getUserIdByVfd(fd)
-	return fdToUserId[fd]
+function get_user_id_by_vfd(fd)
+	return fd_to_user_id[fd]
 end
 
-function delUserIdByVfd(fd)
-	fdToUserId[fd] = nil
+function del_user_id_by_vfd(fd)
+	fd_to_user_id[fd] = nil
 end
 
-function getFdByUserId(userId)
-	return userIdToFd[userId]
+function get_fd_by_user_id(user_id)
+	return user_id_to_fd[user_id]
 end
 
-function getUserIdByFd(fd)
-	return fdToUserId[fd]
+function get_user_id_by_fd(fd)
+	return fd_to_user_id[fd]
 end
 
-function getGateSrvByFd(fd)
-	return fdToGateSrv[fd]
+function get_gate_srv_by_fd(fd)
+	return fd_to_gate_srv[fd]
 end
 
-local function moduleOnUserLogout(userId)
+local function module_on_user_logout(user_id)
 end
 
-function disconnect(fd, userId)
-	delUserIdByVfd(fd)
-	userIdToFd[userId] = nil
-	fdToGateSrv[fd] = nil
-	moduleOnUserLogout(userId)
+function disconnect(fd, user_id)
+	del_user_id_by_vfd(fd)
+	user_id_to_fd[user_id] = nil
+	fd_to_gate_srv[fd] = nil
+	module_on_user_logout(user_id)
 end
 
-function refLogin(userId, fd, gateSrv)
-	userIdToFd[userId] = fd
-	fdToUserId[fd] = userId
-	fdToGateSrv[userId] = gateSrv
+function ref_login(user_id, fd, gate_srv)
+	user_id_to_fd[user_id] = fd
+	fd_to_user_id[fd] = user_id
+	fd_to_gate_srv[user_id] = gate_srv
 end
 
-local function kickUser(fd, userId)
+local function kick_user(fd, user_id)
 	disconnect(fd)
 end
 
-function detectUserHeartBeat(userId)
-	local user = allUserTbl[userId]
+function detect_user_heart_beat(user_id)
+	local user = all_user_tbl[user_id]
 	if not user then
 		return
 	end
-	local lastHeartBeatTime = user:getHeartBeatTime()
-	if os.time() - lastHeartBeatTime > CONST.USER_HEART_BEAT_TIMEOUT then
-		local fd = getFdByUserId(userId)
-		kickUser(fd, userId)
+	local last_heart_beat_time = user:get_heart_beat_time()
+	if os.time() - last_heart_beat_time > CONST.USER_HEART_BEAT_TIMEOUT then
+		local fd = get_fd_by_user_id(user_id)
+		kick_user(fd, user_id)
 	end
 end

@@ -10,34 +10,34 @@ LANGUAGE = skynet.getenv("language")
 PROFILE = skynet.getenv("profile")
 GAME = skynet.getenv("game")
 
-function getServerId()
+function get_server_id()
 	return SERVER_ID
 end
 
-function isAllowRegister()
+function is_allow_register()
 	return ALLOW_REGISTER
 end
 
-function getCurLanguage()
+function get_cur_language()
 	return LANGUAGE
 end
 
-function getCurLanguage()
+function get_cur_language()
 	return LANGUAGE
 end
 
-function getProfile()
+function get_profile()
 	return PROFILE
 end
 
-function getDataBase()
+function get_data_base()
 	return string.format("%s%s", GAME, SERVER_ID)
 end
 
-function getLoginLockKey()
-	return "loginLock"
+function get_login_lock_key()
+	return "login_lock"
 end
 
-function getShutDownTime()
+function get_shut_down_time()
 	return 0
 end

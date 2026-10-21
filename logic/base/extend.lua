@@ -27,11 +27,11 @@ if not setfenv then -- Lua 5.2 or 5.3
 	end
 end
 
-function table.isEmpty(luaTable)
-	if not luaTable then
+function table.is_empty(lua_table)
+	if not lua_table then
 		return
 	end
-	for _ in pairs(luaTable) do
+	for _ in pairs(lua_table) do
 		return false
 	end
 	return true
@@ -39,22 +39,22 @@ end
 
 if not table.maxn then
 	table.maxn = function (array)
-		local curMax
+		local cur_max
 		for idx in ipairs(array) do
-			if not curMax then
-				curMax = idx
+			if not cur_max then
+				cur_max = idx
 			else
-				curMax = math.max(idx, curMax)
+				cur_max = math.max(idx, cur_max)
 			end
 		end
-		return curMax
+		return cur_max
 	end
 end
 
 
 
 
-function table.hasElement(tbl)
+function table.has_element(tbl)
 	if not tbl then
 		return
 	end
@@ -78,14 +78,14 @@ function table.deepcopy(t, d)
 end
 
 function table.size(tbl)
-	local tblLen = 0
+	local tbl_len = 0
 	for _ in pairs(tbl) do
-		tblLen = tblLen + 1
+		tbl_len = tbl_len + 1
 	end
-	return tblLen
+	return tbl_len
 end
 
-function table.valToNumber(tbl)
+function table.val_to_number(tbl)
 	for key, val in pairs(tbl) do
 		tbl[key] = tostring(val)
 	end
@@ -127,11 +127,11 @@ function table2str(obj, indent)
 	return str
 end
 
-function makeCommonPtoTbl(k, v)
+function make_common_pto_tbl(k, v)
 	return { k = k, v = v}
 end
 
-function randItemByWeight(tbl)
+function rand_item_by_weight(tbl)
 	local sum = 0
 	for _, v in pairs(tbl) do
 		sum = sum + v[2]
@@ -140,10 +140,10 @@ function randItemByWeight(tbl)
 		return
 	end
 	local rand = math.random(sum)
-	local curSum = 0
+	local cur_sum = 0
 	for _, v in pairs(tbl) do
-		curSum = curSum + v[2]
-		if curSum >= rand then
+		cur_sum = cur_sum + v[2]
+		if cur_sum >= rand then
 			return v[1]
 		end
 	end
@@ -151,17 +151,17 @@ end
 
 local id = 0
 local OPEN_DATE = 1704067200
-function getIdByUserIdAndTimestamp(userId)
+function get_id_by_user_id_and_timestamp(user_id)
 	id = id + 1
 	local sec = os.time() - OPEN_DATE
-	return string.format("%06d%08d%03d", userId, sec, id)
+	return string.format("%06d%08d%03d", user_id, sec, id)
 end
 
-local srvAutoId = 0
-function getIdBySrvIdAndTimestamp()
-	srvAutoId = srvAutoId + 1
+local srv_auto_id = 0
+function get_id_by_srv_id_and_timestamp()
+	srv_auto_id = srv_auto_id + 1
 	local sec = os.time() - OPEN_DATE
-	return string.format("%06d%08d%03d", GAME.getServerId(), sec, srvAutoId)
+	return string.format("%06d%08d%03d", GAME.get_server_id(), sec, srv_auto_id)
 end
 
 EMPTY_TABLE = {}

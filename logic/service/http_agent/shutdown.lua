@@ -10,9 +10,9 @@ local function response(fd, ...)
 	end
 end
 
-function onHttpRequest(fd, paramsTbl, body)
-	local allServiceList = skynet.call(".launcher", "lua", "LIST")
-	for _, addr in ipairs(allServiceList) do
+function on_http_request(fd, params_tbl, body)
+	local all_service_list = skynet.call(".launcher", "lua", "LIST")
+	for _, addr in ipairs(all_service_list) do
 		if addr ~= skynet.self() then
 			skynet.call(addr, "lua", "shutdown")
 		end

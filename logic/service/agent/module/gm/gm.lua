@@ -17,9 +17,9 @@ local CMD_DESC = {
 }
 
 local function tell(vfd, msg)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	if userId then
-		USER_MGR.tellMe(userId, msg)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	if user_id then
+		USER_MGR.tell_me(user_id, msg)
 	end
 end
 
@@ -43,24 +43,24 @@ end
 
 CMD.h = CMD.help
 
-function CMD.code(vfd, codeString)
-	assert(type(codeString) == "string" and codeString ~= "", "empty code")
-	local fn, err = load(codeString, "gmcode")
+function CMD.code(vfd, code_string)
+	assert(type(code_string) == "string" and code_string ~= "", "empty code")
+	local fn, err = load(code_string, "gmcode")
 	assert(fn, err)
 	fn()
 end
 
 function CMD.update(vfd, file)
 	assert(type(file) == "string" and file ~= "", "empty file")
-	assert(updateLuaFile(file))
+	assert(update_lua_file(file))
 end
 
 function CMD.full_build(vfd)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	local buildTbl = BUILD_MGR.getUserBuildTbl(userId)
-	for _, build in pairs(buildTbl) do
-		build:setLevel(DATA_COMMON.getBuildMaxLevel(build:getBuildType()))
-		build:syncToClient()
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	local build_tbl = BUILD_MGR.get_user_build_tbl(user_id)
+	for _, build in pairs(build_tbl) do
+		build:set_level(DATA_COMMON.get_build_max_level(build:get_build_type()))
+		build:sync_to_client()
 	end
 end
 
@@ -68,74 +68,74 @@ function CMD.add_time(vfd, hour, min, sec)
 	hour = hour or 0
 	min = min or 0
 	sec = sec or 0
-	TIME.addOffset(hour * CONST.ONE_HOUR_SEC + min * 60 + sec)
-	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.osBJSec()))
+	TIME.add_offset(hour * CONST.ONE_HOUR_SEC + min * 60 + sec)
+	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.os_bj_sec()))
 end
 
 function CMD.reset_time(vfd)
-	TIME.resetOffset()
-	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.osBJSec()))
+	TIME.reset_offset()
+	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.os_bj_sec()))
 end
 
 function CMD.show_time(vfd)
-	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.osBJSec()))
+	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.os_bj_sec()))
 end
 
-function CMD.add_item(vfd, itemType, cnt)
-	assert(itemType and cnt and cnt > 0)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	REWARD_MGR.rewardUserAndShow(userId, {
-		GLOBAL_FUNC.genRewardInfo(CONST.REWARD_TYPE_ITEM, itemType, cnt),
+function CMD.add_item(vfd, item_type, cnt)
+	assert(item_type and cnt and cnt > 0)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	REWARD_MGR.reward_user_and_show(user_id, {
+		GLOBAL_FUNC.gen_reward_info(CONST.REWARD_TYPE_ITEM, item_type, cnt),
 	}, {})
 end
 
-function CMD.del_item(vfd, itemType, cnt)
-	assert(itemType and cnt and cnt > 0)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	assert(ITEM_MGR.delCostList(userId, {
+function CMD.del_item(vfd, item_type, cnt)
+	assert(item_type and cnt and cnt > 0)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	assert(ITEM_MGR.del_cost_list(user_id, {
 		{
-			costType = CONST.COST_TYPE.ITEM,
-			itemId = itemType,
+			cost_type = CONST.COST_TYPE.ITEM,
+			itemId = item_type,
 			count = cnt,
 		},
 	}))
 end
 
-function CMD.add_hero(vfd, heroType)
-	assert(heroType)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	HERO_MGR.addHero(userId, heroType, {})
+function CMD.add_hero(vfd, hero_type)
+	assert(hero_type)
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	HERO_MGR.add_hero(user_id, hero_type, {})
 end
 
 function CMD.full_hero(vfd)
-	local userId = USER_MGR.getUserIdByVfd(vfd)
-	for _, heroType in ipairs(DATA_COMMON.getAllHeroTypes()) do
-		HERO_MGR.addHero(userId, heroType, {})
+	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
+	for _, hero_type in ipairs(DATA_COMMON.get_all_hero_types()) do
+		HERO_MGR.add_hero(user_id, hero_type, {})
 	end
 end
 
-local function onGmCommand(fd, packet)
+local function on_gm_command(fd, packet)
 	local cmd = packet and packet.cmd
 	if type(cmd) ~= "string" or cmd == "" then
 		return
 	end
-	local userId = USER_MGR.getUserIdByVfd(fd)
-	if not userId then
+	local user_id = USER_MGR.get_user_id_by_vfd(fd)
+	if not user_id then
 		return
 	end
-	local cmdTbl = string.split(cmd, " ")
-	local funcName = cmdTbl[1]
-	local func = CMD[funcName]
+	local cmd_tbl = string.split(cmd, " ")
+	local func_name = cmd_tbl[1]
+	local func = CMD[func_name]
 	if not func then
-		USER_MGR.tellMe(userId, "没有这个指令")
+		USER_MGR.tell_me(user_id, "没有这个指令")
 		return
 	end
-	skynet.error(string.format("gmcmd:%s %s", userId, cmd))
+	skynet.error(string.format("gmcmd:%s %s", user_id, cmd))
 	local args = {}
-	if funcName == "code" then
+	if func_name == "code" then
 		table.insert(args, string.match(cmd, "^%S+%s+(.*)$"))
-	elseif cmdTbl[2] then
-		for _, v in ipairs(string.split(cmdTbl[2], ",")) do
+	elseif cmd_tbl[2] then
+		for _, v in ipairs(string.split(cmd_tbl[2], ",")) do
 			table.insert(args, tonumber(v) or v)
 		end
 	end
@@ -143,12 +143,12 @@ local function onGmCommand(fd, packet)
 		func(fd, table.unpack(args))
 	end, __G__TRACKBACK__)
 	if ok then
-		USER_MGR.tellMe(userId, "指令使用成功")
+		USER_MGR.tell_me(user_id, "指令使用成功")
 	else
-		USER_MGR.tellMe(userId, "指令使用失败报错")
+		USER_MGR.tell_me(user_id, "指令使用失败报错")
 	end
 end
 
 function __init__()
-	for_maker.c2s_gm_command = onGmCommand
+	for_maker.c2s_gm_command = on_gm_command
 end

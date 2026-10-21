@@ -13,7 +13,7 @@ function g_pickle.eval(str)--注意,不能写变量名,后面直接为{},不能�
 end
 
 --misc tabletostr 没空去比较这两具函数
-function g_pickle.serializeTable(val, name, skipnewlines, depth)
+function g_pickle.serialize_table(val, name, skipnewlines, depth)
 	skipnewlines = skipnewlines or true
 	depth = depth or 0
 	local tmp = string.rep("", depth)
@@ -31,7 +31,7 @@ function g_pickle.serializeTable(val, name, skipnewlines, depth)
 	if type(val) == "table" then
 	    tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
 	    for k, v in pairs(val) do
-	        tmp =  tmp .. g_pickle.serializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+	        tmp =  tmp .. g_pickle.serialize_table(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
 	    end
 	    tmp = tmp .. string.rep("", depth) .. "}"
 	elseif type(val) == "number" then

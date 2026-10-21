@@ -2,11 +2,11 @@ local DOFILE_LIST = {
 	"../logic/service/main_mongodb/global.lua",
 }
 
-local function initDofile()
-	for _, fileInfo in ipairs(DOFILE_LIST) do
-		dofile(fileInfo)
+local function init_dofile()
+	for _, file_info in ipairs(DOFILE_LIST) do
+		dofile(file_info)
 	end
 end
 
-initDofile()
+init_dofile()
 

@@ -7,26 +7,26 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
-function CMD.onUserLogin(userId, fd, gateSrv, isFirstLogin)
-	skynet.error("mail login success", userId, gateSrv, isFirstLogin)
-	USER_MGR.refLogin(userId, fd, gateSrv)
+function CMD.on_user_login(user_id, fd, gate_srv, is_first_login)
+	skynet.error("mail login success", user_id, gate_srv, is_first_login)
+	USER_MGR.ref_login(user_id, fd, gate_srv)
 end
 
-function CMD.onUserLogout(userId, fd)
-	skynet.error("mail logout success", userId, fd)
-	USER_MGR.disconnect(userId, fd)
+function CMD.on_user_logout(user_id, fd)
+	skynet.error("mail logout success", user_id, fd)
+	USER_MGR.disconnect(user_id, fd)
 end
 
-function CMD.sendUserMail(userId, mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec)
-	MAIL_MGR.sendUserMail(userId, mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec)
+function CMD.send_user_mail(user_id, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec)
+	MAIL_MGR.send_user_mail(user_id, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec)
 end
 
-function CMD.sendSrvMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec)
-	MAIL_MGR.sendSrvMail(mailKind, mailType, title, contentTbl, detailTbl, rewardList, lifeSec)
+function CMD.send_srv_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec)
+	MAIL_MGR.send_srv_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec)
 end
 
-function sendGroupMail(userIdTbl, mailType, title, contentTbl, detailTbl, rewardList, lifeSec)
-	MAIL_MGR.sendGroupMail(userIdTbl, mailType, title, contentTbl, detailTbl, rewardList, lifeSec)
+function send_group_mail(user_id_tbl, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec)
+	MAIL_MGR.send_group_mail(user_id_tbl, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec)
 end
 
 skynet.start(function()

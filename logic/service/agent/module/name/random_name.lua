@@ -1,20 +1,20 @@
-function getRandomName()
-	local language = GAME.getCurLanguage()
-	local firstNameList = DATA_COMMON.getFirstNameList(language)
-	local lastNameList = DATA_COMMON.getLastNameList(language)
-	local firstCnt = #firstNameList
-	local lastCnt = #lastNameList
-	local firstNameIdx = math.random(1, firstCnt)
-	local lastNameIdx = math.random(1, lastCnt)
-	local firstName = firstNameList[firstNameIdx].Txt
-	local lastName = lastNameList[lastNameIdx].Txt
-	return string.format("%s%s", lastName, firstName)
+function get_random_name()
+	local language = GAME.get_cur_language()
+	local first_name_list = DATA_COMMON.get_first_name_list(language)
+	local last_name_list = DATA_COMMON.get_last_name_list(language)
+	local first_cnt = #first_name_list
+	local last_cnt = #last_name_list
+	local first_name_idx = math.random(1, first_cnt)
+	local last_name_idx = math.random(1, last_cnt)
+	local first_name = first_name_list[first_name_idx].Txt
+	local last_name = last_name_list[last_name_idx].Txt
+	return string.format("%s%s", last_name, first_name)
 end
 
-function genNewUserName()
+function gen_new_user_name()
 	-- 这里如果重复了咋办, 随机的让他重复吧
-	local name = getRandomName()
-	if USER_NAME.checkNameExsist(name) then
+	local name = get_random_name()
+	if USER_NAME.check_name_exsist(name) then
 		return string.format("%s%s", name)
 	end
 	return name

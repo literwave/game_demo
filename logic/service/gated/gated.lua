@@ -30,16 +30,16 @@ skynet.register_protocol {
 
 local handle = {}
 
-local function decodePack(msg)
+local function decode_pack(msg)
 	local _, pos = string.unpack(">I4", msg)
 	return protobuf.decode("Login.c2s_verify_login", msg:sub(pos))
 end
 
-local function encodePack(msg)
-	local packName = "Login.s2c_user_login_ok"
-	local packData = string.pack(">I2", PACK_NAME_TO_ID[packName]) .. protobuf.encode(packName, msg)
-	packData = string.pack(">I2", #packData) .. packData
-	return packData
+local function encode_pack(msg)
+	local pack_name = "Login.s2c_user_login_ok"
+	local pack_data = string.pack(">I2", PACK_NAME_TO_ID[pack_name]) .. protobuf.encode(pack_name, msg)
+	pack_data = string.pack(">I2", #pack_data) .. pack_data
+	return pack_data
 end
 
 function handle.connect(id)
@@ -51,48 +51,48 @@ function handle.handshake(id, header, url)
 	print("gate ws handshake from: " .. tostring(id), "url", url, "addr:", addr)
 end
 
-local function getBalanceAgentInfo()
+local function get_balance_agent_info()
 	table.sort(AGENT_POOLS, function(a, b)
-		return a.userCnt < b.userCnt
+		return a.user_cnt < b.user_cnt
 	end)
 	return AGENT_POOLS[1]
 end
 
-local function firstLogin(packet, fd)
+local function first_login(packet, fd)
 	local token = packet.token
-	local userId = packet.userId
+	local user_id = packet.userId
 	local passwd = packet.passwd
-	local userInfo = LREDIS.getValueByKey(token) or EMPTY_TABLE
-	if userId ~= userInfo.userId or passwd ~= userInfo.passwd then
-		skynet.error("token error", token, userId, passwd, userInfo.userId, userInfo.passwd)
+	local user_info = LREDIS.get_value_by_key(token) or EMPTY_TABLE
+	if user_id ~= user_info.userId or passwd ~= user_info.passwd then
+		skynet.error("token error", token, user_id, passwd, user_info.userId, user_info.passwd)
 		return
 	end
-	local agentInfo = getBalanceAgentInfo()
-	if not agentInfo then
-		skynet.error("get agent failed", userId)
+	local agent_info = get_balance_agent_info()
+	if not agent_info then
+		skynet.error("get agent failed", user_id)
 		return
 	end
-	local agent = agentInfo.agent
-	skynet.call(agent, "lua", "login", skynet.self(), fd, userId, addr, userInfo.account, userInfo.serverId, token)
-	print("userId: ", userId)
-	agentInfo.userCnt = agentInfo.userCnt + 1
+	local agent = agent_info.agent
+	skynet.call(agent, "lua", "login", skynet.self(), fd, user_id, addr, user_info.account, user_info.serverId, token)
+	print("userId: ", user_id)
+	agent_info.user_cnt = agent_info.user_cnt + 1
 	local c = {
 		agent = agent,
-		userId = userId,
+		userId = user_id,
 		addr = addr,
 	}
 	CONNECTION[fd] = c
-	local ptoTbl = {
-		userId = userId,
-		serverId = userInfo.serverId,
+	local pto_tbl = {
+		userId = user_id,
+		serverId = user_info.serverId,
 	}
-	local sendPacket = encodePack(ptoTbl)
-	websocket.write(fd, sendPacket, "binary")
+	local send_packet = encode_pack(pto_tbl)
+	websocket.write(fd, send_packet, "binary")
 	skynet.error("login ok")
 end
 
 function handle.message(fd, msg)
-	local function errorHandler(err)
+	local function error_handler(err)
 		skynet.error("handle.message mistake", err)
 		skynet.error("stack", debug.traceback())
 		return err
@@ -100,17 +100,17 @@ function handle.message(fd, msg)
 	local ok, ret = xpcall(function ()
 		local conn = CONNECTION[fd]
 		if not conn then
-			local packet = decodePack(msg)
+			local packet = decode_pack(msg)
 			if not packet then
 				return
 			end
-			firstLogin(packet, fd)
+			first_login(packet, fd)
 		else
 			local agent = conn.agent
-			local userId = conn.userId
-			skynet.send(agent, "client", fd, msg, userId)
+			local user_id = conn.userId
+			skynet.send(agent, "client", fd, msg, user_id)
 		end
-	end, errorHandler)
+	end, error_handler)
 	if not ok then
 		skynet.error("handle.message ", fd, "mistake：", ret)
 	end
@@ -120,9 +120,9 @@ function handle.close(id, code, reason)
 	local conn = CONNECTION[id]
 	if conn then
 		local agent = conn.agent
-		for _, agentInfo in pairs(AGENT_POOLS) do
-			if agentInfo.agent == agent then
-				agentInfo.userCnt = agentInfo.userCnt - 1
+		for _, agent_info in pairs(AGENT_POOLS) do
+			if agent_info.agent == agent then
+				agent_info.user_cnt = agent_info.user_cnt - 1
 			end
 		end
 		skynet.send(agent, "lua", "disconnect", id, conn.userId)
@@ -135,9 +135,9 @@ function handle.error(id)
 	local conn = CONNECTION[id]
 	if conn then
 		local agent = conn.agent
-		for _, agentInfo in pairs(AGENT_POOLS) do
-			if agentInfo.agent == agent then
-				agentInfo.userCnt = agentInfo.userCnt - 1
+		for _, agent_info in pairs(AGENT_POOLS) do
+			if agent_info.agent == agent then
+				agent_info.user_cnt = agent_info.user_cnt - 1
 			end
 		end
 		skynet.send(agent, "lua", "disconnect", id, conn.userId)
@@ -155,15 +155,15 @@ function CMD.open(conf)
 	end)
 	for _ = 1, AGENT_INIT_CNT do
 		local agent = {
-			userCnt = 0,
+			user_cnt = 0,
 			agent = skynet.newservice("agent")
 		}
 		table.insert(AGENT_POOLS, agent)
 	end
-	skynet.send(".logind", "lua", "registerGate", skynet.self(), conf.serverId, addr)
+	skynet.send(".logind", "lua", "register_gate", skynet.self(), conf.serverId, addr)
 end
 
-function CMD.sendClientPack(fd, packet)
+function CMD.send_client_pack(fd, packet)
 	websocket.write(fd, packet, "binary") 
 end
 

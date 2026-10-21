@@ -24,46 +24,46 @@ local _FILE_INFO_WITH_NAME_T = {
 	">",
 }
 function _info(...)
-	local debugInfo = debug.getinfo(2, 'nSl')
+	local debug_info = debug.getinfo(2, 'nSl')
 	local t
-	if debugInfo.name then
-		_FILE_INFO_WITH_NAME_T[8] = debugInfo.name
+	if debug_info.name then
+		_FILE_INFO_WITH_NAME_T[8] = debug_info.name
 		t = _FILE_INFO_WITH_NAME_T
 	else
 		t = _FILE_INFO_T
 	end
-	t[3] = debugInfo.short_src
-	t[5] = debugInfo.currentline
+	t[3] = debug_info.short_src
+	t[5] = debug_info.currentline
 	local pfile = os.date("[%Y-%m-%d %H:%M:%S]") .. " [INFO]" .. table.concat(t)
 	skynet.send(".gamelog", "lua", "writefile", "info", pfile, ...)
 end
 
 function _debug(...)
-	local debugInfo = debug.getinfo(2, 'nSl')
+	local debug_info = debug.getinfo(2, 'nSl')
 	local t
-	if debugInfo.name then
-		_FILE_INFO_WITH_NAME_T[8] = debugInfo.name
+	if debug_info.name then
+		_FILE_INFO_WITH_NAME_T[8] = debug_info.name
 		t = _FILE_INFO_WITH_NAME_T
 	else
 		t = _FILE_INFO_T
 	end
-	t[3] = debugInfo.short_src
-	t[5] = debugInfo.currentline
+	t[3] = debug_info.short_src
+	t[5] = debug_info.currentline
 	local pfile = os.date("[%Y-%m-%d %H:%M:%S]") .. " [DEBUG]" .. table.concat(t)
 	skynet.send(".gamelog", "lua", "writefile", "debug", pfile, ...)
 end
 
 function _error(...)
-	local debugInfo = debug.getinfo(2, 'nSl')
+	local debug_info = debug.getinfo(2, 'nSl')
 	local t
-	if debugInfo.name then
-		_FILE_INFO_WITH_NAME_T[8] = debugInfo.name
+	if debug_info.name then
+		_FILE_INFO_WITH_NAME_T[8] = debug_info.name
 		t = _FILE_INFO_WITH_NAME_T
 	else
 		t = _FILE_INFO_T
 	end
-	t[3] = debugInfo.short_src
-	t[5] = debugInfo.currentline
+	t[3] = debug_info.short_src
+	t[5] = debug_info.currentline
 	local pfile = os.date("[%Y-%m-%d %H:%M:%S]") .. " [ERROR]" .. table.concat(t)
 	skynet.send(".gamelog", "lua", "writefile", "error", pfile, ...)
 end

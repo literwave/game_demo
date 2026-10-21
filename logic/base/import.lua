@@ -1,19 +1,19 @@
 
 local string=string
 
-_G._ImportModule = _G._ImportModule or {}
-local _ImportModule = _G._ImportModule
+_G._import_module = _G._import_module or {}
+local _import_module = _G._import_module
 
-local function updateImportByContent(pathFile, content)
-	return __updateImportByContent(_ImportModule, pathFile, content)
+local function update_import_by_content(path_file, content)
+	return __update_import_by_content(_import_module, path_file, content)
 end
 
-local function updateImport(PathFile)
-	return __updateImport(_ImportModule, PathFile, loadfile)
+local function update_import(path_file)
+	return __update_import(_import_module, path_file, loadfile)
 end
 
-local function doImport(PathFile)
-	local func, err = loadfile(PathFile)
+local function do_import(path_file)
+	local func, err = loadfile(path_file)
 
 	if not func then
 		print(string.format("ERROR!!!\n%s\n%s", err, debug.traceback()))
@@ -21,11 +21,11 @@ local function doImport(PathFile)
 	end
 
 	local New = {}
-	_ImportModule[PathFile] = New
+	_import_module[path_file] = New
 	--设置原始环境
 	setmetatable(New, {__index = _G})
 	setfenv(func, New)()
-	New.__FILE__ = PathFile
+	New.__FILE__ = path_file
 
 	if rawget(New, "__init__") then
 		New:__init__()
@@ -34,38 +34,38 @@ local function doImport(PathFile)
 	return New
 end
 
-local function SafeImport(PathFile)
-	local Old = _ImportModule[PathFile]
+local function safe_import(path_file)
+	local Old = _import_module[path_file]
 	if Old then
 		return Old
 	end
 
-	return doImport(PathFile)
+	return do_import(path_file)
 end
 
-function Reimport(PathFile)
-	return doImport(PathFile)
+function Reimport(path_file)
+	return do_import(path_file)
 end
 
-function localEnvDoFile(fileName)
+function local_env_do_file(file_name)
 	local env = getfenv(2)
-	local func, err = loadfile(fileName)
+	local func, err = loadfile(file_name)
 	setfenv(func, env)()
 end
 
-function Import(PathFile)
-	local Module, Err = SafeImport(PathFile)
+function Import(path_file)
+	local Module, Err = safe_import(path_file)
 	assert(Module, Err)
 
 	return Module
 end
 
-function updateLuaFile(PathFile)
-	local ret = updateImport(PathFile)
+function update_lua_file(path_file)
+	local ret = update_import(path_file)
 	return ret
 end
 
-function updateLuaByContent(path, content)
-	updateImportByContent(path, content)
+function update_lua_by_content(path, content)
+	update_import_by_content(path, content)
 end
 

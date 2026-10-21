@@ -1,67 +1,67 @@
-clsHero = clsObject:Inherit()
+cls_hero = cls_object:Inherit()
 
-function clsHero:__init__(oci)
-	Super(clsHero).__init__(self, oci)
+function cls_hero:__init__(oci)
+	Super(cls_hero).__init__(self, oci)
 	if ORM.is_cls(oci, ORM.CLS_HERO_DATA) then
 		self._data = oci
 	else
 		self._data = ORM.create(ORM.CLS_HERO_DATA, oci)
 	end
-	ORM.put(MONGO_SLAVE.COL.USER_HERO, self._data._userId, "_heroes", self._data._heroType, self._data)
+	ORM.put(MONGO_SLAVE.COL.USER_HERO, self._data._user_id, "_heroes", self._data._hero_type, self._data)
 end
 
-function clsHero:getUserId()
-	return self._data._userId
+function cls_hero:get_user_id()
+	return self._data._user_id
 end
 
-function clsHero:getNewTag()
-	return self._data._newTag
+function cls_hero:get_new_tag()
+	return self._data._new_tag
 end
 
-function clsHero:setNewTag(newTag)
-	self._data._newTag = newTag and true or false
+function cls_hero:set_new_tag(new_tag)
+	self._data._new_tag = new_tag and true or false
 end
 
-function clsHero:getHeroType()
-	return self._data._heroType
+function cls_hero:get_hero_type()
+	return self._data._hero_type
 end
 
-function clsHero:getStar()
+function cls_hero:get_star()
 	return self._data._star
 end
 
-function clsHero:getHeroPTOBaseInfo()
-	local skillList = {}
-	for skillId, skillLv in pairs(self._data._skillTbl) do
-		table.insert(skillList, {
-			k = skillId,
-			v = skillLv,
+function cls_hero:get_hero_pto_base_info()
+	local skill_list = {}
+	for skill_id, skill_lv in pairs(self._data._skill_tbl) do
+		table.insert(skill_list, {
+			k = skill_id,
+			v = skill_lv,
 		})
 	end
 	return {
-		heroType = self._data._heroType,
+		heroType = self._data._hero_type,
 		exp = self._data._exp,
 		lv = self._data._level,
-		star = self:getStar(),
+		star = self:get_star(),
 		state = self._data._state or 0,
-		skillList = skillList,
-		newTag = self:getNewTag(),
+		skillList = skill_list,
+		newTag = self:get_new_tag(),
 	}
 end
 
-function clsHero:syncToClient()
-	local fd = USER_MGR.getFdByUserId(self:getUserId())
-	for_caller.s2c_sync_hero_base_info(fd, {heroInfo = self:getHeroPTOBaseInfo()})
+function cls_hero:sync_to_client()
+	local fd = USER_MGR.get_fd_by_user_id(self:get_user_id())
+	for_caller.s2c_sync_hero_base_info(fd, {heroInfo = self:get_hero_pto_base_info()})
 end
 
-function clsHero:getSkillTbl()
-	return self._data._skillTbl
+function cls_hero:get_skill_tbl()
+	return self._data._skill_tbl
 end
 
-function clsHero:setSkillLv(skillId, skillLv)
-	self._data._skillTbl[skillId] = skillLv
+function cls_hero:set_skill_lv(skill_id, skill_lv)
+	self._data._skill_tbl[skill_id] = skill_lv
 end
 
-function clsHero:getEquipTbl()
-	return self._data._equipTbl
+function cls_hero:get_equip_tbl()
+	return self._data._equip_tbl
 end
