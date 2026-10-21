@@ -17,6 +17,7 @@ skynet.start(function()
 	local gate = skynet.newservice("gated")
 	skynet.call(gate, "lua", "open", {
 		serverId = skynet.getenv("host_id"),
+		address = skynet.getenv("gate_address"),
 		port = skynet.getenv("gate_port"),
 	})
 	-- -- control hot update or stop srv

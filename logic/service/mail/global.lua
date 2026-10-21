@@ -6,6 +6,7 @@ DATA_COMMON	= Import("../logic/define/data.lua")
 FUNCLIB 	= Import("../common/funclib.lua")
 CB_MGR		= Import("../common/cb_mgr.lua")
 CALL_OUT	= Import("../common/call_out.lua")
+EVENT		= Import("../common/event.lua")
 
 ORM		= Import("../orm/init.lua")
 

@@ -30,14 +30,33 @@ skynet.register_protocol {
 
 local handle = {}
 
-local function decode_pack(msg)
-	local _, pos = string.unpack(">I4", msg)
-	return protobuf.decode("Login.c2s_verify_login", msg:sub(pos))
+local function decode_verify_login_pack(msg)
+	if #msg < 4 then
+		return nil, "short pack"
+	end
+	local ok, _, pos = pcall(string.unpack, ">I4", msg)
+	if not ok then
+		return nil, _
+	end
+	local decoded, err
+	ok, decoded, err = pcall(protobuf.decode, "Login.c2s_verify_login", msg:sub(pos))
+	if not ok or not decoded then
+		return nil, ok and err or decoded
+	end
+	return decoded
 end
 
-local function encode_pack(msg)
+local function encode_login_ok_pack(msg)
 	local pack_name = "Login.s2c_user_login_ok"
-	local pack_data = string.pack(">I2", PACK_NAME_TO_ID[pack_name]) .. protobuf.encode(pack_name, msg)
+	local pack_id = PACK_NAME_TO_ID[pack_name]
+	if not pack_id then
+		return nil, "pack id missing"
+	end
+	local ok, body = pcall(protobuf.encode, pack_name, msg)
+	if not ok then
+		return nil, body
+	end
+	local pack_data = string.pack(">I2", pack_id) .. body
 	pack_data = string.pack(">I2", #pack_data) .. pack_data
 	return pack_data
 end
@@ -74,7 +93,7 @@ local function first_login(packet, fd)
 	end
 	local agent = agent_info.agent
 	skynet.call(agent, "lua", "login", skynet.self(), fd, user_id, addr, user_info.account, user_info.serverId, token)
-	print("userId: ", user_id)
+	skynet.error("userId: ", user_id)
 	agent_info.user_cnt = agent_info.user_cnt + 1
 	local c = {
 		agent = agent,
@@ -86,7 +105,12 @@ local function first_login(packet, fd)
 		userId = user_id,
 		serverId = user_info.serverId,
 	}
-	local send_packet = encode_pack(pto_tbl)
+	local send_packet, err = encode_login_ok_pack(pto_tbl)
+	if not send_packet then
+		skynet.error("login ok encode failed", fd, err)
+		websocket.close(fd)
+		return
+	end
 	websocket.write(fd, send_packet, "binary")
 	skynet.error("login ok")
 end
@@ -100,8 +124,10 @@ function handle.message(fd, msg)
 	local ok, ret = xpcall(function ()
 		local conn = CONNECTION[fd]
 		if not conn then
-			local packet = decode_pack(msg)
+			local packet, err = decode_verify_login_pack(msg)
 			if not packet then
+				skynet.error("verify login decode failed", fd, err)
+				websocket.close(fd)
 				return
 			end
 			first_login(packet, fd)
@@ -113,6 +139,7 @@ function handle.message(fd, msg)
 	end, error_handler)
 	if not ok then
 		skynet.error("handle.message ", fd, "mistake：", ret)
+		websocket.close(fd)
 	end
 end
 
@@ -149,7 +176,7 @@ end
 function CMD.open(conf)
 	skynet.error(string.format("gate Listen on %s:%d", conf.address or "0.0.0.0", conf.port))
 	local fd = socket.listen(conf.address or "0.0.0.0", conf.port)
-	local addr = string.format("%s:%s", conf.address or "127.0.0.1", conf.port)
+	local addr = string.format("%s:%s", conf.address or "0.0.0.0", conf.port)
 	socket.start(fd, function (fd, addr)
 		websocket.accept(fd, handle, PROTOCOL, addr)
 	end)

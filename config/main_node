@@ -59,7 +59,7 @@ pbpath = rootdir .. "game_common/pb/"
 logpath = rootdir.."log"
 
 ------------ 网关相关 --------------
-gate_address = "0.0.0.0"
+gate_address = "127.0.0.1"
 gate_port = 33022
 gate_cnt = 3
 

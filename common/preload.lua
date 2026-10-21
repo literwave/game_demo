@@ -4,6 +4,10 @@ if skynet.PTYPE_RPC == nil then
 	skynet.PTYPE_RPC = 13
 end
 
+if skynet.PTYPE_EVENT == nil then
+	skynet.PTYPE_EVENT = 14
+end
+
 DOFILE_LIST = {
 	"../logic/base/import.lua",
 	"../logic/base/common_class.lua",

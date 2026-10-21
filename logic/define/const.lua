@@ -75,3 +75,9 @@ MAP_CELL_TYPE = {
 ENTITY_TYPE = {
 	MAIN_HALL = 1,
 }
+
+EVENT = {
+	ON_USER_LOGIN = "on_user_login",
+	ON_USER_LOGOUT = "on_user_logout",
+	KICK_USER = "kick_user",
+}

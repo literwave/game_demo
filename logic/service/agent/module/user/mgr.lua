@@ -138,7 +138,7 @@ function module_on_user_next_day(user_id, times)
 	times = times or 1
 end
 
-local function kick_user(fd, user_id)
+function kick_user(fd, user_id)
 	disconnect(fd)
 end
 
@@ -150,7 +150,7 @@ function detect_user_heart_beat(user_id)
 	local last_heart_beat_time = user:get_heart_beat_time()
 	if os.time() - last_heart_beat_time > CONST.USER_HEART_BEAT_TIMEOUT then
 		local fd = get_fd_by_user_id(user_id)
-		kick_user(fd, user_id)
+		EVENT.emit(CONST.EVENT.KICK_USER, fd, user_id)
 	end
 end
 
@@ -183,4 +183,5 @@ function __init__()
 	for_maker.c2s_heart_beat = on_heart_beat
 	for_maker.c2s_user_base_info = on_user_baseinfo
 	for_maker.c2s_user_create = on_user_create
+	EVENT.register(CONST.EVENT.KICK_USER)
 end
