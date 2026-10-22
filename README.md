@@ -4,7 +4,7 @@
 
 面向原型验证与中小型玩法服务端二次开发，提供可运行的登录、网关、玩家逻辑、持久化与基础运维能力。
 
-配套客户端：[game_demo_client](https://github.com/literwave/game_demo_client)（Cocos Creator 3.8.8 制作的小型 SLG，登录服 `33021`、网关 `33022`）。
+配套客户端：[slg_game_client](https://github.com/literwave/slg_game_client)（Cocos Creator 3.8.8 制作的小型 SLG，登录服 `33021`、网关 `33022`）。
 
 > **不是**开箱即用的商业全量方案。请先读完 [安装步骤](#安装步骤) 与 [架构总览](#架构总览)。
 
@@ -153,7 +153,7 @@ Client                logind                 Redis              gated           
 ## 仓库结构
 
 ```text
-game_demo/
+slg_game/
 ├── README.md                 # 本文件
 ├── start_up/                 # Skynet 启动脚本
 │   └── main_start.lua
@@ -255,7 +255,7 @@ systemd=true
 
 ### 3. 仓库放在 Linux 磁盘
 
-克隆到家目录，例如 `~/game_demo`。不要放在 `/mnt/c` 或 `/mnt/d`。Windows 盘在 WSL 里是网络文件系统，Skynet 编译会很慢，权限和文件监视也容易出问题。
+克隆到家目录，例如 `~/slg_game`。不要放在 `/mnt/c` 或 `/mnt/d`。Windows 盘在 WSL 里是网络文件系统，Skynet 编译会很慢，权限和文件监视也容易出问题。
 
 Cursor 用 **WSL** 窗口打开这个目录，不要用 Windows 路径打开同一份代码。
 
@@ -326,8 +326,8 @@ mongosh --eval 'db.runCommand({ ping: 1 })'
 本机需已配置 [GitHub SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)。
 
 ```bash
-git clone --recurse-submodules git@github.com:literwave/game_demo.git
-cd game_demo
+git clone --recurse-submodules git@github.com:literwave/slg_game.git
+cd slg_game
 ```
 
 若已经克隆但 `skynet/`、`game_common/` 是空的：
