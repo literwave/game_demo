@@ -16,6 +16,7 @@ local CMD_DESC = {
 	{ "full_hero", "获得全部武将 [full_hero]" },
 	{ "add_exp", "增加主角经验 [add_exp exp]" },
 	{ "open_system", "解锁系统 [open_system systemId]，0为全部" },
+	{ "add_heart", "加减心跳时间 [add_heart sec]，负数为减，之后拦截客户端心跳" },
 }
 
 local function tell(vfd, msg)
@@ -121,6 +122,16 @@ function CMD.add_exp(vfd, exp)
 	local user = USER_MGR.get_user_by_fd(vfd)
 	assert(user)
 	user:add_exp(exp)
+end
+
+function CMD.add_heart(vfd, sec)
+	assert(sec)
+	local user = USER_MGR.get_user_by_fd(vfd)
+	assert(user)
+	local last_time = user:get_heart_beat_time() or TIME.os_bj_sec()
+	user:set_heart_beat_time(last_time + sec)
+	USER_MGR.hold_heart_beat(user:get_user_id())
+	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", user:get_heart_beat_time()))
 end
 
 function CMD.open_system(vfd, system_id)

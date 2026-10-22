@@ -197,7 +197,7 @@ function CMD.send_client_pack(fd, packet)
 end
 
 function CMD.kick(fd)
-
+	websocket.close(fd)
 end
 
 function CMD.shutdown()

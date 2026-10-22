@@ -48,7 +48,6 @@ function CMD.login(gate_srv, fd, user_id, addr, account, server_id, token)
 	user:set_account(account)
 	user:set_login_addr(addr)
 	user:set_and_sync_heart_beat_time(TIME.os_bj_sec())
-	CALL_OUT.call_fre("USER_MGR", "detect_user_heart_beat", CONST.USER_HEART_BEAT_TIMEOUT, user_id)
 	USER_MGR.module_on_user_login(user, is_first_login)
 	local times = TIME.get_diff_day(TIME.os_bj_sec(), last_login_time)
 	if times > 1 then

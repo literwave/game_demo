@@ -1,3 +1,5 @@
+local skynet = require "skynet"
+
 all_user_tbl = {
 	-- [userId] = userObj
 }
@@ -63,12 +65,20 @@ local function module_on_user_logout(user_id)
 	TROOP_MGR.on_user_logout(user_id)
 end
 
+local kicking_user = {}
+local ignore_heart_beat = {}
+
 function disconnect(fd, user_id)
 	local user = get_user_by_id(user_id)
+	if not user then
+		return
+	end
 	MONGO_SLAVE.flush()
 	all_user_tbl[user_id] = nil
 	del_user_id_by_vfd(fd)
 	user_id_to_fd[user_id] = nil
+	kicking_user[user_id] = nil
+	ignore_heart_beat[user_id] = nil
 	module_on_user_logout(user_id)
 end
 
@@ -98,6 +108,7 @@ function ref_login(user_id, fd, user)
 	user_id_to_fd[user_id] = fd
 	fd_to_user_id[fd] = user_id
 	all_user_tbl[user_id] = user
+	user:set_heart_beat_time(TIME.os_bj_sec())
 end
 
 function get_game_user_id()
@@ -139,25 +150,56 @@ function module_on_user_next_day(user_id, times)
 	times = times or 1
 end
 
-function kick_user(fd, user_id)
-	disconnect(fd)
-end
-
-function detect_user_heart_beat(user_id)
-	local user = all_user_tbl[user_id]
+function kick_user(fd, user_id, from_heart_beat)
+	local user = get_user_by_id(user_id)
 	if not user then
+		kicking_user[user_id] = nil
 		return
 	end
-	local last_heart_beat_time = user:get_heart_beat_time()
-	if os.time() - last_heart_beat_time > CONST.USER_HEART_BEAT_TIMEOUT then
-		local fd = get_fd_by_user_id(user_id)
-		EVENT.emit(CONST.EVENT.KICK_USER, fd, user_id)
+	if from_heart_beat then
+		local last_heart_beat_time = user:get_heart_beat_time()
+		local now = TIME.os_bj_sec()
+		if not last_heart_beat_time or now - last_heart_beat_time < CONST.USER_HEART_BEAT_TIMEOUT then
+			kicking_user[user_id] = nil
+			return
+		end
 	end
+	local gate_srv = user:get_gate_srv()
+	disconnect(fd, user_id)
+	if gate_srv and fd then
+		skynet.send(gate_srv, "lua", "kick", fd)
+	end
+end
+
+local function check_heart_beat()
+	local now = TIME.os_bj_sec()
+	for user_id, user in pairs(all_user_tbl) do
+		local last_heart_beat_time = user:get_heart_beat_time()
+		if last_heart_beat_time and not kicking_user[user_id]
+			and now - last_heart_beat_time >= CONST.USER_HEART_BEAT_TIMEOUT then
+			kicking_user[user_id] = true
+			local fd = get_fd_by_user_id(user_id)
+			EVENT.emit(CONST.EVENT.KICK_USER, fd, user_id, true)
+		end
+	end
+	skynet.timeout(CONST.USER_HEART_BEAT_CHECK_INTERVAL * 100, check_heart_beat)
+end
+
+function hold_heart_beat(user_id)
+	ignore_heart_beat[user_id] = true
 end
 
 local function on_heart_beat(fd)
 	local user = USER_MGR.get_user_by_fd(fd)
-	user:set_heart_beat_time(os.time())
+	if not user then
+		return
+	end
+	local user_id = user:get_user_id()
+	if ignore_heart_beat[user_id] then
+		return
+	end
+	kicking_user[user_id] = nil
+	user:set_and_sync_heart_beat_time(TIME.os_bj_sec())
 end
 
 local function on_user_baseinfo(fd)
@@ -185,4 +227,5 @@ function __init__()
 	for_maker.c2s_user_base_info = on_user_baseinfo
 	for_maker.c2s_user_create = on_user_create
 	EVENT.register(CONST.EVENT.KICK_USER)
+	skynet.timeout(CONST.USER_HEART_BEAT_CHECK_INTERVAL * 100, check_heart_beat)
 end
