@@ -118,7 +118,7 @@ end
 function create_new_user(gate_srv, fd, user_id, server_id)
 	local oci = {
 		_user_id = user_id,
-		_birth_time = os.time(),
+		_birth_time = TIME.os_bj_sec(),
 		_born_server_id = server_id,
 		_name = CONST.NO_NAME,
 		_sex = CONST.SEX_NONE,

@@ -153,14 +153,14 @@ local id = 0
 local OPEN_DATE = 1704067200
 function get_id_by_user_id_and_timestamp(user_id)
 	id = id + 1
-	local sec = os.time() - OPEN_DATE
+	local sec = TIME.os_bj_sec() - OPEN_DATE
 	return sec * 100000 + id
 end
 
 local srv_auto_id = 0
 function get_id_by_srv_id_and_timestamp()
 	srv_auto_id = srv_auto_id + 1
-	local sec = os.time() - OPEN_DATE
+	local sec = TIME.os_bj_sec() - OPEN_DATE
 	local server_id = GAME.get_server_id()
 	return server_id * 10000000000000 + sec * 10000 + (srv_auto_id % 10000)
 end

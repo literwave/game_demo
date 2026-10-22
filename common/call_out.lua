@@ -61,7 +61,7 @@ function call_once(mod_name, func_name, time, ...)
 		lua_multi_cb(id, time)
 	end)
 
-	need_ref_callout_tbl[id] = os.time() + time
+	need_ref_callout_tbl[id] = TIME.os_bj_sec() + time
 
 	return id
 end

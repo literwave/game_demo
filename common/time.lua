@@ -1,3 +1,5 @@
+local skynet = require "skynet"
+
 local offset = 0
 
 function os_bj_sec_by_tbl(tbl)
@@ -8,7 +10,7 @@ end
 local TIME_BASE = os_bj_sec_by_tbl({year=2004,month=1,day=1,hour=0,min=0,sec=0,})
 
 function os_bj_sec()
-	return os.time() + offset
+	return math.floor(skynet.time()) + offset
 end
 
 function add_offset(sec)

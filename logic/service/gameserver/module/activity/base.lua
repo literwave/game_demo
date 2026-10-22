@@ -1,4 +1,3 @@
-
 local save_field_tbl = {
 	_id = function ()
 		return nil
@@ -138,7 +137,7 @@ function cls_act:set_and_sync_heart_beat_time(time)
 end
 
 function cls_act:on_login()
-	self:set_login_time(os.time())
+	self:set_login_time(TIME.os_bj_sec())
 end
 
 function cls_act:set_login_time(time)

@@ -23,9 +23,11 @@ skynet.register_protocol {
 
 local function decode_pack(packet)
 	local id, pos = string.unpack(">I2", packet, 3)
-	skynet.error(id, pos)
 	local pto_name = ID_TO_PTONAME[id]
 	local pack_name = ID_TO_PACK_NAME[id]
+	if pto_name ~= "c2s_heart_beat" then
+		skynet.error(id, pos)
+	end
 	return protobuf.decode(pack_name, packet:sub(pos)), pto_name
 end
 
@@ -106,13 +108,17 @@ skynet.start(function()
 		end
 		local user_queue = user_queues[user_id]
 		local msg, pto_name = decode_pack(packet)
-		skynet.error("fd", fd, pto_name, user_id)
+		if pto_name ~= "c2s_heart_beat" then
+			skynet.error("fd", fd, pto_name, user_id)
+		end
 		assert(fd)
 		if not for_maker[pto_name] then
 			skynet.error("ptoName not registerptoName", pto_name)
 			return
 		end
-		skynet.error(table2str(msg))
+		if pto_name ~= "c2s_heart_beat" then
+			skynet.error(table2str(msg))
+		end
 		if not msg then
 			return
 		end
