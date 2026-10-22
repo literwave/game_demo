@@ -1,20 +1,12 @@
 local skynet = require "skynet"
 
 local function get_user_tbl(account)
-	local raw = LREDIS.get_value_by_key(account) or {}
+	local raw = LREDIS.hgetall(account)
 	local user_tbl = {}
 	for user_id, flag in pairs(raw) do
 		user_tbl[tonumber(user_id)] = flag
 	end
 	return user_tbl
-end
-
-local function save_user_tbl(account, user_tbl)
-	local raw = {}
-	for user_id, flag in pairs(user_tbl) do
-		raw[tostring(user_id)] = flag
-	end
-	LREDIS.set_value_by_key(account, raw)
 end
 
 function query_user_id(account, user_id)
@@ -23,9 +15,7 @@ function query_user_id(account, user_id)
 end
 
 function create_account(account, user_id)
-	local user_tbl = get_user_tbl(account)
-	user_tbl[user_id] = 1
-	save_user_tbl(account, user_tbl)
+	LREDIS.hset(account, user_id, 1)
 end
 
 local function fetch_user_id()

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 CONFIG_FILE="$SCRIPT_DIR/../config/main_node"
@@ -35,24 +35,25 @@ fi
 
 echo "开始清理数据库数据..."
 
-mongo_args=(--host "$MONGO_HOST" --port "$MONGO_PORT" --quiet)
 if [ -n "$MONGO_USER" ] && [ -n "$MONGO_PWD" ]; then
-	mongo_args+=(-u "$MONGO_USER" -p "$MONGO_PWD" --authenticationDatabase admin)
+	mongosh --host "$MONGO_HOST" --port "$MONGO_PORT" \
+		-u "$MONGO_USER" -p "$MONGO_PWD" --authenticationDatabase admin \
+		--quiet --eval "db.getSiblingDB('$TARGET_DB').dropDatabase()"
+else
+	mongosh --host "$MONGO_HOST" --port "$MONGO_PORT" \
+		--quiet --eval "db.getSiblingDB('$TARGET_DB').dropDatabase()"
 fi
-
-mongosh "${mongo_args[@]}" --eval "db.getSiblingDB('$TARGET_DB').dropDatabase()"
 if [ $? -eq 0 ]; then
 	echo "MongoDB: 数据库 $TARGET_DB 已成功删除。"
 else
 	echo "MongoDB: 删除失败，请检查权限或配置。"
 fi
 
-redis_args=(-h "$REDIS_HOST" -p "$REDIS_PORT")
 if [ -n "$REDIS_PWD" ]; then
-	redis_args+=(-a "$REDIS_PWD")
+	redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PWD" flushall
+else
+	redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" flushall
 fi
-
-redis-cli "${redis_args[@]}" flushall
 if [ $? -eq 0 ]; then
 	echo "Redis: 所有数据已清空。"
 else

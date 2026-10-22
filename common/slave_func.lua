@@ -92,7 +92,7 @@ function handle.message(id, msg)
 		serverId = login_info.serverId,
 		account = login_info.account,
 	}
-	LREDIS.set_value_by_key(token, token_tbl, TOKEN_EXPIRED_TIME)
+	LREDIS.hmset(token, token_tbl, TOKEN_EXPIRED_TIME)
 	local pack = {
 		accountType = login_info.accountType,
 		appId =  login_info.appId,

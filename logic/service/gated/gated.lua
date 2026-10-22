@@ -81,7 +81,9 @@ local function first_login(packet, fd)
 	local token = packet.token
 	local user_id = tonumber(packet.userId)
 	local passwd = packet.passwd
-	local user_info = LREDIS.get_value_by_key(token) or EMPTY_TABLE
+	local user_info = LREDIS.hgetall(token)
+	user_info.userId = tonumber(user_info.userId)
+	user_info.serverId = tonumber(user_info.serverId)
 	if user_id ~= user_info.userId or passwd ~= user_info.passwd then
 		skynet.error("token error", token, user_id, passwd, user_info.userId, user_info.passwd)
 		return

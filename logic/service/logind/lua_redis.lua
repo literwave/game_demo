@@ -37,21 +37,38 @@ function unlock_login_nx(val)
 	end
 end
 
-function set_value_by_key(key, value, expire)
+local function to_map(list)
+	local map = {}
+	if not list then
+		return map
+	end
+	for i = 1, #list, 2 do
+		map[list[i]] = list[i + 1]
+	end
+	return map
+end
+
+function hgetall(key)
 	redis_client = get_redis_client()
-	redis_client:set(key, json4_lua.encode(value))
+	return to_map(redis_client:hgetall(key))
+end
+
+function hset(key, field, value)
+	redis_client = get_redis_client()
+	redis_client:hset(key, field, value)
+end
+
+function hmset(key, map, expire)
+	redis_client = get_redis_client()
+	local args = { key }
+	for field, value in pairs(map) do
+		args[#args + 1] = field
+		args[#args + 1] = value
+	end
+	redis_client:hmset(args)
 	if expire then
 		redis_client:expire(key, expire)
 	end
-end
-
-function get_value_by_key(key)
-	redis_client = get_redis_client()
-	local val = redis_client:get(key)
-	if val then
-		return json4_lua.decode(val)
-	end
-	return val
 end
 
 function system_start_up()
