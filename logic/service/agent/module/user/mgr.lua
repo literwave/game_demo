@@ -42,11 +42,7 @@ function del_user_id_by_vfd(fd)
 end
 
 function get_fd_by_user_id(user_id)
-	local user = all_user_tbl[user_id]
-	if not user then
-		return
-	end
-	return user:get_fd()
+	return user_id_to_fd[user_id]
 end
 
 function get_user_by_fd(fd)
@@ -136,6 +132,7 @@ function create_new_user(gate_srv, fd, user_id, server_id)
 	-- local userName = RANDOM_NAME.genNewUserName()
 	-- user:setName(userName)
 	ORM.touch(user._data)
+	user:set_fd(fd)
 	user:set_gate_srv(gate_srv)
 	-- WORK_QUEUE_MGR.initUserWorkQueue(userId)
 	REWARD_MGR.reward_user(user_id, DATA_COMMON.get_value_by_key(1))
@@ -181,7 +178,7 @@ local function check_heart_beat()
 		if last_heart_beat_time and not kicking_user[user_id]
 			and now - last_heart_beat_time >= CONST.USER_HEART_BEAT_TIMEOUT then
 			kicking_user[user_id] = true
-			local fd = user_id_to_fd[user_id]
+			local fd = get_fd_by_user_id(user_id)
 			EVENT.emit(CONST.EVENT.KICK_USER, fd, user_id, true)
 		end
 	end
@@ -202,7 +199,7 @@ local function on_heart_beat(fd)
 		return
 	end
 	kicking_user[user_id] = nil
-	user:set_and_sync_heart_beat_time(TIME.os_bj_sec(), fd)
+	user:set_and_sync_heart_beat_time(TIME.os_bj_sec())
 end
 
 local function on_user_baseinfo(fd)
@@ -215,10 +212,8 @@ local function on_client_load_ok(fd)
 	if not user then
 		return
 	end
-	user:set_fd(fd)
-	BUILD_MGR.sync_all_build_to_client(user:get_user_id())
-	for_caller.s2c_client_load_ok(fd, {
-	})
+	user:set_client_load_ok()
+	for_caller.s2c_client_load_ok(fd, {})
 end
 
 local function on_user_create(fd, packet)

@@ -11,6 +11,7 @@ function cls_user:__init__(oci)
 	self._gate_srv = nil
 	self._token = nil
 	self._account = nil
+	self._client_load_ok = nil
 end
 
 function cls_user:get_user_id()
@@ -114,6 +115,15 @@ end
 
 function cls_user:set_fd(fd)
 	self._fd = fd
+	self._client_load_ok = nil
+end
+
+function cls_user:is_client_load_ok()
+	return self._client_load_ok
+end
+
+function cls_user:set_client_load_ok()
+	self._client_load_ok = true
 end
 
 function cls_user:get_heart_beat_time()

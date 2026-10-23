@@ -42,6 +42,7 @@ function CMD.login(gate_srv, fd, user_id, addr, account, server_id, token)
 	else
 		user = USER_MGR.try_init_user(user_id)
 		USER_MGR.ref_login(user_id, fd, user)
+		user:set_fd(fd)
 		user:set_gate_srv(gate_srv)
 		last_login_time = user:get_login_time()
 	end
