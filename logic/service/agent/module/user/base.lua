@@ -2,7 +2,7 @@ cls_user = cls_object:Inherit()
 
 function cls_user:__init__(oci)
 	Super(cls_user).__init__(self, oci)
-	self._data = ORM.create(ORM.CLS_USER_DATA, oci)
+	self._data = ORM.new(ORM.CLS_USER_DATA, oci)
 	ORM.bind(self._data, MONGO_SLAVE.COL.USER_INFO, self._data._user_id)
 	-- 运行时字段，不落库
 	self._login_addr = nil
@@ -50,9 +50,10 @@ function cls_user:get_res_num(res_type)
 	return self._data._res_tbl[res_type] or 0
 end
 
-function cls_user:add_res(res_type, num)
-	local res_num = self:get_res_num(res_type)
-	self._data._res_tbl[res_type] = num + res_num
+function cls_user:add_res(res_type, num, reason_list)
+	local res_num = self:get_res_num(res_type) + num
+	self._data._res_tbl[res_type] = res_num
+	LOG._flow("res", self:get_user_id(), res_type, num, res_num, reason_list)
 end
 
 function cls_user:sync_res(res_type_list)
@@ -183,11 +184,13 @@ function cls_user:add_real_diamond(add_cnt, reason_list)
 	assert(add_cnt >= 0)
 	assert(reason_list[1] == CONST.FLOW_REASON.RECHARGE or reason_list[1] == CONST.FLOW_REASON.WIZ)
 	self._data._real_diamond = self._data._real_diamond + add_cnt
+	LOG._flow("diamond", self:get_user_id(), "real", add_cnt, self:get_diamond(), reason_list)
 end
 
 function cls_user:add_gift_diamond(add_cnt, reason_list)
 	assert(add_cnt >= 0)
 	self._data._gift_diamond = self._data._gift_diamond + add_cnt
+	LOG._flow("diamond", self:get_user_id(), "gift", add_cnt, self:get_diamond(), reason_list)
 end
 
 function cls_user:add_real_diamond_and_sync(add_cnt, reason_list)
@@ -213,6 +216,7 @@ end
 function cls_user:add_diamond(add_cnt, reason_list)
 	assert(add_cnt >= 0)
 	self._data._real_diamond = self._data._real_diamond + add_cnt
+	LOG._flow("diamond", self:get_user_id(), "real", add_cnt, self:get_diamond(), reason_list)
 end
 
 function cls_user:sub_diamond(sum_sub_cnt, reason_list)
@@ -228,6 +232,22 @@ function cls_user:sub_diamond(sum_sub_cnt, reason_list)
 		sub_gift = sum_sub_cnt - sub_real
 		self._data._gift_diamond = self._data._gift_diamond - sub_gift
 	end
+	local user_id = self:get_user_id()
+	if sub_real > 0 then
+		LOG._flow("diamond", user_id, "real", -sub_real, self:get_diamond() + sub_gift, reason_list)
+	end
+	if sub_gift > 0 then
+		LOG._flow("diamond", user_id, "gift", -sub_gift, self:get_diamond(), reason_list)
+	end
+end
+
+function cls_user:check_can_use_diamond(cnt)
+	return cnt > 0 and self:get_diamond() >= cnt
+end
+
+function cls_user:sub_diamond_and_sync(cnt, reason_list)
+	self:sub_diamond(cnt, reason_list)
+	self:sync_diamond()
 end
 
 function cls_user:set_token(token)

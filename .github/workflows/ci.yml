@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 语法检查 + 单元测试
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # .gitmodules 里是 ssh 地址，CI 没有 key，换成 https（子模块都是公开仓库）
+      - name: 拉子模块
+        run: git -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive
+
+      - name: 安装依赖
+        run: sudo apt-get update && sudo apt-get install -y autoconf
+
+      - name: 编译
+        run: make -j"$(nproc)"
+
+      - name: 测试
+        run: sh shell/test.sh
+
+  integration:
+    name: 起服 + 压测 + 顶号 + 关服
+    runs-on: ubuntu-24.04
+    needs: test
+    services:
+      mongo:
+        image: mongo:8
+        ports:
+          - 27017:27017
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 拉子模块
+        run: git -c url."https://github.com/".insteadOf="git@github.com:" submodule update --init --recursive
+
+      - name: 安装依赖
+        run: sudo apt-get update && sudo apt-get install -y autoconf
+
+      - name: 编译
+        run: make -j"$(nproc)"
+
+      - name: 起服
+        run: sh shell/start.sh
+
+      - name: 压测
+        env:
+          BENCH_MAX_ERROR_RATE: "0"
+          BENCH_MAX_P99_MS: "200"
+        run: sh shell/bench.sh -u 200 -d 20 -r 5 -i 500
+
+      - name: 顶号
+        run: sh shell/bench.sh --relogin
+
+      - name: 关服
+        run: sh shell/stop.sh
+
+      - name: 上传日志
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-log
+          path: log/
+          if-no-files-found: ignore

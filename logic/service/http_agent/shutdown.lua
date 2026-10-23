@@ -1,4 +1,5 @@
 local skynet = require "skynet"
+require "skynet.manager"	-- skynet.abort
 local socket = require "skynet.socket"
 local httpd = require "http.httpd"
 local sockethelper = require "http.sockethelper"
@@ -11,15 +12,10 @@ local function response(fd, ...)
 end
 
 function on_http_request(fd, params_tbl, body)
-	local all_service_list = skynet.call(".launcher", "lua", "LIST")
-	for _, addr in ipairs(all_service_list) do
-		if addr ~= skynet.self() then
-			skynet.call(addr, "lua", "shutdown")
-		end
-	end
-	response(fd, 200, "shutting down")
+	local result = skynet.call(".mcs", "lua", "stop")
+	response(fd, 200, result)
 	socket.close(fd)
-	skynet.timeout(100, function()
-		os.exit()
-	end)
+	if result:find("^stopped") then
+		skynet.abort()
+	end
 end

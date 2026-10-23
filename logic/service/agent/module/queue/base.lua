@@ -2,17 +2,13 @@ cls_queue = cls_object:Inherit()
 
 function cls_queue:__init__(oci)
 	Super(cls_queue).__init__(self, oci)
-	if ORM.is_cls(oci, ORM.CLS_QUEUE_DATA) then
-		self._data = oci
-	else
-		self._data = ORM.create(ORM.CLS_QUEUE_DATA, oci)
-	end
-	ORM.put(MONGO_SLAVE.COL.QUEUE, self._data._user_id, "_queues", self._data._queue_idx, self._data)
+	self._data = ORM.new(ORM.CLS_QUEUE_DATA, oci)
+	ORM.get(MONGO_SLAVE.COL.QUEUE, self._data._user_id)._queues[self._data._queue_idx] = self._data
 	QUEUE_MGR.ref_queue(self)
 end
 
 function cls_queue:release()
-	ORM.remove(MONGO_SLAVE.COL.QUEUE, self:get_user_id(), "_queues", self:get_queue_idx())
+	ORM.get(MONGO_SLAVE.COL.QUEUE, self:get_user_id())._queues[self:get_queue_idx()] = nil
 	QUEUE_MGR.unref_queue(self)
 	Super(cls_queue).release(self)
 end

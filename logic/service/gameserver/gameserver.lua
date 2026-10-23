@@ -5,7 +5,12 @@ local CMD = {}
 local RPC_CMD = {}
 
 function CMD.shutdown()
-	skynet.exit()
+	MONGO_SLAVE.flush_sync()
+	skynet.fork(skynet.exit)
+end
+
+function CMD.hot_update(path_list)
+	return hot_update(path_list)
 end
 
 skynet.register_protocol {

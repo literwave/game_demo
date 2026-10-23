@@ -14,11 +14,11 @@ COL = {
 	SVR_MAIL = "svr_mail_col",
 }
 
-local flush_cb = nil
+-- 运行时状态用模块变量，热更时会保留；写成 local 会被重置，丢掉还没发出去的写盘
+flush_cb = nil
+all_cmd_tbl = {}
+flush_scheduled = false
 local flush_cd = 5
-local all_cmd_tbl = {}
-local flush_scheduled = false
-local flushing = false
 
 local function enqueue(col, cmd)
 	if not all_cmd_tbl[col] then
@@ -28,7 +28,7 @@ local function enqueue(col, cmd)
 end
 
 local function schedule_flush()
-	if flush_scheduled or flushing then
+	if flush_scheduled then
 		return
 	end
 	flush_scheduled = true
@@ -40,28 +40,33 @@ end
 
 orm.on_dirty = schedule_flush
 
-function flush()
-	if flushing then
-		return
-	end
-	flushing = true
-	local dirty = orm.drain_dirty()
-	for _, item in ipairs(dirty) do
-		enqueue(item.col, {
-			key = item.key,
+local function take_cmds()
+	for _, doc in ipairs(orm.drain()) do
+		enqueue(doc.col, {
+			key = doc.key,
 			op_type = "$set",
 			field_str = "dat",
-			value = orm.dump(item.obj),
+			value = doc.dat,
 		})
 	end
 	local sending = all_cmd_tbl
 	all_cmd_tbl = {}
-	flushing = false
-	if next(sending) then
+	return next(sending) and sending
+end
+
+function flush()
+	local sending = take_cmds()
+	if sending then
 		skynet.send(".mongodb", "lua", "save_data", sending)
 	end
-	if orm.has_dirty() then
-		schedule_flush()
+end
+
+-- 等 .mongodb 真正写完才返回，关服用。等待期间定时器可能又改了数据，所以写到没有新脏数据为止
+function flush_sync()
+	local sending = take_cmds()
+	while sending do
+		skynet.call(".mongodb", "lua", "save_data", sending)
+		sending = take_cmds()
 	end
 end
 

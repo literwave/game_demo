@@ -1,6 +1,7 @@
 local skynet = require "skynet"
 local protobuf = require "protobuf"
 local websocket = require "http.websocket"
+local socketdriver = require "skynet.socketdriver"
 local crypt = require "client.crypt"
 local PROTOCOL = skynet.getenv("protocol")
 
@@ -120,6 +121,7 @@ end
 function CMD.auth(fd, addr)
 	skynet.error("login step 1-auth", fd, addr)
 	skynet.fork(function()
+		socketdriver.nodelay(fd)
 		local ok, err = websocket.accept(fd, handle, PROTOCOL, addr)
 		if not ok then
 			skynet.error("login error", fd, addr, err)

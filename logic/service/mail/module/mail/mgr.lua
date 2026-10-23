@@ -47,14 +47,14 @@ local function dump_user_mail_info(info)
 		mail_tbl[mail_kind] = {}
 		for mail_id, st in pairs(id_map) do
 			mail_tbl[mail_kind][mail_id] = {
-				isRead = st.isRead and true or false,
-				isGotReward = st.isGotReward and true or false,
-				isLock = st.isLock and true or false,
-				lv = st.lv or 0,
+				is_read = st.isRead,
+				is_got_reward = st.isGotReward,
+				is_lock = st.isLock,
+				lv = st.lv,
 			}
 		end
 	end
-	local doc = ORM.create(ORM.CLS_USER_MAIL_DOC, {
+	local doc = ORM.new(ORM.CLS_USER_MAIL_DOC, {
 		mail_tbl = mail_tbl,
 		fetch_svr_idx = info.fetch_svr_idx or 0,
 	})
@@ -70,7 +70,7 @@ local function persist_user_mail(user_id)
 end
 
 local function persist_svr_mail()
-	local doc = ORM.create(ORM.CLS_SVR_MAIL_DOC, {
+	local doc = ORM.new(ORM.CLS_SVR_MAIL_DOC, {
 		global_idx = svr_mail_info.global_idx or 0,
 		svr_mail_tbl = svr_mail_info.svr_mail_tbl or {},
 	})
@@ -109,7 +109,7 @@ function load_data()
 	user_mail_info_tbl = {}
 	local raw_user_tbl = MONGO_SLAVE.common_load_tbl(MONGO_SLAVE.COL.USER_MAIL) or {}
 	for user_id, raw in pairs(raw_user_tbl) do
-		local doc = ORM.create(ORM.CLS_USER_MAIL_DOC, raw)
+		local doc = ORM.new(ORM.CLS_USER_MAIL_DOC, raw)
 		local info = {
 			mail_tbl = {},
 			fetch_svr_idx = doc.fetch_svr_idx,
@@ -117,23 +117,21 @@ function load_data()
 		for mail_kind, id_map in pairs(doc.mail_tbl) do
 			info.mail_tbl[mail_kind] = {}
 			for mail_id, st in pairs(id_map) do
-				if type(st) == "table" then
-					info.mail_tbl[mail_kind][mail_id] = {
-						isRead = st.isRead,
-						isGotReward = st.isGotReward,
-						isLock = st.isLock,
-						lv = st.lv,
-					}
-				end
+				info.mail_tbl[mail_kind][mail_id] = {
+					isRead = st.is_read,
+					isGotReward = st.is_got_reward,
+					isLock = st.is_lock,
+					lv = st.lv,
+				}
 			end
 		end
 		user_mail_info_tbl[user_id] = info
 	end
 
 	local raw_svr = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY) or {}
-	local svr_doc = ORM.create(ORM.CLS_SVR_MAIL_DOC, raw_svr)
+	local svr_doc = ORM.new(ORM.CLS_SVR_MAIL_DOC, raw_svr)
 	svr_mail_info = {
-		global_idx = svr_doc.global_idx or 0,
+		global_idx = svr_doc.global_idx,
 		svr_mail_tbl = {},
 	}
 	for idx, mail_id in pairs(svr_doc.svr_mail_tbl) do

@@ -22,18 +22,34 @@ function get_open_list(user)
 	return list
 end
 
+-- 返回 true 表示本次新开启；已开启的不重复发事件
 function open_system(user, system_id)
 	if user:is_system_open(system_id) then
-		return
+		return false
 	end
 	user:set_system_open(system_id)
 	EVENT.emit(CONST.EVENT.ON_SYSTEM_OPEN, user:get_user_id(), system_id)
 	sync_one(user, system_id)
+	return true
 end
 
+-- 返回本次新开启的数量
 function open_all(user)
+	local cnt = 0
 	for system_id in pairs(DATA_COMMON.get_system_open_tbl()) do
-		open_system(user, system_id)
+		if open_system(user, system_id) then
+			cnt = cnt + 1
+		end
+	end
+	return cnt
+end
+
+function sync_all(user)
+	local fd = user:get_fd()
+	if fd then
+		for_caller.s2c_req_system_open(fd, {
+			systemIdList = get_open_list(user),
+		})
 	end
 end
 

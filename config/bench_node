@@ -1,0 +1,14 @@
+-- 压测客户端节点：只跑机器人，不加载游戏服务。由 shell/bench.sh 启动，参数走环境变量
+skynetdir = "./"
+rootdir = "../"
+
+thread = 4
+harbor = 0
+start = "bench_main"
+bootstrap = "snlua bootstrap"
+
+luaservice = skynetdir.."service/?.lua;"..rootdir.."test/bench/?.lua;"
+lualoader = skynetdir.."lualib/loader.lua"
+lua_path = skynetdir.."lualib/?.lua;"..skynetdir.."lualib/?/init.lua;"..rootdir.."lualib/?.lua;"..rootdir.."test/bench/?.lua;"
+lua_cpath = skynetdir.."luaclib/?.so;"
+cpath = skynetdir.."cservice/?.so"

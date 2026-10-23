@@ -31,8 +31,33 @@ local function decode_pack(packet)
 	return protobuf.decode(pack_name, packet:sub(pos)), pto_name
 end
 
-function CMD.login(gate_srv, fd, user_id, addr, account, server_id, token)
+local function get_user_queue(user_id)
+	local user_queue = user_queues[user_id]
+	if not user_queue then
+		user_queue = queue()
+		user_queues[user_id] = user_queue
+	end
+	return user_queue
+end
+
+-- 顶号：旧连接可能在另一个 gate_worker 上，先解绑旧 fd 再踢，之后旧 fd 的 disconnect 会被忽略
+local function kick_old_conn(user_id, new_fd)
+	local old_fd = USER_MGR.get_fd_by_user_id(user_id)
+	if not old_fd or old_fd == new_fd then
+		return
+	end
+	local user = USER_MGR.get_user_by_id(user_id)
+	local old_gate_srv = user and user:get_gate_srv()
+	USER_MGR.del_user_id_by_vfd(old_fd)
+	if old_gate_srv then
+		skynet.send(old_gate_srv, "lua", "kick", old_fd)
+	end
+	skynet.error("relogin kick old conn", user_id, old_fd, new_fd)
+end
+
+local function do_login(gate_srv, fd, user_id, addr, account, server_id, token)
 	skynet.error("login step 3-agent", fd, user_id, addr, account)
+	kick_old_conn(user_id, fd)
 	local user = false
 	local is_first_login = false
 	local last_login_time = TIME.os_bj_sec()
@@ -58,10 +83,48 @@ function CMD.login(gate_srv, fd, user_id, addr, account, server_id, token)
 	EVENT.emit(CONST.EVENT.ON_USER_LOGIN, user_id, fd, gate_srv, is_first_login)
 end
 
-function CMD.disconnect(fd, user_id)
-	user_queues[user_id] = nil
+local is_closing = false
+
+-- 和协议、下线走同一个玩家队列，避免登录和旧连接下线交错
+function CMD.login(gate_srv, fd, user_id, addr, account, server_id, token)
+	assert(not is_closing, "server is closing")
+	return get_user_queue(user_id)(do_login, gate_srv, fd, user_id, addr, account, server_id, token)
+end
+
+local function do_disconnect(fd, user_id)
+	-- 顶号后旧连接的断开：玩家已经在新 fd 上，只清旧 fd
+	if USER_MGR.get_fd_by_user_id(user_id) ~= fd then
+		if USER_MGR.get_user_id_by_fd(fd) == user_id then
+			USER_MGR.del_user_id_by_vfd(fd)
+		end
+		return
+	end
 	USER_MGR.disconnect(fd, user_id)
 	EVENT.emit(CONST.EVENT.ON_USER_LOGOUT, user_id, fd)
+	-- 新连接的消息要等 login 返回后 worker 才会转发，这里删掉不会和新登录并发
+	user_queues[user_id] = nil
+end
+
+-- 进玩家的消息队列里下线，等正在处理的协议跑完再存盘
+function CMD.disconnect(fd, user_id)
+	get_user_queue(user_id)(do_disconnect, fd, user_id)
+end
+
+function CMD.hot_update(path_list)
+	return hot_update(path_list)
+end
+
+function CMD.shutdown()
+	is_closing = true
+	local online = {}
+	for user_id, fd in pairs(USER_MGR.user_id_to_fd) do
+		online[user_id] = fd
+	end
+	for user_id, fd in pairs(online) do
+		CMD.disconnect(fd, user_id)
+	end
+	MONGO_SLAVE.flush_sync()
+	skynet.fork(skynet.exit)
 end
 
 local function sub_item_list_recv(id, taddr, user_id, item_list, reason_list)
@@ -73,12 +136,13 @@ local function sub_item_list_recv(id, taddr, user_id, item_list, reason_list)
 	if not ok then
 		return
 	end
-	assert(ITEM_MGR.del_cost_list(user_id, item_list))
+	assert(ITEM_MGR.del_cost_list(user_id, item_list, reason_list))
 end
 
 function RPC_CMD.sub_item_list(id, user_id, taddr, item_list, reason_list)
 	if not ITEM_MGR.check_cost_enough(user_id, item_list) then
 		skynet.send(taddr, "rpc", id, false)
+		return
 	end
 	local q = queue()
 	local ok = q(sub_item_list_recv, id, taddr, user_id, item_list, reason_list)
@@ -102,10 +166,9 @@ skynet.start(function()
 	end)
 
 	skynet.dispatch("client", function(seesion, address, fd, packet, user_id)
-		if not user_queues[user_id] then
-			user_queues[user_id] = queue()
+		if is_closing then
+			return
 		end
-		local user_queue = user_queues[user_id]
 		local msg, pto_name = decode_pack(packet)
 		if pto_name ~= "c2s_heart_beat" then
 			skynet.error("fd", fd, pto_name, user_id)
@@ -121,8 +184,14 @@ skynet.start(function()
 		if not msg then
 			return
 		end
-		-- 分发数据
-		local ok, err = xpcall(user_queue, error_handler, for_maker[pto_name], fd, msg)
+		-- 分发数据；执行时再确认 fd 仍是当前连接，顶号后旧连接残留的包丢掉
+		local handler = for_maker[pto_name]
+		local ok, err = xpcall(get_user_queue(user_id), error_handler, function()
+			if USER_MGR.get_fd_by_user_id(user_id) ~= fd then
+				return
+			end
+			handler(fd, msg)
+		end)
 		if not ok then
 			LOG._error("userQueue error: %s", err)
 		end

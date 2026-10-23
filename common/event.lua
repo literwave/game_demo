@@ -2,8 +2,8 @@ local skynet = require "skynet"
 local datacenter = require "skynet.datacenter"
 
 local ROOT = "event"
--- [event_id] = { [mod] = true }
-local listener = {}
+-- [event_id] = { [mod] = true }；模块变量热更时保留
+listener = {}
 
 skynet.register_protocol {
 	name = "event",

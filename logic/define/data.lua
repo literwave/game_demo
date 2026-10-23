@@ -19,24 +19,36 @@ local DATA_SYSTEM_OPEN = sharedata.query("SystemOpen")
 -- 	end,
 -- }
 
--- 二次处理配置表的内容
-init_build_list = {}
+-- 二次处理配置表的内容。放在 __init__ 里：热更 / 重载配置时会先恢复旧模块变量再调 __init__，这里才能重算
 local function init_config_data()
+	init_build_list = {}
 	for _, conf in pairs(DATA_BUILD_DETAIL) do
 		table.insert(init_build_list, conf.InitLev)
+	end
+	-- [build_type] = { [lv] = conf }，build_max_level_tbl[build_type] = 配置里的最高等级
+	build_lv_tbl = {}
+	build_max_level_tbl = {}
+	for _, conf in pairs(DATA_BUILD_LEVEL) do
+		local b_type = conf.BuildingType
+		build_lv_tbl[b_type] = build_lv_tbl[b_type] or {}
+		build_lv_tbl[b_type][conf.Lv] = conf
+		build_max_level_tbl[b_type] = math.max(build_max_level_tbl[b_type] or 0, conf.Lv)
 	end
 end
 
 local function init_system_open_enum()
 	for system_id, conf in pairs(DATA_SYSTEM_OPEN) do
 		local enum_name = conf.Enum
-		assert(not _G[enum_name], enum_name)
-		_G[enum_name] = conf.Id or system_id
+		local value = conf.Id or system_id
+		assert(_G[enum_name] == nil or _G[enum_name] == value, enum_name)
+		_G[enum_name] = value
 	end
 end
 
-init_config_data()
-init_system_open_enum()
+function __init__()
+	init_config_data()
+	init_system_open_enum()
+end
 
 function get_value_by_key(key)
 	return DATA_GLOBAL[key].value1 or DATA_GLOBAL[key].value2 or DATA_GLOBAL[key].value3
@@ -102,20 +114,14 @@ function get_build_type_by_id(bid)
 	return DATA_BUILD_CONF.builds[bid].build_type
 end
 
-function get_lottery_common_pools(use_lottery_times)
-end
-
-function get_lottery_hero_pools(use_lottery_times)
-end
-
-function get_up_hero_item_lottery_times(use_lottery_times)
-end
-
-function get_lottery_cost(use_lottery_times)
+-- Lottery 表的 Id 就是一次抽几发；没配的抽数不允许
+-- 奖池每项 {reward_type, item_id, item_count, weight}
+function get_lottery_conf(use_lottery_times)
+	return DATA_LOTTERY[use_lottery_times]
 end
 
 function can_overlap(item_id)
-	return DATA_ITEM[item_id].can_overlap == 1
+	return (DATA_ITEM[item_id].Overlap or 1) > 1
 end
 
 function get_item_overlap(item_id)
@@ -142,7 +148,11 @@ function get_build_create_limit()
 end
 
 function get_build_max_level(b_type)
-	return 1
+	return build_max_level_tbl[b_type] or 0
+end
+
+function get_build_level_conf(b_type, lv)
+	return build_lv_tbl[b_type] and build_lv_tbl[b_type][lv]
 end
 
 function get_system_open_tbl()

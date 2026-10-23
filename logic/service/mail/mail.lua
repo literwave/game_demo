@@ -4,7 +4,12 @@ require "skynet.manager"
 local CMD = {}
 
 function CMD.shutdown()
-	skynet.exit()
+	MONGO_SLAVE.flush_sync()
+	skynet.fork(skynet.exit)
+end
+
+function CMD.hot_update(path_list)
+	return hot_update(path_list)
 end
 
 function CMD.send_user_mail(user_id, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec)

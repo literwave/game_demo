@@ -37,7 +37,7 @@ db_info = [[{
     [2]="3306",
     [3]="dbgame",
     [4]="root",
-    [5]="123"
+    [5]=""
 }]]
 
 -- mongo etc
@@ -57,11 +57,13 @@ pbpath = rootdir .. "game_common/pb/"
 
 -- 日志路径
 logpath = rootdir.."log"
+-- debug / info / warn / error，低于此级别的 LOG._xxx 不写
+log_level = "debug"
 
 ------------ 网关相关 --------------
 gate_address = "127.0.0.1"
 gate_port = 33022
-gate_cnt = 3
+gate_cnt = 3    -- gate_worker 数量，同一端口，连接轮流分给各 worker 做读写
 
 ------------ 登录相关 --------------
 address = "0.0.0.0"
@@ -70,8 +72,7 @@ slave_cnt = 3
 maxonline = 2000  -- 单服人数
 nodelay = true    -- 尽可能快socket发送包 会有零碎小包
 
-agent_init_cnt = 4    -- 一开始初始化agent的数量  前期就用一个agent做玩法把，简单些
-agent_max_user_cnt = 500
+agent_init_cnt = 4    -- agent 数量，玩家按 user_id % agent_init_cnt 固定分配
 
 ------------ http相关 --------------
 http_port = 33023

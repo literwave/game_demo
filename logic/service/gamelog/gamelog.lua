@@ -1,57 +1,106 @@
 local skynet = require "skynet"
 require "skynet.manager"
-local log_path = skynet.getenv("logpath")
--- local cjson = require "cjson"
+
+-- 行由调用方 logic/base/log.lua 拼好，这里只负责按 (名字, 日期) 落文件
+-- common_<level>_<yyyymmdd>.log：运行日志；flow_<kind>_<yyyymmdd>.log：资源流水
+
+local LOG_PATH = skynet.getenv("logpath") or "../log"
+local FLUSH_INTERVAL = 100	-- 1 秒
+local CONSOLE_LEVEL_TBL = {
+	info = true,
+	warn = true,
+	error = true,
+}
 
 local CMD = {}
 
--- 警告日志
-local function writefile(pfile, mod, args, file_name)
-	if not mod then mod = "a+" end
-	local args_str = table2str(args)
-	-- todo
-	if type(args) == "table" then
-		args_str = table2str(args)
-	else
-		args = table.pack(args)
-		for i = 1, args.n do
-			args[i] = tostring(args[i])
-		end
-		args_str = table.concat(args, " ")
+-- [name] = {fh = file, date = "yyyymmdd"}
+local file_tbl = {}
+-- 关服后改成每行直接落盘，关服期间其他服务的日志也不丢
+local is_flush_each_line = false
+
+local function get_file(name)
+	local date = os.date("%Y%m%d")
+	local f = file_tbl[name]
+	if f and f.date == date then
+		return f.fh
 	end
-	local file, err = io.open(file_name, mod)
-	if not file then
-		os.execute(string.format("mkdir -p %q", log_path))
-		file, err = io.open(file_name, mod)
+	if f then
+		f.fh:close()
+		file_tbl[name] = nil
 	end
-	local write_str = pfile..args_str
-	print(write_str)
-	if not file then
+	local file_name = string.format("%s/%s_%s.log", LOG_PATH, name, date)
+	local fh, err = io.open(file_name, "a")
+	if not fh then
 		skynet.error("gamelog open failed", file_name, err)
 		return
 	end
-	file:write(write_str .. "\n")
-	file:close()
+	fh:setvbuf("full")
+	file_tbl[name] = {fh = fh, date = date}
+	return fh
 end
 
-function CMD.writefile(level, pfile, args)
-	local file_name = log_path .. "/" .. "common_"..level.."_"..os.date("%Y%m%d")..".log"
-	writefile(pfile, nil, args, file_name)
+local function write_line(name, line, is_flush)
+	local fh = get_file(name)
+	if not fh then
+		return
+	end
+	fh:write(line, "\n")
+	if is_flush or is_flush_each_line then
+		fh:flush()
+	end
 end
 
+local function flush_all()
+	for _, f in pairs(file_tbl) do
+		f.fh:flush()
+	end
+end
+
+function CMD.log(level, line)
+	if CONSOLE_LEVEL_TBL[level] then
+		print(line)
+	end
+	write_line("common_" .. level, line, level == "error")
+end
+
+function CMD.flow(kind, line)
+	write_line("flow_" .. kind, line)
+end
+
+function CMD.flush()
+	flush_all()
+end
+
+-- 不退出：关服流程后面还会有日志，进程由 http_agent abort 结束
 function CMD.shutdown()
-	skynet.exit()
+	flush_all()
+	is_flush_each_line = true
+end
+
+local function flush_loop()
+	while true do
+		skynet.sleep(FLUSH_INTERVAL)
+		flush_all()
+	end
 end
 
 skynet.start(function()
-	skynet.dispatch("lua", function(_, _, cmd, ...)
+	os.execute(string.format("mkdir -p %q", LOG_PATH))
+	skynet.dispatch("lua", function(session, _, cmd, ...)
 		local f = CMD[cmd]
-			if f then
-				f(...)
-			else
-				skynet.error("no callback")
+		if not f then
+			skynet.error("gamelog unknown cmd", cmd)
+			if session ~= 0 then
+				skynet.ret(skynet.pack(nil))
 			end
+			return
+		end
+		f(...)
+		if session ~= 0 then
+			skynet.ret(skynet.pack(true))
+		end
 	end)
-	-- 注册服务别名
+	skynet.fork(flush_loop)
 	skynet.register(".gamelog")
 end)

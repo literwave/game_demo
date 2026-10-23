@@ -30,15 +30,11 @@ local function create_queue(oci)
 end
 
 local function try_init_user_queues(user_id)
-	if not ORM.get(MONGO_SLAVE.COL.QUEUE, user_id) then
-		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.QUEUE, user_id) or {}
-		local doc = ORM.create(ORM.CLS_USER_QUEUE_DOC, raw)
-		ORM.hold(doc, MONGO_SLAVE.COL.QUEUE, user_id)
+	local doc, is_loaded = ORM.load(MONGO_SLAVE.COL.QUEUE, user_id, ORM.CLS_USER_QUEUE_DOC)
+	if is_loaded then
 		all_user_queue_tbl[user_id] = {}
 		for _, queue_data in pairs(doc._queues) do
-			if ORM.is_cls(queue_data, ORM.CLS_QUEUE_DATA) then
-				create_queue(queue_data)
-			end
+			create_queue(queue_data)
 		end
 	end
 	return all_user_queue_tbl[user_id]
@@ -234,7 +230,7 @@ local function on_req_buy_queue(fd, tbl)
 	if not user:check_can_use_diamond(cost_yb * buy_cnt) then
 		return
 	end
-	user:sub_diamond_and_sync(cost_yb * buy_cnt, {CONST.REASON_BUY_BUILD_QUEUE, buy_cnt})
+	user:sub_diamond_and_sync(cost_yb * buy_cnt, {CONST.FLOW_REASON.BUY_BUILD_QUEUE, buy_cnt})
 	local queue = get_user_queue(user_id, buy_queue_idx)
 	if queue then
 		local expire_time = queue:get_expire_time()

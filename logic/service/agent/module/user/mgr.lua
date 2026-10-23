@@ -65,8 +65,8 @@ local function module_on_user_logout(user_id)
 	TROOP_MGR.on_user_logout(user_id)
 end
 
-local kicking_user = {}
-local ignore_heart_beat = {}
+kicking_user = {}
+ignore_heart_beat = {}
 
 function disconnect(fd, user_id)
 	local user = get_user_by_id(user_id)
@@ -74,6 +74,7 @@ function disconnect(fd, user_id)
 		return
 	end
 	MONGO_SLAVE.flush()
+	ORM.unbind(MONGO_SLAVE.COL.USER_INFO, user_id)
 	all_user_tbl[user_id] = nil
 	del_user_id_by_vfd(fd)
 	user_id_to_fd[user_id] = nil
@@ -204,6 +205,9 @@ end
 
 local function on_user_baseinfo(fd)
 	local user = USER_MGR.get_user_by_fd(fd)
+	if not user then
+		return
+	end
 	user:sync_user_base_info()
 end
 
@@ -222,8 +226,12 @@ local function on_user_create(fd, packet)
 	if sex < CONST.SEX_MAN or sex > CONST.SEX_WOMAN then
 		return
 	end
+	local name_len = utf8.len(name)
+	if not name_len or name_len < 1 or name_len > CONST.USER_NAME_MAX_LEN then
+		return
+	end
 	local user = USER_MGR.get_user_by_fd(fd)
-	if user:get_sex() ~= CONST.SEX_NONE then
+	if not user or user:get_sex() ~= CONST.SEX_NONE then
 		return
 	end
 	user:set_sex(sex)

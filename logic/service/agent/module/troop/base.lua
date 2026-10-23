@@ -2,12 +2,8 @@ cls_troop = cls_object:Inherit()
 
 function cls_troop:__init__(oci)
 	Super(cls_troop).__init__(self, oci)
-	if ORM.is_cls(oci, ORM.CLS_TROOP_DATA) then
-		self._data = oci
-	else
-		self._data = ORM.create(ORM.CLS_TROOP_DATA, oci)
-	end
-	ORM.put(MONGO_SLAVE.COL.USER_TROOP, self._data._user_id, "_troops", self._data._troop_idx, self._data)
+	self._data = ORM.new(ORM.CLS_TROOP_DATA, oci)
+	ORM.get(MONGO_SLAVE.COL.USER_TROOP, self._data._user_id)._troops[self._data._troop_idx] = self._data
 	TROOP_MGR.ref_troop(self)
 end
 

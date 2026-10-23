@@ -1,6 +1,6 @@
 local skynet = require "skynet"
 
-local offset = 0
+offset = 0
 
 function os_bj_sec_by_tbl(tbl)
 	local ret = os.time(tbl)

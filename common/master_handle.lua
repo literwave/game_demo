@@ -11,7 +11,7 @@ local slave_cnt = tonumber(skynet.getenv("slave_cnt"))
 local address = skynet.getenv("address")
 
 function CMD.shutdown()
-	skynet.exit()
+	skynet.fork(skynet.exit)
 end
 
 function start_login()

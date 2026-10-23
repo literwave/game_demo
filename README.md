@@ -1,12 +1,12 @@
 # Game Demo Framework
 
-基于 [Skynet](https://github.com/cloudwu/skynet) 的 Lua 游戏服务端骨架。
+基于 [Skynet](https://github.com/cloudwu/skynet) 的 Lua SLG 服务端，单进程里可以跑登录、网关、玩家逻辑和 Mongo 存盘，并带关服、热更、日志、单元测试和压测。
 
-面向原型验证与中小型玩法服务端二次开发，提供可运行的登录、网关、玩家逻辑、持久化与基础运维能力。
+用来在上面做中小型 SLG 玩法。本机 1000 人读请求大约 5100 req/s，p99 约 4ms（见 [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md)）。多服拆分、运行时监控，以及建造队列、邮件、聊天这几块协议还没做完，见 [已知限制](#已知限制)。
 
 配套客户端：[slg_game_client](https://github.com/literwave/slg_game_client)（Cocos Creator 3.8.8 制作的小型 SLG，登录服 `33021`、网关 `33022`）。
 
-> **不是**开箱即用的商业全量方案。请先读完 [安装步骤](#安装步骤) 与 [架构总览](#架构总览)。
+安装和进程怎么拆，看 [安装步骤](#安装步骤) 与 [架构总览](#架构总览)。
 
 ---
 
@@ -37,9 +37,14 @@
 | Actor 服务拆分 | 登录 / 网关 / Agent / 全局业务 / DB 职责清晰 |
 | WebSocket 网关 | 二进制帧 + protobuf，适合实时客户端 |
 | 玩家级串行队列 | 同 `userId` 串行、跨玩家并行，降低竞态 |
-| Agent 池 | `gated` 按负载分配 agent，支持水平扩连接 |
+| Agent 池 | 玩家按 `userId` 固定落到同一个 agent，重连不会同时进两个 |
+| 网关多 worker | `gated` 只负责接入，连接轮流交给 `gate_cnt` 个 worker 并行读写 |
+| 安全关服 | `shell/stop.sh` 按依赖顺序下线并落盘，进程再退出 |
+| 热更 | `shell/hot_update.sh` 先整体编译，有一个文件编译失败就整批不生效 |
+| 日志 | 按级别分文件；钻石、资源、道具、英雄的变动另写流水 |
 | MongoDB 持久化 | 统一走 `.mongodb`；业务侧 schema 驱动存盘 |
 | 配置热加载入口 | `load_xls` + 导表产物 |
+| 测试 | `shell/test.sh` 做语法和单元测试；`shell/bench.sh` 压登录和读请求；CI 覆盖起服、压测、顶号、关服 |
 
 ---
 
@@ -74,17 +79,25 @@
                           | 签发 token + gate 地址
                           v
                     +-----------+
-                    |   gated   |  连接管理 / 转发 / Agent 池
+                    |   gated   |  只监听、接入，连接轮流分发
                     +-----+-----+
                           |
               +-----------+-----------+
               v           v           v
-          +-------+   +-------+   +-------+
-          | agent |   | agent |   |  ...  |  玩家业务
-          +---+---+   +---+---+   +---+---+
-              |           |
-              +-----+-----+
-                    v
+          +---------+ +---------+ +---------+
+          | worker  | | worker  | |   ...   |  读写 / 登录校验 / 转发
+          +----+----+ +----+----+ +----+----+
+               |           |
+               +-----+-----+
+                     | 按 userId 取模，固定落到同一个
+         +-----------+-----------+
+         v           v           v
+     +-------+   +-------+   +-------+
+     | agent |   | agent |   |  ...  |  玩家业务
+     +---+---+   +---+---+   +---+---+
+         |           |
+         +-----+-----+
+               v
             +---------------+     +------------+
             | main_mongodb  | --> |  MongoDB   |
             |   (.mongodb)  |     +------------+
@@ -95,9 +108,10 @@
 
 ### 并发约定
 
-- **gated**：维护 `AGENT_POOLS`，优先选择玩家数较少的 agent  
-- **agent**：每个 `userId` 独立 `queue()` —— 同玩家串行，异玩家并行  
-- 断线 / 异常时由 gated 回收连接并通知 `disconnect`
+- **gated**：只 `listen` / `accept`，连接轮流交给 `gate_cnt` 个 `gate_worker`
+- **gate_worker**：各自独立做 WebSocket 读写、token 校验和转发，连接压力摊到多个服务上
+- **agent**：玩家按 `userId % agent 数` 固定分配；每个 `userId` 一个 `queue()`，同玩家串行、异玩家并行。同一玩家再登录会踢掉旧连接，旧连接迟到的断线不会把新会话登出
+- 断线由持有该连接的 worker 通知 agent 的 `disconnect`
 
 ---
 
@@ -106,22 +120,22 @@
 以本机默认配置为例：登录 `33021`，网关 `33022`，`host_id` / `serverId` 为 `120`。玩家账号 `alice`、密码 `123`，PC 登录（`accountType = 1`）。
 
 ```text
-Client                logind                 Redis              gated                agent              MongoDB
-  |                     |                     |                  |                    |                   |
-  |-- WS :33021 ------->|                     |                  |                    |                   |
-  |  c2s_user_login     |                     |                  |                    |                   |
-  |                     |-- 查/建账号 ------->|                  |                    |                   |
-  |                     |-- 写 token (300s) ->|                  |                    |                   |
-  |<- s2c_user_login ---|                     |                  |                    |                   |
-  |   gateAddr + token  x 断开                 |                  |                    |                   |
-  |                     |                     |                  |                    |                   |
-  |-- WS :33022 ---------------------------------------------->|                    |                   |
-  |  c2s_verify_login   |                     |                  |                    |                   |
-  |                     |                     |<-- 校验 token ---|                    |                   |
-  |                     |                     |                  |-- login ---------->|                   |
-  |                     |                     |                  |                    |-- 读档 ---------->|
-  |<- s2c_user_login_ok --------------------------------------------------------------|                   |
-  |   之后业务包都走 gated → agent                                                      |                   |
+Client          logind            Redis           gated         worker          agent         MongoDB
+  |               |                 |               |              |               |              |
+  |-- WS :33021 ->|                 |               |              |               |              |
+  | c2s_user_login|                 |               |              |               |              |
+  |               |-- 查/建账号 --->|               |              |               |              |
+  |               |-- 写 token ---->|               |              |               |              |
+  |<- s2c_user_login (gateAddr + token)，随后断开   |              |               |              |
+  |               |                 |               |              |               |              |
+  |-- WS :33022 ------------------------------->|              |               |              |
+  |               |                 |               |-- 轮流分发 ->|               |              |
+  | c2s_verify_login ----------------------------------------->|               |              |
+  |               |                 |<-- 校验 token ------------|               |              |
+  |               |                 |               |              |-- login ----->|              |
+  |               |                 |               |              |               |-- 读档 ----->|
+  |<- s2c_user_login_ok ---------------------------------------|               |              |
+  |   之后业务包走 worker → agent                              |               |              |
 ```
 
 1. **连登录服**  
@@ -136,17 +150,18 @@ Client                logind                 Redis              gated           
    回 `Login.s2c_user_login`（`gateAddr`、`token`、`userId`），然后关掉这条登录连接。登录服不持游戏长连接。
 
 4. **连网关并验 token**  
-   客户端用 `gateAddr` 连 `gated:33022`，发 `Login.c2s_verify_login`（`token`、`userId`、`passwd`）。  
-   gated 从 Redis 取出 token 记录，对不上就拒绝。
+   客户端用 `gateAddr` 连 `gated:33022`。`.gated` 接受连接后轮流交给某个 `gate_worker`，整条连接之后的读写都在这个 worker 里。  
+   客户端发 `Login.c2s_verify_login`（`token`、`userId`、`passwd`），worker 从 Redis 取出 token 记录，对不上就关掉连接。
 
 5. **进 agent**  
-   gated 从 `AGENT_POOLS` 里挑人数最少的 agent，`skynet.call(agent, "lua", "login", ...)`。  
-   agent 向 Mongo 读档：没有存档则 `createNewUser`，否则加载玩家对象；挂心跳，并通知 `.gameserver`、`.mail`。  
-   **此时还不进 world**，进大世界时再通知 `.world`。
+   worker 按 `userId % agent 数` 选出 agent（同一个玩家每次都是同一个），`skynet.call(agent, "lua", "login", ...)`。  
+   agent 向 Mongo 读档：没有存档则建新玩家，否则加载玩家对象；挂心跳，并通知 `.gameserver`、`.mail`。  
+   **此时还不进 world**，进大世界时再通知 `.world`。  
+   这个玩家如果已经在线，agent 先踢掉旧连接再登录，两个连接不会同时生效。
 
 6. **登录完成，之后走业务**  
-   gated 记下 `fd → agent`，回 `Login.s2c_user_login_ok`。  
-   之后这条连接上的包都由 gated 转给该 agent；存档走 `agent → .mongodb`。断线时 gated 调 agent 的 `disconnect`。
+   worker 记下 `fd → agent`，回 `Login.s2c_user_login_ok`。  
+   之后这条连接上的包由 worker 转给该 agent；存档走 `agent → .mongodb`。断线时 worker 调 agent 的 `disconnect`。
 
 ---
 
@@ -160,12 +175,14 @@ slg_game/
 ├── config/                   # 节点配置
 │   ├── main_node             # 120 服
 │   ├── clustername.lua       # Skynet cluster 节点地址
-│   └── test_node             # 测试节点
-├── shell/                    # 启停 / 编译 / 清库脚本
+│   ├── test_node             # 测试节点
+│   └── bench_node            # 压测机器人节点
+├── shell/                    # 启停 / 编译 / 测试 / 压测 / 清库脚本
 ├── logic/
 │   ├── service/              # Skynet 服务实现
 │   │   ├── logind/           # 登录
-│   │   ├── gated/            # 网关
+│   │   ├── gated/            # 网关入口：监听、接入、关服
+│   │   ├── gate_worker/      # 网关 worker：连接读写、登录校验、转发
 │   │   ├── agent/            # 玩家逻辑（模块在 module/ 下）
 │   │   ├── gameserver/       # 全局协调
 │   │   ├── main_mongodb/     # Mongo 访问（注册 .mongodb）
@@ -186,7 +203,10 @@ slg_game/
 ├── game_common/              # submodule：协议、pb、导表（literwave/game_common）
 ├── res/innerCity.lua         # 本服内城布局，不在 game_common 里
 ├── docs/                     # 专题设计文档
-└── test/                     # 简易客户端 / 联调脚本
+├── .github/workflows/ci.yml  # CI
+└── test/                     # 联调脚本
+    ├── unit/                 # 单元测试（shell/test.sh 调用）
+    └── bench/                # 压测机器人（shell/bench.sh 调用）
 ```
 
 ---
@@ -397,7 +417,20 @@ macOS 会走 `make macosx`。成功后应存在：
 sh shell/start.sh
 ```
 
-日志出现 `server start`、`boot world success` 以及 ASCII logo，主链路已拉起。
+后台运行，输出追加到 `log/skynet.log`。脚本每秒询问服务状态，所有服务拉起后打印「启动完成」，关终端不影响服务器。
+
+```bash
+tail -f log/skynet.log    # 看日志，ctrl+c 只停 tail
+sh shell/start.sh -f      # 前台运行，调试用
+```
+
+`-f` 模式下 `Ctrl+C` 会直接杀掉进程，还没落盘的数据会丢，正常停服用：
+
+```bash
+sh shell/stop.sh
+```
+
+它按顺序停登录、踢下线、各服务落盘、关数据库，确认进程退出后才返回。
 
 Debug console（telnet）：
 
@@ -405,13 +438,36 @@ Debug console（telnet）：
 telnet 127.0.0.1 8000
 ```
 
-停止：在启动终端按 `Ctrl+C`。
-
 ### 7.（可选）测试节点
 
 ```bash
 sh shell/runtest.sh
 ```
+
+### 8. 测试与压测
+
+不用起服的检查（lua 语法、shell 语法、单元测试），编译过就能跑：
+
+```bash
+sh shell/test.sh
+```
+
+压测：对已经在运行的服务器起一批机器人，走完整登录，然后循环发系统开放、基础信息、部队、英雄请求，并保持心跳。结束打印每个协议的延迟分位数，失败比例超过上限时退出码为 1。
+
+```bash
+sh shell/bench.sh                          # 默认 100 人、30 秒
+sh shell/bench.sh -u 1000 -d 60 -r 10 -i 200
+sh shell/bench.sh --relogin                # 顶号检查
+```
+
+机器人账号是 `bench_<序号>`，会在当前配置的库里建号；重复跑同样的参数复用同一批号。不要对正式数据的服跑。
+
+### 9. CI
+
+`.github/workflows/ci.yml` 在 push / PR 时跑两个任务：
+
+- 编译后执行 `shell/test.sh`
+- 用 Mongo、Redis 容器起服，`bench.sh` 200 人压测（要求零失败、p99 不超过 200ms），`--relogin` 顶号检查，最后 `stop.sh` 关服。失败时上传 `log/`
 
 ---
 
@@ -423,9 +479,10 @@ sh shell/runtest.sh
 |--------|------|
 | `host_id` | 本服 ID |
 | `nodename` / `cluster` | 节点前缀，启动时拼上 `host_id`；以及 `config/clustername.lua` 路径 |
-| `gate_port` / `login_port` / `http_port` | 网关 / 登录 / HTTP |
-| `agent_init_cnt` | 启动时预创建 agent 数 |
-| `agent_max_user_cnt` | 单 agent 建议承载上限 |
+| `gate_port` / `login_port` / `http_port` | 网关 / 登录 / HTTP 运维端口 |
+| `gate_cnt` | 网关 worker 数，同一端口，连接轮流分给各 worker |
+| `agent_init_cnt` | agent 数，玩家按 `userId % agent_init_cnt` 固定分配。改这个数要重启，运行中不能改 |
+| `logpath` / `log_level` | 日志目录；`debug` / `info` / `warn` / `error`，低于该级别不写 |
 | `mongodb_*` | Mongo 连接 |
 | `redis_*` | Redis 连接 |
 | `rootdir` / `workdir` | 工程与 logic 相对路径 |
@@ -450,7 +507,7 @@ cluster.call("game120", ".mail", ...)
 持久化采用 **schema + OOP 行为分离**：
 
 - **Schema**：`orm/schema/*.td` 描述可落库结构（`number` / `string` / `boolean` / `struct` / `list` / `map`）
-- **核心库**：`lualib/orm`（`create` / `dump` / `dump_field`）
+- **核心库**：`lualib/orm`（`new` / `bind` / `get` / `unbind` / `touch` / `dump`）
 - **游戏入口**：`Import("../orm/init.lua")` → 全局 `ORM`
 - **行为类**：`clsUser` / `clsHero` 等通过 `self._data` 持有 ORM 对象，方法仍用 `clsObject:Inherit()`
 
@@ -463,12 +520,20 @@ cluster.call("game120", ".mail", ...)
 加载或创建文档后绑上集合和 `_id`。之后改字段会标脏，刷盘时整包写回：
 
 ```lua
-self._data = ORM.create(ORM.CLS_USER_DATA, oci)
-ORM.bind(self._data, MONGO_SLAVE.COL.USER_INFO, self._data._userId)
+self._data = ORM.new(ORM.CLS_USER_DATA, oci)
+ORM.bind(self._data, MONGO_SLAVE.COL.USER_INFO, self._data._user_id)
 self._data._name = name
 ```
 
-新建文档如果之后没有赋值，调用 `ORM.touch(doc)` 标一次脏。新增可存盘类型：先写 `orm/schema/xxx.td`，再在 `orm/init.lua` 的 `SCHEMA_FILES` 中注册。
+按 id 存一包子对象的文档（英雄、道具等）用 `ORM.load` 读取，子对象直接赋值挂上、赋 `nil` 删除：
+
+```lua
+local doc, is_loaded = ORM.load(MONGO_SLAVE.COL.USER_HERO, user_id, ORM.CLS_USER_HERO_DOC)
+doc._heroes[hero_type] = ORM.new(ORM.CLS_HERO_DATA, oci)
+doc._heroes[hero_type] = nil
+```
+
+新建文档如果之后没有赋值，调用 `ORM.touch(doc)` 标一次脏。下线时 `ORM.unbind(col, key)`。新增可存盘类型：先写 `orm/schema/xxx.td`，再在 `orm/init.lua` 的 `SCHEMA_FILES` 中注册。
 
 ---
 
@@ -508,8 +573,13 @@ self._data._name = name
 | 脚本 | 作用 |
 |------|------|
 | `shell/build.sh` | 编译 Skynet、`protobuf.so`、`navigation/c.so` |
-| `shell/start.sh` | 启动主节点（`config/main_node`） |
+| `shell/start.sh` | 后台启动主节点，输出在 `log/skynet.log`；`-f` 前台 |
+| `shell/stop.sh` | 安全关服：下线、落盘后进程自己退出 |
+| `shell/restart.sh` | `stop.sh` 之后再 `start.sh`，参数透传（`-f`） |
+| `shell/hot_update.sh` | 热更 lua 文件，`-c` 同时重载配置表 |
 | `shell/runtest.sh` | 启动测试节点 |
+| `shell/test.sh` | lua / shell 语法检查和单元测试，不需要起服 |
+| `shell/bench.sh` | 机器人压测，`--relogin` 做顶号检查；结果在 `log/bench_result.txt` |
 | `shell/start_db.sh` | 启动 MongoDB / Redis（`/usr/local` 模板路径，系统包安装可不用） |
 | `shell/stop_db.sh` | 停止 DB（同样依赖模板路径） |
 | `shell/drop_db.sh` | 清空业务库与 Redis（慎用） |
@@ -522,7 +592,7 @@ self._data._name = name
 |------|------|
 | [FRAMEWORK_REVIEW.md](FRAMEWORK_REVIEW.md) | 架构评价与改进建议 |
 | [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md) | 性能与负载分析 |
-| [docs/GATE_SCALING.md](docs/GATE_SCALING.md) | Gate 水平扩展方案 |
+| [docs/GATE_SCALING.md](docs/GATE_SCALING.md) | 网关扩展：进程内多 worker，以及还没做的跨进程方案 |
 
 上游参考：[Skynet Wiki](https://github.com/cloudwu/skynet/wiki)
 
@@ -530,13 +600,14 @@ self._data._name = name
 
 ## 已知限制
 
-- 大型 MMO 需补监控、压测与工程化  
-- Redis 登录 token 默认约 **300s** 过期（以登录服实现为准）  
-- 多 Gate 分配策略相对简单，扩展见 `docs/GATE_SCALING.md`
+- 大型 MMO 需补监控和工程化；压测只覆盖登录和几个查询协议，没有覆盖建造、抽卡等写操作
+- Redis 登录 token 默认约 **300s** 过期（以登录服实现为准）
+- 网关的并行在单个进程内：`gate_cnt` 个 worker 分担读写。跨进程、跨机器的多网关还没做，见 `docs/GATE_SCALING.md`
+- 热更替换的是函数。模块里的非函数值（常量、已初始化的表）保持旧值，改这些需要重启
 - Cluster 已监听，玩法仍在同一进程；拆节点时再把对应服务挪出去
 
 ---
 
 ## License
 
-本仓库示例代码可按 **MIT** 使用与修改；**Skynet** 及第三方组件请遵循其各自许可证。
+本仓库代码可按 **MIT** 使用与修改；**Skynet** 及第三方组件请遵循其各自许可证。

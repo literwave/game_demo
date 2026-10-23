@@ -1,69 +1,107 @@
-package.path = SERVICE_PATH.."?.lua;" .. package.path
 local skynet = require "skynet"
 
-local SERVICE_INFO = string.format("%s:%0x ", SERVICE_NAME, skynet.self())
+-- 用法：LOG._info("user %s login", user_id)；参数是表会展开
+-- 只有一个参数或格式化失败时按空格拼接，不会因为日志本身报错
+-- 配置 log_level = "info" 可关掉 debug
 
-local _FILE_INFO_T = {
-	" <",
-	SERVICE_INFO,
-	"nil",
-	" line:",
-	"nil",
-	">",
+local LEVEL_TBL = {
+	debug = 1,
+	info = 2,
+	warn = 3,
+	error = 4,
 }
 
-local _FILE_INFO_WITH_NAME_T = {
-	" <",
-	SERVICE_INFO,
-	"nil",
-	" line:",
-	"nil",
-	">",
-	" <",
-	"nil",
-	">",
-}
-function _info(...)
-	local debug_info = debug.getinfo(2, 'nSl')
-	local t
-	if debug_info.name then
-		_FILE_INFO_WITH_NAME_T[8] = debug_info.name
-		t = _FILE_INFO_WITH_NAME_T
-	else
-		t = _FILE_INFO_T
+local min_level = LEVEL_TBL[skynet.getenv("log_level") or "debug"] or LEVEL_TBL.debug
+local SERVICE_INFO = string.format("%s:%08x", SERVICE_NAME, skynet.self())
+
+local function to_str(v)
+	if type(v) == "table" then
+		return table2str(v)
 	end
-	t[3] = debug_info.short_src
-	t[5] = debug_info.currentline
-	local pfile = os.date("[%Y-%m-%d %H:%M:%S]") .. " [INFO]" .. table.concat(t)
-	skynet.send(".gamelog", "lua", "writefile", "info", pfile, ...)
+	return tostring(v)
+end
+
+local function format_msg(fmt, ...)
+	local n = select("#", ...)
+	if n == 0 then
+		return to_str(fmt)
+	end
+	local args = table.pack(...)
+	for i = 1, n do
+		if type(args[i]) == "table" then
+			args[i] = table2str(args[i])
+		end
+	end
+	if type(fmt) == "string" then
+		local ok, msg = pcall(string.format, fmt, table.unpack(args, 1, n))
+		if ok then
+			return msg
+		end
+	end
+	local str_list = {to_str(fmt)}
+	for i = 1, n do
+		str_list[#str_list + 1] = tostring(args[i])
+	end
+	return table.concat(str_list, " ")
+end
+
+-- 栈：调用方 -> _xxx -> write
+local function write(level, fmt, ...)
+	if LEVEL_TBL[level] < min_level then
+		return
+	end
+	local info = debug.getinfo(3, "Sl")
+	local line = string.format("[%s] [%s] <%s %s:%s> %s",
+		os.date("%Y-%m-%d %H:%M:%S"), string.upper(level), SERVICE_INFO,
+		info and info.short_src or "?", info and info.currentline or "?",
+		format_msg(fmt, ...))
+	skynet.send(".gamelog", "lua", "log", level, line)
 end
 
 function _debug(...)
-	local debug_info = debug.getinfo(2, 'nSl')
-	local t
-	if debug_info.name then
-		_FILE_INFO_WITH_NAME_T[8] = debug_info.name
-		t = _FILE_INFO_WITH_NAME_T
-	else
-		t = _FILE_INFO_T
-	end
-	t[3] = debug_info.short_src
-	t[5] = debug_info.currentline
-	local pfile = os.date("[%Y-%m-%d %H:%M:%S]") .. " [DEBUG]" .. table.concat(t)
-	skynet.send(".gamelog", "lua", "writefile", "debug", pfile, ...)
+	write("debug", ...)
+end
+
+function _info(...)
+	write("info", ...)
+end
+
+function _warn(...)
+	write("warn", ...)
 end
 
 function _error(...)
-	local debug_info = debug.getinfo(2, 'nSl')
-	local t
-	if debug_info.name then
-		_FILE_INFO_WITH_NAME_T[8] = debug_info.name
-		t = _FILE_INFO_WITH_NAME_T
-	else
-		t = _FILE_INFO_T
+	write("error", ...)
+end
+
+function debug_print(...)
+	write("debug", ...)
+end
+
+-- 热更时 common_class 逐个打印保留下来的模块变量
+function update_file(...)
+	write("debug", ...)
+end
+
+-- 资源流水，一行一条，tab 分隔：
+-- 时间  user_id  id  变化量  变化后数量  reason_list(逗号分隔)
+-- kind: diamond / res / item / hero，分别写 flow_<kind>_<日期>.log
+function _flow(kind, user_id, id, change, after, reason_list)
+	local reason_str = "-"
+	if reason_list and reason_list[1] then
+		local str_list = {}
+		for i, v in ipairs(reason_list) do
+			str_list[i] = tostring(v)
+		end
+		reason_str = table.concat(str_list, ",")
 	end
-	t[3] = debug_info.short_src
-	t[5] = debug_info.currentline
-	local pfile = os.date("[%Y-%m-%d %H:%M:%S]") .. " [ERROR]" .. table.concat(t)
-	skynet.send(".gamelog", "lua", "writefile", "error", pfile, ...)
+	local line = table.concat({
+		os.date("%Y-%m-%d %H:%M:%S"),
+		tostring(user_id),
+		tostring(id),
+		tostring(change),
+		tostring(after),
+		reason_str,
+	}, "\t")
+	skynet.send(".gamelog", "lua", "flow", kind, line)
 end

@@ -1,11 +1,9 @@
 local skynet = require "skynet"
 local sharedata = require "skynet.sharedata"
-local CONFIG_PATH = skynet.getenv("config_path")
+require "skynet.manager"
+-- 配置文件用 loadfile 读，开着代码缓存重载会拿到旧配置
+skynet.cache.mode("OFF")
 local CMD = {}
-
-FILE_MODIFY_TIME_TBL = {
-	-- [filename] = modification
-}
 
 -- 星图导出的表是 { {Id=...}, ... }，业务按 Id 取值，加载时转成 [Id] = row。
 -- 不是这种形状的表（例如内城布局）原样放进 sharedata。
@@ -52,42 +50,39 @@ function CMD.shutdown()
 	skynet.exit()
 end
 
-function CMD.hot_update()
-	for file in lfs.dir(CONFIG_PATH) do
-		local filename = file:sub(1, -5)
-		local file_attr = lfs.attributes(CONFIG_PATH .. file)
-		if not FILE_MODIFY_TIME_TBL[filename] then
-			local temdata = load_config(CONFIG_PATH .. file)
-			sharedata.new(filename, temdata)
-			FILE_MODIFY_TIME_TBL[filename] = file_attr.modification
-		else
-			local old_modification = FILE_MODIFY_TIME_TBL[filename]
-			if old_modification ~= file_attr.modification then
-				local temdata = load_config(CONFIG_PATH .. file)
-				sharedata.update(filename, temdata)
-				FILE_MODIFY_TIME_TBL[filename] = file_attr.modification
-			end
-		end
-	end
-end
-
-local function load_data_file()
+local function read_all()
+	local ret = {}
 	for _, file in ipairs(DATA_FILE_LIST) do
 		local filename = file:match("([^/\\]+)%.lua$")
 		assert(filename, "bad config path: " .. tostring(file))
-		local data = load_config(file)
-		sharedata.new(filename, data)
-		FILE_MODIFY_TIME_TBL[filename] = os.time()
-		skynet.error("sharedata loaded:", filename)
+		ret[filename] = load_config(file)
 	end
+	return ret
 end
 
--- 待做，类似于协议初始化
+-- 全部读成功才替换，避免一张表坏了导致新旧配置混用
+function CMD.reload()
+	local ok, data_tbl = pcall(read_all)
+	if not ok then
+		return {ok = false, err = tostring(data_tbl)}
+	end
+	for filename, data in pairs(data_tbl) do
+		sharedata.update(filename, data)
+	end
+	return {ok = true}
+end
+
 skynet.start(function()
-	load_data_file()
-	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
-		assert(CMD[cmd])
-		local f = CMD[cmd]
-		f()
+	for filename, data in pairs(read_all()) do
+		sharedata.new(filename, data)
+		skynet.error("sharedata loaded:", filename)
+	end
+	skynet.dispatch("lua", function(session, source, cmd, ...)
+		local f = assert(CMD[cmd], cmd)
+		local ret = f(...)
+		if session ~= 0 then
+			skynet.ret(skynet.pack(ret))
+		end
 	end)
+	skynet.register(".load_xls")
 end)

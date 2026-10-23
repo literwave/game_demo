@@ -2,12 +2,8 @@ cls_item = cls_object:Inherit()
 
 function cls_item:__init__(oci)
 	Super(cls_item).__init__(self)
-	if ORM.is_cls(oci, ORM.CLS_ITEM_DATA) then
-		self._data = oci
-	else
-		self._data = ORM.create(ORM.CLS_ITEM_DATA, oci)
-	end
-	ORM.put(MONGO_SLAVE.COL.USER_ITEM, self._data._user_id, "_items", self._data._item_uid, self._data)
+	self._data = ORM.new(ORM.CLS_ITEM_DATA, oci)
+	ORM.get(MONGO_SLAVE.COL.USER_ITEM, self._data._user_id)._items[self._data._item_uid] = self._data
 end
 
 function cls_item:get_item_uid()
@@ -58,7 +54,7 @@ function cls_item:can_use(user_id, use_cnt)
 end
 
 function cls_item:release()
-	ORM.remove(MONGO_SLAVE.COL.USER_ITEM, self:get_user_id(), "_items", self:get_item_uid())
+	ORM.get(MONGO_SLAVE.COL.USER_ITEM, self:get_user_id())._items[self:get_item_uid()] = nil
 	ITEM_MGR.unref_item(self)
 	Super(cls_item).release(self)
 end

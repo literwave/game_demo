@@ -21,15 +21,11 @@ function create_hero(oci)
 end
 
 local function try_init_user_hero_data(user_id)
-	if not ORM.get(MONGO_SLAVE.COL.USER_HERO, user_id) then
-		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.USER_HERO, user_id) or {}
-		local doc = ORM.create(ORM.CLS_USER_HERO_DOC, raw)
-		ORM.hold(doc, MONGO_SLAVE.COL.USER_HERO, user_id)
+	local doc, is_loaded = ORM.load(MONGO_SLAVE.COL.USER_HERO, user_id, ORM.CLS_USER_HERO_DOC)
+	if is_loaded then
 		user_hero_tbl[user_id] = {}
 		for _, hero_data in pairs(doc._heroes) do
-			if ORM.is_cls(hero_data, ORM.CLS_HERO_DATA) then
-				create_hero(hero_data)
-			end
+			create_hero(hero_data)
 		end
 	end
 	return user_hero_tbl[user_id]
@@ -72,6 +68,7 @@ function add_hero(user_id, hero_type, reason_list)
 	}
 	local hero = create_hero(oci)
 	hero:sync_to_client()
+	LOG._flow("hero", user_id, hero_type, 1, 1, reason_list)
 	return hero
 end
 

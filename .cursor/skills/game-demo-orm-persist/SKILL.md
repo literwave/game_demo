@@ -19,9 +19,9 @@ description: >-
 
 1. 在 `orm/schema/<name>.td` 写类型（原子类型用 `number` / `string` / `boolean`）
 2. 若有「id 当 key 的包」，用命名字段挂 map，例如 `_items` / `_heroes` / `_queues`
-3. 把文件名加入 `orm/init.lua` 的 `SCHEMA_FILES`，并导出 `CLS_*` 常量
-4. `clsXxx:__init__`：`self._data = ORM.create(CLS_*, oci)`（已是 orm 对象则直接挂）
-5. 加载时 `ORM.hold(doc, MONGO_SLAVE.COL.XXX, id)`。集合名只用 `logic/base/mongo_slave.lua` 里的 `COL` 枚举。子对象在 `__init__` 里 `ORM.put` 挂进文档，删除用 `ORM.remove`。不要在模块里再存一份 doc 表。改字段会把根标脏，`flush` 整包写回
+3. 把文件名加入 `orm/init.lua` 的 `SCHEMA_FILES`，并导出 `CLS_*` 常量。被引用的类型要写在引用者前面
+4. `clsXxx:__init__`：`self._data = ORM.new(CLS_*, oci)`（oci 已是该类型 orm 对象时原样返回）
+5. mgr 加载用 `local doc, is_loaded = ORM.load(MONGO_SLAVE.COL.XXX, id, CLS_*_DOC)`，`is_loaded` 为 true 时遍历 bag 建对象。集合名只用 `logic/base/mongo_slave.lua` 里的 `COL` 枚举。子对象在 `__init__` 里直接赋值挂进文档：`ORM.get(col, id)._heroes[k] = self._data`，删除赋 `nil`。不要在模块里再存一份 doc 表。改字段会把根标脏，`flush` 整包写回；下线 `ORM.unbind(col, id)`
 6. 不要再写 `save_col.lua`、`persist*` 或在 setter 里 `saveField`。删整份独立文档仍用 `delDoc`
 
 ## 禁止

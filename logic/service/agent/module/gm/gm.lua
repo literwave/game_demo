@@ -53,9 +53,13 @@ function CMD.code(vfd, code_string)
 	fn()
 end
 
+-- 只更当前 agent；全服热更用 shell/hot_update.sh
 function CMD.update(vfd, file)
 	assert(type(file) == "string" and file ~= "", "empty file")
-	assert(update_lua_file(file))
+	skynet.cache.clear()
+	local ret = hot_update({file})
+	assert(ret.ok, ret.err)
+	assert(ret.updated[1], "file not imported in this agent")
 end
 
 function CMD.full_build(vfd)
@@ -89,7 +93,7 @@ function CMD.add_item(vfd, item_id, cnt)
 	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
 	REWARD_MGR.reward_user_and_show(user_id, {
 		GLOBAL_FUNC.gen_reward_info(CONST.REWARD_TYPE_ITEM, item_id, cnt),
-	}, {})
+	}, {CONST.FLOW_REASON.GM})
 end
 
 function CMD.del_item(vfd, item_id, cnt)
@@ -101,19 +105,19 @@ function CMD.del_item(vfd, item_id, cnt)
 			itemId = item_id,
 			count = cnt,
 		},
-	}))
+	}, {CONST.FLOW_REASON.GM}))
 end
 
 function CMD.add_hero(vfd, hero_type)
 	assert(hero_type)
 	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
-	HERO_MGR.add_hero(user_id, hero_type, {})
+	HERO_MGR.add_hero(user_id, hero_type, {CONST.FLOW_REASON.GM})
 end
 
 function CMD.full_hero(vfd)
 	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
 	for _, hero_type in ipairs(DATA_COMMON.get_all_hero_types()) do
-		HERO_MGR.add_hero(user_id, hero_type, {})
+		HERO_MGR.add_hero(user_id, hero_type, {CONST.FLOW_REASON.GM})
 	end
 end
 
@@ -139,11 +143,17 @@ function CMD.open_system(vfd, system_id)
 	local user = USER_MGR.get_user_by_fd(vfd)
 	assert(user)
 	if system_id == 0 then
-		SYSTEM_OPEN.open_all(user)
+		tell(vfd, string.format("新开启 %d 个系统", SYSTEM_OPEN.open_all(user)))
+		SYSTEM_OPEN.sync_all(user)
 		return
 	end
-	assert(DATA_COMMON.get_system_open_tbl()[system_id], system_id)
-	SYSTEM_OPEN.open_system(user, system_id)
+	assert(DATA_COMMON.get_system_open_tbl()[system_id], "没有这个系统 " .. tostring(system_id))
+	if SYSTEM_OPEN.open_system(user, system_id) then
+		tell(vfd, "系统已开启 " .. system_id)
+	else
+		tell(vfd, "系统之前已开启 " .. system_id)
+		SYSTEM_OPEN.sync_all(user)
+	end
 end
 
 local function on_gm_command(fd, packet)

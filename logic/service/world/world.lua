@@ -4,7 +4,11 @@ require "skynet.manager"
 local CMD = {}
 
 function CMD.shutdown()
-	skynet.exit()
+	skynet.fork(skynet.exit)
+end
+
+function CMD.hot_update(_, path_list)
+	return hot_update(path_list)
 end
 
 function CMD.sync_to_map(oci)
@@ -18,7 +22,7 @@ skynet.start(function()
 		local f = CMD[cmd]
 		if f then
 			if session ~= 0 then
-				skynet.ret(f(address, ...))
+				skynet.ret(skynet.pack(f(address, ...)))
 			else
 				f(address, ...)
 			end

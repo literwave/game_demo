@@ -1,220 +1,75 @@
 local skynet = require "skynet"
+require "skynet.manager"
 local socket = require "skynet.socket"
-local websocket = require "http.websocket"
-local protobuf = require "protobuf"
-local crypt = require "client.crypt"
-local PROTOCOL = skynet.getenv("protocol")
+
+-- 网关入口：只监听和 accept，连接轮流交给 gate_cnt 个 gate_worker 处理读写
+-- agent 池也在这里统一创建，所有 worker 共用同一份列表
+
+local GATE_CNT = tonumber(skynet.getenv("gate_cnt")) or 1
+local AGENT_CNT = tonumber(skynet.getenv("agent_init_cnt")) or 1
 
 local CMD = {}
-
-CONNECTION = {
-	-- [fd] = {
-
-	-- }
-}
-
-local AGENT_INIT_CNT = skynet.getenv("agent_init_cnt")
-local AGENT_MAX_USER_CNT = tonumber(skynet.getenv("agent_max_user_cnt"))
-local AGENT_POOLS = {
-	-- {
-	-- 	userCnt = *,
-	-- 	agent = *,
-	-- }
-}
-
-skynet.register_protocol {
-	name = "client",
-	id = skynet.PTYPE_CLIENT,
-	pack = skynet.pack
-}
-
-local handle = {}
-
-local function decode_verify_login_pack(msg)
-	if #msg < 4 then
-		return nil, "short pack"
-	end
-	local ok, _, pos = pcall(string.unpack, ">I4", msg)
-	if not ok then
-		return nil, _
-	end
-	local decoded, err
-	ok, decoded, err = pcall(protobuf.decode, "Login.c2s_verify_login", msg:sub(pos))
-	if not ok or not decoded then
-		return nil, ok and err or decoded
-	end
-	return decoded
-end
-
-local function encode_login_ok_pack(msg)
-	local pack_name = "Login.s2c_user_login_ok"
-	local pack_id = PACK_NAME_TO_ID[pack_name]
-	if not pack_id then
-		return nil, "pack id missing"
-	end
-	local ok, body = pcall(protobuf.encode, pack_name, msg)
-	if not ok then
-		return nil, body
-	end
-	local pack_data = string.pack(">I2", pack_id) .. body
-	pack_data = string.pack(">I2", #pack_data) .. pack_data
-	return pack_data
-end
-
-function handle.connect(id)
-	print("gate ws connect from: " .. tostring(id))
-end
-
-function handle.handshake(id, header, url)
-	local addr = websocket.addrinfo(id)
-	print("gate ws handshake from: " .. tostring(id), "url", url, "addr:", addr)
-end
-
-local function get_balance_agent_info()
-	table.sort(AGENT_POOLS, function(a, b)
-		return a.user_cnt < b.user_cnt
-	end)
-	return AGENT_POOLS[1]
-end
-
-local function first_login(packet, fd)
-	local token = packet.token
-	local user_id = tonumber(packet.userId)
-	local passwd = packet.passwd
-	local user_info = LREDIS.hgetall(token)
-	user_info.userId = tonumber(user_info.userId)
-	user_info.serverId = tonumber(user_info.serverId)
-	if user_id ~= user_info.userId or passwd ~= user_info.passwd then
-		skynet.error("token error", token, user_id, passwd, user_info.userId, user_info.passwd)
-		return
-	end
-	local agent_info = get_balance_agent_info()
-	if not agent_info then
-		skynet.error("get agent failed", user_id)
-		return
-	end
-	local agent = agent_info.agent
-	skynet.call(agent, "lua", "login", skynet.self(), fd, user_id, addr, user_info.account, user_info.serverId, token)
-	skynet.error("userId: ", user_id)
-	agent_info.user_cnt = agent_info.user_cnt + 1
-	local c = {
-		agent = agent,
-		userId = user_id,
-		addr = addr,
-	}
-	CONNECTION[fd] = c
-	local pto_tbl = {
-		userId = user_id,
-		serverId = user_info.serverId,
-	}
-	local send_packet, err = encode_login_ok_pack(pto_tbl)
-	if not send_packet then
-		skynet.error("login ok encode failed", fd, err)
-		websocket.close(fd)
-		return
-	end
-	websocket.write(fd, send_packet, "binary")
-	skynet.error("login ok")
-end
-
-function handle.message(fd, msg)
-	local function error_handler(err)
-		skynet.error("handle.message mistake", err)
-		skynet.error("stack", debug.traceback())
-		return err
-	end
-	local ok, ret = xpcall(function ()
-		local conn = CONNECTION[fd]
-		if not conn then
-			local packet, err = decode_verify_login_pack(msg)
-			if not packet then
-				skynet.error("verify login decode failed", fd, err)
-				websocket.close(fd)
-				return
-			end
-			first_login(packet, fd)
-		else
-			local agent = conn.agent
-			local user_id = conn.userId
-			skynet.send(agent, "client", fd, msg, user_id)
-		end
-	end, error_handler)
-	if not ok then
-		skynet.error("handle.message ", fd, "mistake：", ret)
-		websocket.close(fd)
-	end
-end
-
-function handle.close(id, code, reason)
-	local conn = CONNECTION[id]
-	if conn then
-		local agent = conn.agent
-		for _, agent_info in pairs(AGENT_POOLS) do
-			if agent_info.agent == agent then
-				agent_info.user_cnt = agent_info.user_cnt - 1
-			end
-		end
-		skynet.send(agent, "lua", "disconnect", id, conn.userId)
-	end
-	CONNECTION[id] = nil
-	print("gate ws close from: " .. tostring(id), code, reason)
-end
-
-function handle.error(id)
-	local conn = CONNECTION[id]
-	if conn then
-		local agent = conn.agent
-		for _, agent_info in pairs(AGENT_POOLS) do
-			if agent_info.agent == agent then
-				agent_info.user_cnt = agent_info.user_cnt - 1
-			end
-		end
-		skynet.send(agent, "lua", "disconnect", id, conn.userId)
-	end
-	CONNECTION[id] = nil
-	print("gate ws error from: " .. tostring(id))
-end
+local LISTEN_FD = nil
+local is_closing = false
+local worker_list = {}
+local agent_list = {}
+local balance = 1
 
 function CMD.open(conf)
-	skynet.error(string.format("gate Listen on %s:%d", conf.address or "0.0.0.0", conf.port))
-	local fd = socket.listen(conf.address or "0.0.0.0", conf.port)
-	local addr = string.format("%s:%s", conf.address or "0.0.0.0", conf.port)
-	socket.start(fd, function (fd, addr)
-		websocket.accept(fd, handle, PROTOCOL, addr)
-	end)
-	for _ = 1, AGENT_INIT_CNT do
-		local agent = {
-			user_cnt = 0,
-			agent = skynet.newservice("agent")
-		}
-		table.insert(AGENT_POOLS, agent)
+	for _ = 1, AGENT_CNT do
+		table.insert(agent_list, skynet.newservice("agent"))
 	end
-	skynet.send(".logind", "lua", "register_gate", skynet.self(), conf.serverId, addr)
+	for _ = 1, GATE_CNT do
+		local worker = skynet.newservice("gate_worker")
+		skynet.call(worker, "lua", "init", agent_list)
+		table.insert(worker_list, worker)
+	end
+	local address = conf.address or "0.0.0.0"
+	LISTEN_FD = socket.listen(address, conf.port)
+	skynet.error(string.format("gate listen on %s:%s, worker=%d, agent=%d", address, conf.port, GATE_CNT, AGENT_CNT))
+	socket.start(LISTEN_FD, function(fd, addr)
+		if is_closing then
+			socket.close_fd(fd)
+			return
+		end
+		skynet.send(worker_list[balance], "lua", "accept", fd, addr)
+		balance = balance % #worker_list + 1
+	end)
+	skynet.send(".logind", "lua", "register_gate", skynet.self(), conf.serverId, string.format("%s:%s", address, conf.port))
 end
 
-function CMD.send_client_pack(fd, packet)
-	websocket.write(fd, packet, "binary")
+function CMD.get_agent_list()
+	return agent_list
 end
 
-function CMD.kick(fd)
-	websocket.close(fd)
-end
-
+-- 顺序：停收连接 -> worker 停止转发 -> agent 逐个下线存盘 -> worker 断开客户端
 function CMD.shutdown()
-	skynet.exit()
+	is_closing = true
+	socket.close(LISTEN_FD)
+	for _, worker in ipairs(worker_list) do
+		skynet.call(worker, "lua", "stop_forward")
+	end
+	for _, agent in ipairs(agent_list) do
+		skynet.call(agent, "lua", "shutdown")
+	end
+	for _, worker in ipairs(worker_list) do
+		skynet.call(worker, "lua", "shutdown")
+	end
+	skynet.fork(skynet.exit)
 end
-
 
 skynet.start(function()
-	dofile "../logic/service/gated/preload.lua"
 	skynet.dispatch("lua", function (session, address, cmd, ...)
 		local f = CMD[cmd]
-		if f then
-			if session ~= 0 then
-				skynet.ret(f(...))
-			else
-				f(...)
-			end
+		if not f then
+			skynet.error("gated unknown cmd", cmd)
+			return
+		end
+		if session ~= 0 then
+			skynet.ret(skynet.pack(f(...)))
+		else
+			f(...)
 		end
 	end)
+	skynet.register(".gated")
 end)

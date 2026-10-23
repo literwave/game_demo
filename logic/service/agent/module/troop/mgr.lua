@@ -13,15 +13,11 @@ local function create_troop(oci)
 end
 
 local function try_init_user_troops(user_id)
-	if not ORM.get(MONGO_SLAVE.COL.USER_TROOP, user_id) then
-		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.USER_TROOP, user_id) or {}
-		local doc = ORM.create(ORM.CLS_USER_TROOP_DOC, raw)
-		ORM.hold(doc, MONGO_SLAVE.COL.USER_TROOP, user_id)
+	local doc, is_loaded = ORM.load(MONGO_SLAVE.COL.USER_TROOP, user_id, ORM.CLS_USER_TROOP_DOC)
+	if is_loaded then
 		all_user_troop_tbl[user_id] = {}
 		for _, troop_data in pairs(doc._troops) do
-			if ORM.is_cls(troop_data, ORM.CLS_TROOP_DATA) then
-				create_troop(troop_data)
-			end
+			create_troop(troop_data)
 		end
 	end
 	return all_user_troop_tbl[user_id]
@@ -36,7 +32,7 @@ function on_user_logout(user_id)
 	if ORM.get(MONGO_SLAVE.COL.USER_TROOP, user_id) then
 		MONGO_SLAVE.flush()
 		all_user_troop_tbl[user_id] = nil
-		ORM.forget(MONGO_SLAVE.COL.USER_TROOP, user_id)
+		ORM.unbind(MONGO_SLAVE.COL.USER_TROOP, user_id)
 	end
 end
 
@@ -88,7 +84,9 @@ local function check_edit(user_id, troop_idx, pos_hero_list)
 	return true
 end
 
+-- 返回 true 表示有其他部队被改动
 local function take_hero_off_other_troops(user_id, troop_idx, hero_idx)
+	local is_changed = false
 	local troop_tbl = try_init_user_troops(user_id)
 	for idx, troop in pairs(troop_tbl) do
 		if idx ~= troop_idx then
@@ -100,16 +98,14 @@ local function take_hero_off_other_troops(user_id, troop_idx, hero_idx)
 			end
 			for _, pos in ipairs(pos_list) do
 				troop:set_pos_hero(pos, nil)
+				is_changed = true
 			end
 		end
 	end
+	return is_changed
 end
 
-local function on_req_troop(fd)
-	local user_id = USER_MGR.get_user_id_by_fd(fd)
-	if not user_id then
-		return
-	end
+local function sync_all_troop(fd, user_id)
 	local troop_list = {}
 	for _, troop in pairs(try_init_user_troops(user_id)) do
 		troop_list[#troop_list + 1] = troop:get_pto_info()
@@ -117,6 +113,14 @@ local function on_req_troop(fd)
 	for_caller.s2c_req_troop(fd, {
 		troopList = troop_list,
 	})
+end
+
+local function on_req_troop(fd)
+	local user_id = USER_MGR.get_user_id_by_fd(fd)
+	if not user_id then
+		return
+	end
+	sync_all_troop(fd, user_id)
 end
 
 local function on_edit_troop(fd, packet)
@@ -141,8 +145,11 @@ local function on_edit_troop(fd, packet)
 			_troop_idx = troop_idx,
 		})
 	end
+	local is_other_changed = false
 	for _, info in ipairs(pos_hero_list) do
-		take_hero_off_other_troops(user_id, troop_idx, info.hero_idx)
+		if take_hero_off_other_troops(user_id, troop_idx, info.hero_idx) then
+			is_other_changed = true
+		end
 	end
 	troop:clear_pos_hero()
 	for _, info in ipairs(pos_hero_list) do
@@ -151,6 +158,9 @@ local function on_edit_troop(fd, packet)
 	for_caller.s2c_edit_troop(fd, {
 		troopInfo = troop:get_pto_info(),
 	})
+	if is_other_changed then
+		sync_all_troop(fd, user_id)
+	end
 end
 
 function __init__()

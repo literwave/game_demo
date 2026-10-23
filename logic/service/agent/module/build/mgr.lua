@@ -31,15 +31,11 @@ local function create_build(oci)
 end
 
 local function try_init_user_builds(user_id)
-	if not ORM.get(MONGO_SLAVE.COL.USER_BUILD, user_id) then
-		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.USER_BUILD, user_id) or {}
-		local doc = ORM.create(ORM.CLS_USER_BUILD_DOC, raw)
-		ORM.hold(doc, MONGO_SLAVE.COL.USER_BUILD, user_id)
+	local doc, is_loaded = ORM.load(MONGO_SLAVE.COL.USER_BUILD, user_id, ORM.CLS_USER_BUILD_DOC)
+	if is_loaded then
 		all_user_build_tbl[user_id] = {}
 		for _, build_data in pairs(doc._builds) do
-			if ORM.is_cls(build_data, ORM.CLS_BUILD_DATA) then
-				create_build(build_data)
-			end
+			create_build(build_data)
 		end
 	end
 	return all_user_build_tbl[user_id]
@@ -83,7 +79,7 @@ function on_user_logout(user_id)
 	if ORM.get(MONGO_SLAVE.COL.USER_BUILD, user_id) then
 		MONGO_SLAVE.flush()
 		all_user_build_tbl[user_id] = nil
-		ORM.forget(MONGO_SLAVE.COL.USER_BUILD, user_id)
+		ORM.unbind(MONGO_SLAVE.COL.USER_BUILD, user_id)
 	end
 end
 
@@ -128,9 +124,19 @@ local function on_up_build(fd, packet)
 	if not build then
 		return
 	end
-	local max_lv = DATA_COMMON.get_build_max_level(build:get_build_type())
-	if build:get_level() >= max_lv then
+	local b_type = build:get_build_type()
+	if build:get_level() >= DATA_COMMON.get_build_max_level(b_type) then
 		return
+	end
+	local next_conf = DATA_COMMON.get_build_level_conf(b_type, build:get_level() + 1)
+	if not next_conf then
+		return
+	end
+	for _, limit in ipairs(next_conf.ItemLimit or EMPTY_TABLE) do
+		local need_build = get_build_by_bid(user_id, limit.bid)
+		if not need_build or need_build:get_level() < limit.lev then
+			return
+		end
 	end
 	if not packet.isInstant then
 		local ok = QUEUE_MGR.try_add_new_work(user_id, packet.bid)

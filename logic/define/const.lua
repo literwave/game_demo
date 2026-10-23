@@ -49,12 +49,21 @@ ITEM_KIND = {
 }
 
 NO_NAME = ""
+USER_NAME_MAX_LEN = 12
 
 FIRST_QUEUE_IDX = 1
 QUEUE_PRIORITY = {1, 2, 3}
 
 
-REASON_BUY_BUILD_QUEUE = 1 -- 购买建造队列
+-- 资源流水原因，reason_list[1]
+FLOW_REASON = {
+	RECHARGE = 1,
+	WIZ = 2,
+	MAIL = 3,
+	LOTTERY = 4,
+	BUY_BUILD_QUEUE = 5,
+	GM = 6,
+}
 
 ONE_HOUR_SEC = 3600
 ONE_DAY_HOUR = 24

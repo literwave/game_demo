@@ -1,392 +1,198 @@
--- lua-orm core (trimmed): schema object + dump for mongo
--- no __oldindex patch required (skynet stock lua)
+-- lua-orm：按 schema 校验赋值，改动时把所在文档标脏，dump 出可直接写 mongo 的纯 table
+-- 对象本体是空表，字段存在 nodes[obj].vals 里，这样每次赋值都会进 __newindex
 
 local M = {}
 
-M.KEYWORD_MAP = {
-	boolean = true,
-	number = true,
-	string = true,
-	struct = true,
-	list = true,
-	map = true,
+local ATOMS = {
+	number = {name = "number", atom = true, default = 0, conv = tonumber},
+	string = {name = "string", atom = true, default = "", conv = tostring},
+	boolean = {name = "boolean", atom = true, default = false, conv = function(v) return v == true end},
 }
 
-M.CONTAINER_DATA_TYPES = {
-	struct = true,
-	list = true,
-	map = true,
-}
+local classes = {}
+local nodes = setmetatable({}, {__mode = "k"})	-- obj -> {cls, vals, parent, col, key, dirty}
+local docs = {}		-- col -> key -> root
+local dirty_list = {}
 
-M.KEY_ATTRS = {
-	["__cls"] = true,
-}
-
-M.cls_ref_map = {}
-local cls_map = {}
-
-function M.check_ref(node_id, parent_id)
-	if parent_id == nil then
-		return
+local function resolve(def, name)
+	local t = def.type
+	if ATOMS[t] then
+		return ATOMS[t]
 	end
-	if parent_id == node_id then
-		error(string.format("type<%s> ref recursion define", node_id))
-	end
-
-	local p_map = M.cls_ref_map[node_id]
-	if not p_map then
-		p_map = {}
-		M.cls_ref_map[node_id] = p_map
-	end
-	p_map[parent_id] = true
-
-	local pp_map = M.cls_ref_map[parent_id]
-	if not pp_map then
-		pp_map = {}
-		M.cls_ref_map[parent_id] = pp_map
-	end
-	for pp_id, _ in pairs(pp_map) do
-		M.check_ref(node_id, pp_id)
-	end
-end
-
-function M.get_default(cls)
-	local cls_type = cls.type
-	if not cls.is_atom then
-		error(string.format("cls<%s> type<%s> no default", cls.name, cls_type))
-	end
-	if cls_type == "boolean" then
-		return cls.default or false
-	elseif cls_type == "number" then
-		return cls.default or 0
-	elseif cls_type == "string" then
-		return cls.default or ""
-	end
-end
-
-local function _cls_parse_error(cls, data, msg)
-	error(string.format("cls<%s> data<%s> %s", cls.name, tostring(data), msg))
-end
-
-function M.parse_boolean(cls, s)
-	return s == true
-end
-
-function M.parse_string(cls, s)
-	return tostring(s)
-end
-
-function M.parse_number(cls, s)
-	local value = tonumber(s)
-	if value == nil then
-		_cls_parse_error(cls, s, "is not number")
-	end
-	return value
-end
-
-function M.parse_struct(cls, data)
-	if data == nil then
-		return cls:new()
-	end
-	if type(data) ~= "table" then
-		_cls_parse_error(cls, data, "is not table")
-	end
-	local ret = {}
-	for attr_name, attr_cls in pairs(cls.attrs) do
-		local attr_data = data[attr_name]
-		if not (attr_data == nil and attr_cls.is_atom) then
-			ret[attr_name] = attr_cls:parse(attr_data)
+	if t == "struct" then
+		local cls = {name = name, kind = "struct", attrs = {}}
+		for k, attr in pairs(def.attrs) do
+			cls.attrs[k] = resolve(attr, name .. "." .. k)
 		end
-	end
-	return cls:new(ret)
-end
-
-function M.parse_list(cls, data)
-	if data == nil then
-		return cls:new()
-	end
-	if type(data) ~= "table" then
-		_cls_parse_error(cls, data, "is not table")
-	end
-	local ret = {}
-	local item_cls = cls.item
-	for _, _data in ipairs(data) do
-		table.insert(ret, item_cls:parse(_data))
-	end
-	return cls:new(ret)
-end
-
-function M.parse_map(cls, data)
-	if data == nil then
-		return cls:new()
-	end
-	if type(data) ~= "table" then
-		_cls_parse_error(cls, data, "is not table")
-	end
-	local k_cls = cls.key
-	local v_cls = cls.value
-	local ret = {}
-	for k_data, v_data in pairs(data) do
-		ret[k_cls:parse(k_data)] = v_cls:parse(v_data)
-	end
-	return cls:new(ret)
-end
-
--- 字段不放在对象本体上，已有字段的再次赋值也会走进 __newindex。
-local values_of = setmetatable({}, { __mode = "k" })
-
-local function value_box(obj)
-	local box = values_of[obj]
-	if not box then
-		box = {}
-		values_of[obj] = box
-	end
-	return box
-end
-
-local function read_value(obj, k, defaults)
-	local box = values_of[obj]
-	if box ~= nil and box[k] ~= nil then
-		return box[k]
-	end
-	if defaults then
-		return defaults[k]
-	end
-end
-
-local function iter_values(obj)
-	return next, values_of[obj] or {}
-end
-
-local data_parsers = {
-	boolean = M.parse_boolean,
-	number = M.parse_number,
-	string = M.parse_string,
-	struct = M.parse_struct,
-	list = M.parse_list,
-	map = M.parse_map,
-}
-
-function M.load_cls_define(cls, parent_name)
-	assert(cls, "no cls define")
-	if parent_name ~= nil then
-		cls.name = parent_name .. "." .. cls.name
-	end
-	local cls_name = cls.name
-
-	if M.KEYWORD_MAP[cls_name] then
-		error(string.format("cls name<%s> is keyword", cls_name))
-	end
-
-	local data_type = cls.type
-	if not data_type then
-		error(string.format("init cls<%s> no data type", cls_name))
-	end
-
-	if not M.KEYWORD_MAP[data_type] then
-		local ref_cls = cls_map[data_type]
-		if ref_cls == nil then
-			error(string.format("init cls<%s|%s>, ref illegal ", cls.name, data_type))
-		end
-		M.check_ref(ref_cls.name, parent_name)
-		for k, v in pairs(ref_cls) do
-			cls[k] = v
-		end
-		if not ref_cls.id then
-			cls.id = ref_cls
-		end
-		cls.name = cls_name
 		return cls
 	end
-
-	cls.id = cls
-	local parser = data_parsers[data_type]
-	if not parser then
-		error(string.format("data type<%s> no parser", data_type))
-	end
-	cls.parse = parser
-	M.check_ref(cls_name, parent_name)
-	cls_map[cls_name] = cls
-	cls.is_atom = (M.CONTAINER_DATA_TYPES[data_type] == nil)
-	if cls.is_atom then
-		return cls
-	end
-
-	if data_type == "struct" then
-		cls.new = M.create_struct
-		local mt_index = {__cls = cls}
-		cls.mt = {
-			__index = function(obj, k)
-				return read_value(obj, k, mt_index)
-			end,
-			__newindex = M.struct_setfield,
-			__pairs = iter_values,
-		}
-		assert(cls.attrs, "not attrs")
-		local attrs = {}
-		for k, v in pairs(cls.attrs) do
-			if M.KEY_ATTRS[k] then
-				error(string.format("class<%s> define key attr<%s>", cls_name, k))
-			end
-			v.name = k
-			local v_cls = M.load_cls_define(v, cls_name)
-			if v_cls.is_atom then
-				mt_index[k] = M.get_default(v_cls)
-			end
-			attrs[k] = v_cls
+	if t == "map" or t == "list" then
+		local key = t == "list" and ATOMS.number or resolve(def.key, name .. ".key")
+		if not key.atom then
+			error(string.format("cls<%s> map key must be atom", name))
 		end
-		cls.attrs = attrs
-		return cls
+		return {name = name, kind = t, key = key, value = resolve(def.value or def.item, name .. ".value")}
 	end
-
-	if data_type == "list" then
-		cls.new = M.create_list
-		local mt_index = {__cls = cls}
-		cls.mt = {
-			__index = function(obj, k)
-				return read_value(obj, k, mt_index)
-			end,
-			__newindex = M.list_setfield,
-			__pairs = iter_values,
-			__len = function(obj)
-				local box = values_of[obj]
-				return box and #box or 0
-			end,
-		}
-		cls.item.name = "item"
-		cls.item = M.load_cls_define(cls.item, cls_name)
-		return cls
+	local ref = classes[t]
+	if not ref then
+		error(string.format("cls<%s> ref unknown type<%s>, define it first", name, t))
 	end
-
-	if data_type == "map" then
-		cls.new = M.create_map
-		local mt_index = {__cls = cls}
-		cls.mt = {
-			__index = function(obj, k)
-				return read_value(obj, k, mt_index)
-			end,
-			__newindex = M.map_setfield,
-			__pairs = iter_values,
-		}
-		cls.key.name = "key"
-		cls.key = M.load_cls_define(cls.key, cls_name)
-		cls.value.name = "value"
-		cls.value = M.load_cls_define(cls.value, cls_name)
-		return cls
-	end
-
-	error(string.format("unsupport data type<%s>", data_type))
+	return ref
 end
 
 function M.init(type_list)
-	cls_map = {}
-	M.cls_ref_map = {}
-	for _, item in ipairs(type_list) do
-		assert(item.name, "not cls name")
-		M.load_cls_define(item, nil)
-	end
-	M.cls_map = cls_map
-end
-
-local parent_of = setmetatable({}, { __mode = "k" })
-local doc_of = setmetatable({}, { __mode = "k" })
-local held = {}
-local dirty_list = {}
-local DIRTY_KEY = "_is_dirty"
-
-local function is_orm(v)
-	return type(v) == "table" and v.__cls ~= nil
-end
-
-local function root_of(obj)
-	local seen = {}
-	while parent_of[obj] do
-		if seen[obj] then
-			break
+	classes = {}
+	for _, def in ipairs(type_list) do
+		if classes[def.name] or ATOMS[def.name] then
+			error(string.format("cls<%s> redefined", def.name))
 		end
-		seen[obj] = true
-		obj = parent_of[obj]
+		classes[def.name] = resolve(def, def.name)
 	end
-	return obj
+	M.inited = true
 end
 
 local function mark_dirty(obj)
-	local root = root_of(obj)
-	local info = doc_of[root]
-	if not info or rawget(root, DIRTY_KEY) then
+	local n = nodes[obj]
+	while n.parent do
+		obj = n.parent
+		n = nodes[obj]
+	end
+	if n.col == nil or n.dirty then
 		return
 	end
-	rawset(root, DIRTY_KEY, true)
-	dirty_list[#dirty_list + 1] = root
+	n.dirty = true
+	dirty_list[#dirty_list + 1] = obj
 	if M.on_dirty then
 		M.on_dirty()
 	end
 end
 
--- 写入字段并挂上父子关系。未 bind 的对象不会进入脏列表。
-local function commit(obj, k, v)
-	local box = value_box(obj)
-	local old = box[k]
-	if old ~= v and is_orm(old) then
-		parent_of[old] = nil
+local new_obj
+
+local function conform(cls, v, where)
+	if cls.atom then
+		local ret = cls.conv(v)
+		if ret == nil then
+			error(string.format("%s need<%s>, give<%s>", where, cls.name, tostring(v)))
+		end
+		return ret
 	end
-	box[k] = v
-	if is_orm(v) then
-		parent_of[v] = obj
+	local n = nodes[v]
+	if n then
+		if n.cls ~= cls then
+			error(string.format("%s need<%s>, give<%s>", where, cls.name, n.cls.name))
+		end
+		return v
 	end
+	return new_obj(cls, v)
+end
+
+local function setfield(obj, k, v)
+	local n = nodes[obj]
+	local cls = n.cls
+	local v_cls
+	if cls.kind == "struct" then
+		v_cls = cls.attrs[k]
+		if not v_cls then
+			error(string.format("cls<%s> has no attr<%s>", cls.name, tostring(k)))
+		end
+		if v == nil and not v_cls.atom then
+			v = {}
+		end
+	else
+		k = conform(cls.key, k, cls.name .. ".key")
+		v_cls = cls.value
+	end
+	if v ~= nil then
+		v = conform(v_cls, v, cls.name .. "." .. tostring(k))
+	end
+	local old = n.vals[k]
+	if old == v then
+		return
+	end
+	if nodes[old] then
+		nodes[old].parent = nil
+	end
+	if nodes[v] then
+		nodes[v].parent = obj
+	end
+	n.vals[k] = v
 	mark_dirty(obj)
 end
 
-function M.bind(obj, col, key)
-	assert(is_orm(obj), "orm.bind: target is not orm object")
-	assert(parent_of[obj] == nil, "orm.bind: only document root can be bound")
-	assert(type(col) == "string" and col ~= "", "orm.bind: col required")
-	assert(key ~= nil, "orm.bind: key required")
-	doc_of[obj] = { col = col, key = key }
-end
-
-local function held_by(col)
-	local by_key = held[col]
-	if not by_key then
-		by_key = {}
-		held[col] = by_key
+local function getfield(obj, k)
+	local n = nodes[obj]
+	local v = n.vals[k]
+	if v == nil and n.cls.kind == "struct" then
+		local attr = n.cls.attrs[k]
+		return attr and attr.default
 	end
-	return by_key
+	return v
 end
 
--- 按集合和文档 id 记住根。模块不用再各存一张 doc 表。
-function M.hold(obj, col, key)
-	M.bind(obj, col, key)
-	held_by(col)[key] = obj
+local MT = {
+	__index = getfield,
+	__newindex = setfield,
+	__pairs = function(obj)
+		return next, nodes[obj].vals, nil
+	end,
+	__len = function(obj)
+		return #nodes[obj].vals
+	end,
+}
+
+new_obj = function(cls, data)
+	if data ~= nil and type(data) ~= "table" then
+		error(string.format("cls<%s> data<%s> is not table", cls.name, tostring(data)))
+	end
+	local obj = setmetatable({}, MT)
+	nodes[obj] = {cls = cls, vals = {}}
+	if cls.kind == "struct" then
+		for k, attr in pairs(cls.attrs) do
+			local v = data and data[k]
+			if v ~= nil or not attr.atom then
+				obj[k] = v
+			end
+		end
+	elseif data then
+		for k, v in pairs(data) do
+			obj[k] = v
+		end
+	end
+	return obj
+end
+
+-- data 已经是该类型的 orm 对象时原样返回
+function M.new(cls_name, data)
+	local cls = classes[cls_name]
+	if not cls then
+		error(string.format("orm.new: unknown cls<%s>", tostring(cls_name)))
+	end
+	local n = nodes[data]
+	if n and n.cls == cls then
+		return data
+	end
+	return new_obj(cls, data)
+end
+
+-- 把根对象登记为 col/key 文档，之后改动会进脏列表
+function M.bind(obj, col, key)
+	local n = nodes[obj]
+	assert(n and not n.parent, "orm.bind: need a root orm object")
+	assert(col and key ~= nil, "orm.bind: col and key required")
+	n.col, n.key = col, key
+	docs[col] = docs[col] or {}
+	docs[col][key] = obj
 end
 
 function M.get(col, key)
-	local by_key = held[col]
-	return by_key and by_key[key]
+	return docs[col] and docs[col][key]
 end
 
-function M.forget(col, key)
-	local by_key = held[col]
-	if by_key then
-		by_key[key] = nil
-	end
-end
-
--- 已经挂在文档上的对象直接返回。新对象要求文档已经 hold。
-function M.put(col, key, field, map_key, child)
-	assert(is_orm(child), "orm.put: child is not orm object")
-	if parent_of[child] then
-		return
-	end
-	local root = M.get(col, key)
-	assert(root, "orm.put: document not held")
-	root[field][map_key] = child
-end
-
-function M.remove(col, key, field, map_key)
-	local root = M.get(col, key)
-	if root and root[field] then
-		root[field][map_key] = nil
+-- 只是不再登记，已经标脏的改动仍会刷出去
+function M.unbind(col, key)
+	if docs[col] then
+		docs[col][key] = nil
 	end
 end
 
@@ -394,220 +200,37 @@ function M.touch(obj)
 	mark_dirty(obj)
 end
 
-function M.has_dirty()
-	return dirty_list[1] ~= nil
-end
-
-function M.drain_dirty()
-	local list = dirty_list
-	dirty_list = {}
+-- 纯 table；number key 的 map 转成字符串 key，list 按数组输出
+function M.dump(obj)
+	local n = nodes[obj]
+	if not n then
+		return obj
+	end
 	local ret = {}
-	for _, root in ipairs(list) do
-		rawset(root, DIRTY_KEY, nil)
-		local info = doc_of[root]
-		if info then
-			ret[#ret + 1] = { obj = root, col = info.col, key = info.key }
+	if n.cls.kind == "list" then
+		for i, v in ipairs(n.vals) do
+			ret[i] = M.dump(v)
 		end
+		return ret
+	end
+	local str_key = n.cls.kind == "map" and n.cls.key == ATOMS.number
+	for k, v in pairs(n.vals) do
+		ret[str_key and tostring(k) or k] = M.dump(v)
 	end
 	return ret
 end
 
-function M.struct_setfield(obj, k, v)
-	local cls = obj.__cls
-	if not cls then
-		error("struct no cls info")
+-- 取走所有脏文档：{ {col, key, dat}, ... }
+function M.drain()
+	local list = dirty_list
+	dirty_list = {}
+	local ret = {}
+	for i, root in ipairs(list) do
+		local n = nodes[root]
+		n.dirty = nil
+		ret[i] = {col = n.col, key = n.key, dat = M.dump(root)}
 	end
-	local v_cls = cls.attrs[k]
-	if not v_cls then
-		error(string.format("cls<%s> has no attr<%s>", cls.name, k))
-	end
-	if type(v) == "table" and v.__cls ~= nil then
-		if v_cls.id == v.__cls.id then
-			commit(obj, k, v)
-			return
-		end
-		error(string.format(
-			"obj<%s.%s> value type not match, need<%s>, give<%s>",
-			cls.name, k, v_cls.id.name, v.__cls.name
-		))
-	end
-	if v == nil and v_cls.is_atom then
-		commit(obj, k, nil)
-		return
-	end
-	commit(obj, k, v_cls:parse(v))
-end
-
-function M.list_setfield(obj, k, v)
-	local cls = obj.__cls
-	if not cls then
-		error("list no cls info")
-	end
-	if k ~= math.tointeger(k) then
-		error(string.format("cls<%s> key<%s> is not integer index", cls.name, tostring(k)))
-	end
-	if v == nil then
-		commit(obj, k, nil)
-		return
-	end
-	local v_cls = cls.item
-	if type(v) == "table" and v.__cls ~= nil then
-		if v_cls.id == v.__cls.id then
-			commit(obj, k, v)
-			return
-		end
-		error(string.format(
-			"cls<%s.%s> value type not match, need<%s>, give<%s>",
-			cls.name, k, v_cls.id.name, v.__cls.name
-		))
-	end
-	commit(obj, k, v_cls:parse(v))
-end
-
-function M.map_setfield(obj, k, v)
-	local cls = obj.__cls
-	if not cls then
-		error("map no cls info")
-	end
-	local k_data = cls.key:parse(k)
-	if v == nil then
-		commit(obj, k_data, nil)
-		return
-	end
-	local v_cls = cls.value
-	if type(v) == "table" and v.__cls ~= nil then
-		if v_cls.id == v.__cls.id then
-			commit(obj, k_data, v)
-			return
-		end
-		error(string.format(
-			"obj<%s.%s> value type not match, need<%s>, give<%s>",
-			cls.name, tostring(k_data), v_cls.id.name, v.__cls.name
-		))
-	end
-	commit(obj, k_data, v_cls:parse(v))
-end
-
-function M.create_struct(cls, data)
-	local obj = {}
-	setmetatable(obj, cls.mt)
-	if data == nil then
-		for k, v in pairs(cls.attrs) do
-			if not v.is_atom then
-				obj[k] = nil
-			end
-		end
-	else
-		for k, v in pairs(cls.attrs) do
-			local k_data = data[k]
-			if not (k_data == nil and v.is_atom) then
-				obj[k] = k_data
-			end
-		end
-	end
-	return obj
-end
-
-function M.create_list(cls, data)
-	local obj = {}
-	setmetatable(obj, cls.mt)
-	if data == nil then
-		return obj
-	end
-	for idx, item in ipairs(data) do
-		obj[idx] = item
-	end
-	return obj
-end
-
-function M.create_map(cls, data)
-	local obj = {}
-	setmetatable(obj, cls.mt)
-	if data == nil then
-		return obj
-	end
-	for k, v in pairs(data) do
-		obj[k] = v
-	end
-	return obj
-end
-
-function M.create(cls_name, data)
-	local cls = cls_map[cls_name]
-	if not cls then
-		error(string.format("create obj, illgeal cls<%s>", cls_name))
-	end
-	return cls:new(data)
-end
-
-local function dump_key(key_cls, k)
-	if key_cls.type == "number" then
-		return tostring(k)
-	end
-	return k
-end
-
-local function dump_by_cls(cls, value)
-	if value == nil then
-		return nil
-	end
-	if cls.is_atom then
-		return value
-	end
-	return M.dump(value)
-end
-
--- 纯 table，无 __cls；number-key map 的 key 转为 string，供 mongo 落库
-function M.dump(obj)
-	if type(obj) ~= "table" then
-		return obj
-	end
-	local cls = obj.__cls
-	if not cls then
-		error("orm.dump: object has no __cls")
-	end
-	local data_type = cls.type
-	if data_type == "struct" then
-		local ret = {}
-		for k, attr_cls in pairs(cls.attrs) do
-			local v = obj[k]
-			if v ~= nil then
-				ret[k] = dump_by_cls(attr_cls, v)
-			end
-		end
-		return ret
-	end
-	if data_type == "list" then
-		local ret = {}
-		for i, v in ipairs(obj) do
-			ret[i] = dump_by_cls(cls.item, v)
-		end
-		return ret
-	end
-	if data_type == "map" then
-		local ret = {}
-		for k, v in pairs(obj) do
-			ret[dump_key(cls.key, k)] = dump_by_cls(cls.value, v)
-		end
-		return ret
-	end
-	error(string.format("orm.dump unsupported type<%s>", tostring(data_type)))
-end
-
-function M.dump_field(obj, field)
-	local cls = obj.__cls
-	if not cls or cls.type ~= "struct" then
-		error("orm.dump_field: obj must be struct")
-	end
-	local attr_cls = cls.attrs[field]
-	if not attr_cls then
-		error(string.format("orm.dump_field: cls<%s> no field<%s>", cls.name, field))
-	end
-	return dump_by_cls(attr_cls, obj[field])
-end
-
-function M.is_cls(obj, cls_name)
-	return type(obj) == "table" and obj.__cls ~= nil and obj.__cls.name == cls_name
+	return ret
 end
 
 return M

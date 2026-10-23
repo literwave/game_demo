@@ -69,3 +69,30 @@ function update_lua_by_content(path, content)
 	update_import_by_content(path, content)
 end
 
+-- 一批文件一起热更：先全部编译，有一个编译不过就整批不更，避免只更一半。
+-- 本服务没 Import 过的文件跳过，所以可以对所有服务广播同一批文件
+function hot_update(path_list)
+	local func_tbl = {}
+	local updated = {}
+	for _, path in ipairs(path_list) do
+		if _import_module[path] then
+			local func, err = loadfile(path)
+			if not func then
+				return {ok = false, err = err}
+			end
+			func_tbl[path] = func
+		end
+	end
+	for _, path in ipairs(path_list) do
+		local func = func_tbl[path]
+		if func then
+			local ok, err = pcall(__update_import, _import_module, path, function() return func end)
+			if not ok then
+				return {ok = false, err = string.format("%s: %s", path, tostring(err)), updated = updated}
+			end
+			table.insert(updated, path)
+		end
+	end
+	return {ok = true, updated = updated}
+end
+

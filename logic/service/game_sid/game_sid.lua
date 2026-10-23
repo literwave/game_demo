@@ -12,9 +12,7 @@ local GAME_SID_COL_KEY = "1"
 local sid_data
 
 local function load_game_data()
-	local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.GAME_SID, GAME_SID_COL_KEY) or {}
-	sid_data = ORM.create(ORM.CLS_GAME_SID_DATA, raw)
-	ORM.bind(sid_data, MONGO_SLAVE.COL.GAME_SID, GAME_SID_COL_KEY)
+	sid_data = ORM.load(MONGO_SLAVE.COL.GAME_SID, GAME_SID_COL_KEY, ORM.CLS_GAME_SID_DATA)
 	for _, var_name in pairs(SID_VAR_NAME_LIST) do
 		_G[var_name] = sid_data[var_name] or 0
 	end
@@ -37,7 +35,12 @@ function CMD.fetch_user_id()
 end
 
 function CMD.shutdown()
-	skynet.exit()
+	MONGO_SLAVE.flush_sync()
+	skynet.fork(skynet.exit)
+end
+
+function CMD.hot_update(path_list)
+	return hot_update(path_list)
 end
 
 skynet.start(function()

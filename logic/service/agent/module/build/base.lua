@@ -2,12 +2,8 @@ cls_build = cls_object:Inherit()
 
 function cls_build:__init__(oci)
 	Super(cls_build).__init__(self, oci)
-	if ORM.is_cls(oci, ORM.CLS_BUILD_DATA) then
-		self._data = oci
-	else
-		self._data = ORM.create(ORM.CLS_BUILD_DATA, oci)
-	end
-	ORM.put(MONGO_SLAVE.COL.USER_BUILD, self._data._user_id, "_builds", self._data._bid, self._data)
+	self._data = ORM.new(ORM.CLS_BUILD_DATA, oci)
+	ORM.get(MONGO_SLAVE.COL.USER_BUILD, self._data._user_id)._builds[self._data._bid] = self._data
 	BUILD_MGR.ref_build(self)
 end
 

@@ -2,12 +2,8 @@ cls_hero = cls_object:Inherit()
 
 function cls_hero:__init__(oci)
 	Super(cls_hero).__init__(self, oci)
-	if ORM.is_cls(oci, ORM.CLS_HERO_DATA) then
-		self._data = oci
-	else
-		self._data = ORM.create(ORM.CLS_HERO_DATA, oci)
-	end
-	ORM.put(MONGO_SLAVE.COL.USER_HERO, self._data._user_id, "_heroes", self._data._hero_type, self._data)
+	self._data = ORM.new(ORM.CLS_HERO_DATA, oci)
+	ORM.get(MONGO_SLAVE.COL.USER_HERO, self._data._user_id)._heroes[self._data._hero_type] = self._data
 end
 
 function cls_hero:get_user_id()

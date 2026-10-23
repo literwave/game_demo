@@ -51,73 +51,6 @@ local function ref_item(item)
 	all_item_kind_tbl[user_id][item_kind][item_uid] = item
 end
 
-local check_enough_func = {
-	[CONST.COST_TYPE.DIAMOND] = function(user_id, cost_info)
-		local user = USER_MGR.try_init_user(user_id)
-		return user:check_diamond_enough(user_id, cost_info.count)
-	end,
-	[CONST.COST_TYPE.RES] = function(user_id, cost_info)
-		return RESOURCE.check_res_enough(user_id, cost_info.count)
-	end,
-	[CONST.COST_TYPE.ITEM] = function(user_id, cost_info)
-		local item_info = ITEM_MGR.get_item_info(cost_info.itemId)
-		if not item_info then
-			return false
-		end
-		local item_count = ITEM_MGR.get_item_count(user_id, item_info.itemId)
-		if item_count < cost_info.count then
-			return false
-		end
-		return true
-	end,
-}
-
-local sub_func = {
-	[CONST.COST_TYPE.DIAMOND] = function(user_id, cost_info)
-		local user = USER_MGR.try_init_user(user_id)
-		user:sub_diamond(cost_info.count)
-	end,
-	[CONST.COST_TYPE.RES] = function(user_id, cost_info)
-		return RESOURCE.check_res_enough(user_id, cost_info.count)
-	end,
-	[CONST.COST_TYPE.ITEM] = function(user_id, cost_info)
-		local item_info = ITEM_MGR.get_item_info(cost_info.itemId)
-		if not item_info then
-			return false
-		end
-		local item_count = ITEM_MGR.get_item_count(user_id, item_info.itemId)
-		if item_count < cost_info.count then
-			return false
-		end
-		return true
-	end,
-}
-
-function check_cost_enough(user_id, cost_list)
-	if not next(cost_list) then
-		return false
-	end
-	for _, const_info in ipairs(cost_list) do
-		local func = check_enough_func[const_info.cost_type]
-		if not func then
-			return false
-		end
-		local is_enough = func(user_id, const_info)
-		if not is_enough then
-			return false
-		end
-	end
-	return true
-end
-
-function del_cost_list(user_id, cost_list)
-	for _, const_info in ipairs(cost_list) do
-		local func = sub_func[const_info.cost_type]
-		func(user_id, const_info)
-	end
-	return true
-end
-
 function get_item_max_add_cnt(item_id)
 	return DATA_COMMON.get_item_overlap(item_id)
 end
@@ -153,15 +86,11 @@ function unref_item(item)
 end
 
 local function try_init_user_data(user_id)
-	if not ORM.get(MONGO_SLAVE.COL.USER_ITEM, user_id) then
-		local raw = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.USER_ITEM, user_id) or {}
-		local doc = ORM.create(ORM.CLS_USER_ITEM_DOC, raw)
-		ORM.hold(doc, MONGO_SLAVE.COL.USER_ITEM, user_id)
+	local doc, is_loaded = ORM.load(MONGO_SLAVE.COL.USER_ITEM, user_id, ORM.CLS_USER_ITEM_DOC)
+	if is_loaded then
 		all_item_uid_tbl[user_id] = {}
 		for _, item_data in pairs(doc._items) do
-			if ORM.is_cls(item_data, ORM.CLS_ITEM_DATA) then
-				create_item(item_data)
-			end
+			create_item(item_data)
 		end
 	end
 	return all_item_uid_tbl[user_id]
@@ -209,6 +138,7 @@ local function do_add_item_cnt(user_id, item_id, cnt, need_sync, reason_list, ne
 			end
 		end
 	end
+	LOG._flow("item", user_id, item_id, cnt, get_item_count(user_id, item_id), reason_list)
 end
 
 function add_item_cnt(user_id, item_id, cnt, reason_list)
@@ -240,4 +170,103 @@ function add_item(user_id, item_id, cnt, reason_list)
 	else
 		add_item_cnt(user_id, item_id, cnt, reason_list)
 	end
+end
+
+function get_item_count(user_id, item_id)
+	try_init_user_data(user_id)
+	local cnt = 0
+	for _, item in pairs((all_item_tbl[user_id] or EMPTY_TABLE)[item_id] or EMPTY_TABLE) do
+		cnt = cnt + item:get_cnt()
+	end
+	return cnt
+end
+
+-- 调用方先确认数量足够。扣到 0 的道具同步 cnt=0 给客户端后删除
+local function sub_item_cnt(user_id, item_id, cnt, reason_list)
+	local sub_cnt = cnt
+	local item_list = {}
+	for _, item in pairs(all_item_tbl[user_id][item_id]) do
+		table.insert(item_list, item)
+	end
+	for _, item in ipairs(item_list) do
+		if cnt <= 0 then
+			break
+		end
+		local sub = math.min(cnt, item:get_cnt())
+		item:sub_cnt(sub)
+		cnt = cnt - sub
+		item:sync_to_client()
+		if item:get_cnt() == 0 then
+			item:release()
+		end
+	end
+	assert(cnt == 0)
+	LOG._flow("item", user_id, item_id, -sub_cnt, get_item_count(user_id, item_id), reason_list)
+end
+
+-- cost_info: {cost_type, count, itemId}；itemId 对道具是道具 id，对资源是资源类型
+local COST_FUNC = {
+	[CONST.COST_TYPE.DIAMOND] = {
+		has = function(user_id)
+			return USER_MGR.try_init_user(user_id):get_diamond()
+		end,
+		sub = function(user_id, _, count, reason_list)
+			USER_MGR.try_init_user(user_id):sub_diamond_and_sync(count, reason_list)
+		end,
+	},
+	[CONST.COST_TYPE.RES] = {
+		has = function(user_id, res_type)
+			return USER_MGR.try_init_user(user_id):get_res_num(res_type)
+		end,
+		sub = function(user_id, res_type, count, reason_list)
+			local user = USER_MGR.try_init_user(user_id)
+			user:add_res(res_type, -count, reason_list)
+			user:sync_res({res_type})
+		end,
+	},
+	[CONST.COST_TYPE.ITEM] = {
+		has = get_item_count,
+		sub = sub_item_cnt,
+	},
+}
+
+-- 同一种消耗配了多条时先合并，否则每条单独看都够、合起来却不够
+local function merge_cost_list(cost_list)
+	local merged = {}
+	for _, cost_info in ipairs(cost_list) do
+		if not COST_FUNC[cost_info.cost_type] or not cost_info.count or cost_info.count <= 0 then
+			return
+		end
+		local id = cost_info.itemId or 0
+		local key = cost_info.cost_type .. ":" .. id
+		if not merged[key] then
+			merged[key] = {cost_type = cost_info.cost_type, id = id, count = 0}
+		end
+		merged[key].count = merged[key].count + cost_info.count
+	end
+	return merged
+end
+
+function check_cost_enough(user_id, cost_list)
+	local merged = merge_cost_list(cost_list)
+	if not merged then
+		return false
+	end
+	for _, cost in pairs(merged) do
+		if COST_FUNC[cost.cost_type].has(user_id, cost.id) < cost.count then
+			return false
+		end
+	end
+	return true
+end
+
+-- 先整体校验再扣，不够就一样都不扣
+function del_cost_list(user_id, cost_list, reason_list)
+	if not check_cost_enough(user_id, cost_list) then
+		return false
+	end
+	for _, cost in pairs(merge_cost_list(cost_list)) do
+		COST_FUNC[cost.cost_type].sub(user_id, cost.id, cost.count, reason_list)
+	end
+	return true
 end

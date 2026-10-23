@@ -4,7 +4,11 @@ require "skynet.manager"
 local CMD = {}
 
 function CMD.shutdown()
-	skynet.exit()
+	skynet.fork(skynet.exit)
+end
+
+function CMD.hot_update(path_list)
+	return hot_update(path_list)
 end
 
 skynet.start(function()

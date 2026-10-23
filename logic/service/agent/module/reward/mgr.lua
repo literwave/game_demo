@@ -1,7 +1,7 @@
 local function add_res_and_sync(user_id, res_type, cnt, reason_list)
 	local user = USER_MGR.try_init_user(user_id)
-	user:add_res(res_type, cnt)
-	user:sync_res(res_type)
+	user:add_res(res_type, cnt, reason_list)
+	user:sync_res({res_type})
 end
 
 local function reward_item(ret, user_id, reward_info_list, reason_list)
