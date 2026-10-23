@@ -231,10 +231,24 @@ local function on_user_create(fd, packet)
 	for_caller.s2c_user_create(fd, packet)
 end
 
+local function on_change_head_icon(fd, packet)
+	local head_icon = packet.headIcon
+	if not DATA_COMMON.get_head_icon_info(head_icon) then
+		return
+	end
+	local user = get_user_by_fd(fd)
+	if not user then
+		return
+	end
+	user:set_head_icon(head_icon)
+	for_caller.s2c_change_head_icon(fd, {headIcon = head_icon})
+end
+
 function __init__()
 	for_maker.c2s_heart_beat = on_heart_beat
 	for_maker.c2s_user_base_info = on_user_baseinfo
 	for_maker.c2s_user_create = on_user_create
+	for_maker.c2s_change_head_icon = on_change_head_icon
 	for_maker.c2s_client_load_ok = on_client_load_ok
 	EVENT.register(CONST.EVENT.KICK_USER)
 	skynet.timeout(CONST.USER_HEART_BEAT_CHECK_INTERVAL * 100, check_heart_beat)

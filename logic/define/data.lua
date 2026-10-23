@@ -77,6 +77,10 @@ function get_hero_info_by_type(hero_type)
 	return DATA_HERO[hero_type]
 end
 
+function get_head_icon_info(head_icon)
+	return DATA_HEAD_ICON[head_icon]
+end
+
 function get_all_hero_types()
 	local list = {}
 	for hero_type in pairs(DATA_HERO) do
