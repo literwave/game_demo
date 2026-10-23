@@ -11,7 +11,7 @@ user_id_to_fd = {
 }
 
 function tell_me_by_language_id(user_id, ...)
-	local fd = user_id_to_fd[user_id]
+	local fd = get_fd_by_user_id(user_id)
 	if fd then
 		local tbl = table.val_to_number({...})
 		for_caller.s2c_sys_notify_by_lanid(fd, {tbl = tbl})
@@ -19,7 +19,7 @@ function tell_me_by_language_id(user_id, ...)
 end
 
 function tell_me(user_id, msg)
-	local fd = user_id_to_fd[user_id]
+	local fd = get_fd_by_user_id(user_id)
 	if not fd then
 		return
 	end
@@ -42,7 +42,11 @@ function del_user_id_by_vfd(fd)
 end
 
 function get_fd_by_user_id(user_id)
-	return user_id_to_fd[user_id]
+	local user = all_user_tbl[user_id]
+	if not user then
+		return
+	end
+	return user:get_fd()
 end
 
 function get_user_by_fd(fd)
@@ -132,7 +136,6 @@ function create_new_user(gate_srv, fd, user_id, server_id)
 	-- local userName = RANDOM_NAME.genNewUserName()
 	-- user:setName(userName)
 	ORM.touch(user._data)
-	user:set_fd(fd)
 	user:set_gate_srv(gate_srv)
 	-- WORK_QUEUE_MGR.initUserWorkQueue(userId)
 	REWARD_MGR.reward_user(user_id, DATA_COMMON.get_value_by_key(1))
@@ -178,7 +181,7 @@ local function check_heart_beat()
 		if last_heart_beat_time and not kicking_user[user_id]
 			and now - last_heart_beat_time >= CONST.USER_HEART_BEAT_TIMEOUT then
 			kicking_user[user_id] = true
-			local fd = get_fd_by_user_id(user_id)
+			local fd = user_id_to_fd[user_id]
 			EVENT.emit(CONST.EVENT.KICK_USER, fd, user_id, true)
 		end
 	end
@@ -199,12 +202,23 @@ local function on_heart_beat(fd)
 		return
 	end
 	kicking_user[user_id] = nil
-	user:set_and_sync_heart_beat_time(TIME.os_bj_sec())
+	user:set_and_sync_heart_beat_time(TIME.os_bj_sec(), fd)
 end
 
 local function on_user_baseinfo(fd)
 	local user = USER_MGR.get_user_by_fd(fd)
 	user:sync_user_base_info()
+end
+
+local function on_client_load_ok(fd)
+	local user = get_user_by_fd(fd)
+	if not user then
+		return
+	end
+	user:set_fd(fd)
+	BUILD_MGR.sync_all_build_to_client(user:get_user_id())
+	for_caller.s2c_client_load_ok(fd, {
+	})
 end
 
 local function on_user_create(fd, packet)
@@ -226,6 +240,7 @@ function __init__()
 	for_maker.c2s_heart_beat = on_heart_beat
 	for_maker.c2s_user_base_info = on_user_baseinfo
 	for_maker.c2s_user_create = on_user_create
+	for_maker.c2s_client_load_ok = on_client_load_ok
 	EVENT.register(CONST.EVENT.KICK_USER)
 	skynet.timeout(CONST.USER_HEART_BEAT_CHECK_INTERVAL * 100, check_heart_beat)
 end

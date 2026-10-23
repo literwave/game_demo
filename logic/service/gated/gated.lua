@@ -193,7 +193,7 @@ function CMD.open(conf)
 end
 
 function CMD.send_client_pack(fd, packet)
-	websocket.write(fd, packet, "binary") 
+	websocket.write(fd, packet, "binary")
 end
 
 function CMD.kick(fd)

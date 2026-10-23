@@ -42,14 +42,12 @@ function CMD.login(gate_srv, fd, user_id, addr, account, server_id, token)
 	else
 		user = USER_MGR.try_init_user(user_id)
 		USER_MGR.ref_login(user_id, fd, user)
-		user:set_fd(fd)
 		user:set_gate_srv(gate_srv)
 		last_login_time = user:get_login_time()
 	end
-	user:set_and_sync_verify_login(token)
+	user:set_token(token)
 	user:set_account(account)
 	user:set_login_addr(addr)
-	user:set_and_sync_heart_beat_time(TIME.os_bj_sec())
 	USER_MGR.module_on_user_login(user, is_first_login)
 	local times = TIME.get_diff_day(TIME.os_bj_sec(), last_login_time)
 	if times > 1 then

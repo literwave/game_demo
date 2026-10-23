@@ -220,13 +220,8 @@ function cls_user:sub_diamond(sum_sub_cnt, reason_list)
 	end
 end
 
-function cls_user:set_and_sync_verify_login(token)
+function cls_user:set_token(token)
 	self._token = token
-	local fd = self:get_fd()
-	local pto_tbl = {
-		token = token
-	}
-	for_caller.s2c_verify_login(fd, pto_tbl)
 end
 
 function cls_user:get_head_icon()
