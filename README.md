@@ -2,7 +2,7 @@
 
 基于 [Skynet](https://github.com/cloudwu/skynet) 的 Lua SLG 服务端，单进程里可以跑登录、网关、玩家逻辑和 Mongo 存盘，并带关服、热更、日志、单元测试和压测。
 
-用来在上面做中小型 SLG 玩法。本机 1000 人读请求大约 5100 req/s，p99 约 4ms（见 [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md)）。多服拆分、运行时监控，以及建造队列、邮件、聊天这几块协议还没做完，见 [已知限制](#已知限制)。
+用来在上面做中小型 SLG 玩法。本机 1000 人同时在线、大约 5100 req/s 读请求时没有压力，p99 约 4ms（见 [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md)）。1000 人以上还没测。多服拆分、运行时监控，以及建造队列、邮件、聊天这几块协议还没做完，见 [已知限制](#已知限制)。
 
 配套客户端：[slg_game_client](https://github.com/literwave/slg_game_client)（Cocos Creator 3.8.8 制作的小型 SLG，登录服 `33021`、网关 `33022`）。
 
@@ -600,7 +600,7 @@ doc._heroes[hero_type] = nil
 
 ## 已知限制
 
-- 大型 MMO 需补监控和工程化；压测只覆盖登录和几个查询协议，没有覆盖建造、抽卡等写操作
+- 读请求测到 1000 人同时在线没有压力；1000 人以上，以及建造、抽卡等写操作还没压。大型 MMO 还需补监控和工程化
 - Redis 登录 token 默认约 **300s** 过期（以登录服实现为准）
 - 网关的并行在单个进程内：`gate_cnt` 个 worker 分担读写。跨进程、跨机器的多网关还没做，见 `docs/GATE_SCALING.md`
 - 热更替换的是函数。模块里的非函数值（常量、已初始化的表）保持旧值，改这些需要重启
