@@ -60,7 +60,11 @@ FLOW_REASON = {
 	BATTLE = 10,
 	ALLIANCE = 11,
 	GATHER = 12,
+	MOVE_CITY = 13,
 }
+
+-- 迁主城消耗的道具，对应 Item.Id=1001 迁城令
+MOVE_CITY_ITEM = 1001
 
 ONE_HOUR_SEC = 3600
 ONE_DAY_HOUR = 24
@@ -68,7 +72,7 @@ ONE_DAY_SEC = ONE_DAY_HOUR * ONE_HOUR_SEC
 
 INT_SIZE = 32
 
--- 与 res/map/map_res.lua 格子 type 一致
+-- 与 res/map/mapRes_0.lua 格子 type 一致。类型 0 不全是阻挡，阻挡在 terrain.lua
 MAP_CELL_TYPE = {
 	OBSTRUCT = 0,
 	SYS_FORTRESS = 50,

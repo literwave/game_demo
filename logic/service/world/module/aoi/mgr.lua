@@ -334,7 +334,7 @@ local function place_group(group_id)
 	if entities[eid] then
 		return
 	end
-	local idx = MAP_MGR.get_map():alloc_birth_idx()
+	local idx = MAP_MGR.alloc_wild_idx()
 	if not idx then
 		skynet.timeout(6000, function()
 			place_group(group_id)
@@ -365,7 +365,7 @@ local function place_res_land(land_id)
 	if entities[eid] then
 		return
 	end
-	local idx = MAP_MGR.get_map():alloc_birth_idx()
+	local idx = MAP_MGR.alloc_wild_idx()
 	if not idx then
 		skynet.timeout(6000, function()
 			place_res_land(land_id)
@@ -897,9 +897,7 @@ function init()
 	for group_id in pairs(DATA_COMMON.get_monster_group_tbl()) do
 		place_group(group_id)
 	end
-	for land_id in pairs(DATA_COMMON.get_res_land_tbl()) do
-		place_res_land(land_id)
-	end
+	-- 资源地在 mapRes 快照里，按格子类型和等级读，不再随机铺到空地上
 	local users = MONGO_SLAVE.common_load_tbl(MONGO_SLAVE.COL.USER_INFO)
 	for _, dat in pairs(users) do
 		if dat._has_birth and dat._user_id then

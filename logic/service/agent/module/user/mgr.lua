@@ -265,6 +265,75 @@ local function on_user_create(fd, packet)
 	user:sync_city_pos()
 end
 
+local function city_move_cost()
+	return {
+		{
+			cost_type = CONST.COST_TYPE.ITEM,
+			itemId = CONST.MOVE_CITY_ITEM,
+			count = 1,
+		},
+	}
+end
+
+local function troop_outside(user_id)
+	for _, troop in pairs(TROOP_MGR.get_user_troops(user_id) or {}) do
+		if troop:get_march_state() ~= 0 then
+			return true
+		end
+	end
+	return false
+end
+
+-- cost 为 true 时扣一张迁城令。成功后主城坐标已写入玩家和地图
+function try_move_city(user, x, y, cost)
+	if not user:has_birth_pos() then
+		return false, "没有主城"
+	end
+	if not x or not y then
+		return false, "坐标不对"
+	end
+	x, y = math.floor(x), math.floor(y)
+	local old_x, old_y = user:get_birth_x(), user:get_birth_y()
+	if x == old_x and y == old_y then
+		return false, "已经在这个坐标"
+	end
+	local user_id = user:get_user_id()
+	if troop_outside(user_id) then
+		return false, "部队在城外"
+	end
+	local cost_list = cost and city_move_cost()
+	if cost_list and not ITEM_MGR.check_cost_enough(user_id, cost_list) then
+		return false, "迁城令不足"
+	end
+	if not skynet.call(".world", "lua", "move_city", user_id, x, y, old_x, old_y) then
+		return false, "目标无法迁入"
+	end
+	if cost_list and not ITEM_MGR.del_cost_list(user_id, cost_list, {CONST.FLOW_REASON.MOVE_CITY, x, y}) then
+		if skynet.call(".world", "lua", "move_city", user_id, old_x, old_y, x, y) then
+			return false, "迁城令不足"
+		end
+		user:set_birth_pos(x, y)
+		return true
+	end
+	user:set_birth_pos(x, y)
+	return true
+end
+
+local function on_move_city(fd, packet)
+	local user = get_user_by_fd(fd)
+	local pos = packet and packet.pos
+	if not user or not pos then
+		return
+	end
+	local ok, msg = try_move_city(user, pos.x, pos.y, true)
+	if not ok then
+		tell_me(user:get_user_id(), msg)
+		return
+	end
+	for_caller.s2c_move_city(fd, {cityPos = user:get_city_pos_pto()})
+	user:sync_city_pos()
+end
+
 local function on_change_head_icon(fd, packet)
 	local head_icon = packet.headIcon
 	if not DATA_COMMON.get_head_icon_info(head_icon) then
@@ -283,6 +352,7 @@ function __init__()
 	for_maker.c2s_heart_beat = on_heart_beat
 	for_maker.c2s_user_base_info = on_user_baseinfo
 	for_maker.c2s_user_create = on_user_create
+	for_maker.c2s_move_city = on_move_city
 	for_maker.c2s_change_head_icon = on_change_head_icon
 	for_maker.c2s_client_load_ok = on_client_load_ok
 	EVENT.register(CONST.EVENT.KICK_USER)

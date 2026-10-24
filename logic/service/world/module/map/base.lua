@@ -18,6 +18,12 @@ function cls_map:__init__(oci)
 		_size = self._cell_cnt,
 	})
 	self._birth_free = 0
+	-- 建议出生点。新号只从这里分，迁城可以落到其它空地
+	self._spawn = BITSET.cls_bit_set:New({
+		_size = self._cell_cnt,
+	})
+	self._spawn_list = {}
+	self._spawn_free = 0
 end
 
 function cls_map:get_width()
@@ -32,30 +38,35 @@ function cls_map:in_bound(idx)
 	return idx >= 1 and idx <= self._cell_cnt
 end
 
-local function can_birth(cell_type)
-	return cell_type ~= CONST.MAP_CELL_TYPE.OBSTRUCT
-		and cell_type ~= CONST.MAP_CELL_TYPE.SYS_FORTRESS
-		and cell_type ~= CONST.MAP_CELL_TYPE.SYS_CITY
-		and cell_type ~= CONST.MAP_CELL_TYPE.FORTRESS
+function cls_map:set_block(idx)
+	if not self:in_bound(idx) or self._bit_set:get(idx) then
+		return false
+	end
+	self._bit_set:set(idx, true)
+	return true
 end
 
-function cls_map:load_block_from_res(map_res)
-	local list = map_res.list
-	local obstruct = CONST.MAP_CELL_TYPE.OBSTRUCT
-	local cnt = 0
-	local birth_free = 0
-	for idx = 1, #list do
-		local cell_type = list[idx][1]
-		if cell_type == obstruct then
-			self._bit_set:set(idx, true)
-			cnt = cnt + 1
-		elseif can_birth(cell_type) then
-			self._birth_ok:set(idx, true)
-			birth_free = birth_free + 1
-		end
+function cls_map:is_birth_cell(idx)
+	return self:in_bound(idx) and self._birth_ok:get(idx)
+end
+
+function cls_map:allow_birth(idx)
+	if not self:in_bound(idx) or self._bit_set:get(idx) or self._birth_ok:get(idx) then
+		return false
 	end
-	self._birth_free = birth_free
-	return cnt
+	self._birth_ok:set(idx, true)
+	self._birth_free = self._birth_free + 1
+	return true
+end
+
+function cls_map:mark_spawn(idx)
+	if not self._birth_ok:get(idx) or self._spawn:get(idx) then
+		return false
+	end
+	self._spawn:set(idx, true)
+	self._spawn_list[#self._spawn_list + 1] = idx
+	self._spawn_free = self._spawn_free + 1
+	return true
 end
 
 function cls_map:is_block(idx)
@@ -71,6 +82,9 @@ function cls_map:release_birth_idx(idx)
 	end
 	self._birth_taken:set(idx, false)
 	self._birth_free = self._birth_free + 1
+	if self._spawn:get(idx) then
+		self._spawn_free = self._spawn_free + 1
+	end
 end
 
 function cls_map:hold_birth_idx(idx)
@@ -79,25 +93,56 @@ function cls_map:hold_birth_idx(idx)
 	end
 	self._birth_taken:set(idx, true)
 	self._birth_free = self._birth_free - 1
+	if self._spawn:get(idx) then
+		self._spawn_free = self._spawn_free - 1
+	end
 	return true
 end
 
--- 先随机几次，撞上障碍或已占用再从随机起点扫一整圈
+-- 先占新格子再放开旧格子。新格子不能落城时旧格子保持占用
+function cls_map:relocate_birth(old_idx, new_idx)
+	if old_idx == new_idx then
+		return true
+	end
+	if not self:hold_birth_idx(new_idx) then
+		return false
+	end
+	self:release_birth_idx(old_idx)
+	return true
+end
+
+-- 新号只占建议出生点，出生区满了就不再往资源州丢
 function cls_map:alloc_birth_idx()
-	if self._birth_free < 1 then
+	local list = self._spawn_list
+	if self._spawn_free < 1 or #list < 1 then
 		return
 	end
-	local n = self._cell_cnt
 	for _ = 1, 32 do
-		local idx = math.random(1, n)
+		local idx = list[math.random(#list)]
 		if self:hold_birth_idx(idx) then
+			return idx
+		end
+	end
+	for i = 1, #list do
+		if self:hold_birth_idx(list[i]) then
+			return list[i]
+		end
+	end
+end
+
+-- 野怪落在空地上，不占建议出生点
+function cls_map:alloc_wild_idx()
+	local n = self._cell_cnt
+	for _ = 1, 64 do
+		local idx = math.random(1, n)
+		if self._birth_ok:get(idx) and not self._spawn:get(idx) and self:hold_birth_idx(idx) then
 			return idx
 		end
 	end
 	local start = math.random(1, n)
 	for i = 0, n - 1 do
 		local idx = (start + i - 1) % n + 1
-		if self:hold_birth_idx(idx) then
+		if self._birth_ok:get(idx) and not self._spawn:get(idx) and self:hold_birth_idx(idx) then
 			return idx
 		end
 	end

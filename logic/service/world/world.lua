@@ -23,6 +23,14 @@ function CMD.upsert_city(_, user_id, x, y)
 	AOI_MGR.upsert_city(user_id, x, y)
 end
 
+function CMD.move_city(_, user_id, x, y, old_x, old_y)
+	if not MAP_MGR.relocate_birth(old_x, old_y, x, y) then
+		return false
+	end
+	AOI_MGR.upsert_city(user_id, x, y)
+	return true
+end
+
 function CMD.find_march_path(_, sx, sy, ex, ey)
 	return MAP_MGR.find_march_path(sx, sy, ex, ey)
 end

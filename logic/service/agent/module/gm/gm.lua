@@ -22,6 +22,7 @@ local CMD_DESC = {
 	{ "open_system", "解锁系统 [open_system systemId]，0为全部" },
 	{ "add_heart", "加减心跳时间 [add_heart sec]，负数为减，之后拦截客户端心跳" },
 	{ "super", "超级号：主角升级、开全部系统、全部武将满级满技能、建筑满级、资源兵力道具加满 [super] 或 [super 主角等级]" },
+	{ "move_city", "迁主城，不消耗迁城令 [move_city x,y]" },
 }
 
 local function tell(vfd, msg)
@@ -254,6 +255,20 @@ function CMD.super(vfd, level)
 	REWARD_MGR.reward_user(user_id, reward_list, {CONST.FLOW_REASON.GM})
 
 	tell(vfd, string.format("超级号完成：主角 %d 级，武将 %d 级", user:get_level(), hero_max))
+end
+
+function CMD.move_city(vfd, x, y)
+	assert(x and y)
+	local user = USER_MGR.get_user_by_fd(vfd)
+	assert(user)
+	local ok, msg = USER_MGR.try_move_city(user, x, y, false)
+	if not ok then
+		tell(vfd, msg)
+		error(msg)
+	end
+	for_caller.s2c_move_city(vfd, {cityPos = user:get_city_pos_pto()})
+	user:sync_city_pos()
+	tell(vfd, string.format("主城已迁到 %d,%d", user:get_birth_x(), user:get_birth_y()))
 end
 
 local function on_gm_command(fd, packet)

@@ -1,11 +1,14 @@
 local skynet = require "skynet"
 local navigation = require "navigation"
 
-local MAP_RES_PATH = "../res/map/map_res.lua"
+local MAP_DIR = "../res/map/"
 
 map_obj = nil
-map_res = nil
 nav_obj = nil
+map_revision = nil
+-- 非空地的格子：cellId -> type * 256 + level。空地和山河不放进来
+cell_pack = {}
+land_by_key = {}
 
 local function idx_to_pos(idx, w)
 	local linear = idx - 1
@@ -22,33 +25,125 @@ end
 -- 已经落库的出生点占住，避免重启后分到同一格。没有出生点的旧号不补
 local function load_used_birth()
 	local all = MONGO_SLAVE.common_load_tbl(MONGO_SLAVE.COL.USER_INFO)
+	local miss = 0
 	for _, dat in pairs(all) do
 		if dat._has_birth then
-			map_obj:hold_birth_idx(pos_to_idx({x = dat._birth_x, y = dat._birth_y}, map_obj:get_width()))
+			local idx = pos_to_idx({x = dat._birth_x, y = dat._birth_y}, map_obj:get_width())
+			if not map_obj:hold_birth_idx(idx) then
+				miss = miss + 1
+			end
 		end
+	end
+	if miss > 0 then
+		skynet.error("birth pos not on empty cell", miss)
 	end
 end
 
-function init()
-	map_res = dofile(MAP_RES_PATH)
-	assert(map_res and map_res.w and map_res.h and map_res.list, "load map_res failed")
-	map_obj = MAP_BASE.cls_map:New({
-		_width = map_res.w,
-		_height = map_res.h,
-	})
-	local block_cnt = map_obj:load_block_from_res(map_res)
-	local w = map_res.w
-	local obstruct = CONST.MAP_CELL_TYPE.OBSTRUCT
-	local obstacles = {}
-	for idx = 1, #map_res.list do
-		if map_res.list[idx][1] == obstruct then
-			local pos = idx_to_pos(idx, w)
-			obstacles[#obstacles + 1] = { pos.x, pos.y }
+local function cell_id_of(x, y, w)
+	return y * w + x
+end
+
+local function land_type_of(cell_type)
+	if cell_type == CONST.MAP_CELL_TYPE.GRAIN then
+		return DATA_COMMON.RES_LAND_TYPE.GRAIN
+	elseif cell_type == CONST.MAP_CELL_TYPE.WOOD then
+		return DATA_COMMON.RES_LAND_TYPE.WOOD
+	elseif cell_type == CONST.MAP_CELL_TYPE.IRON then
+		return DATA_COMMON.RES_LAND_TYPE.IRON
+	elseif cell_type == CONST.MAP_CELL_TYPE.STONE then
+		return DATA_COMMON.RES_LAND_TYPE.STONE
+	end
+end
+
+local function index_land_cfg()
+	land_by_key = {}
+	for id, conf in pairs(DATA_COMMON.get_res_land_tbl()) do
+		land_by_key[conf.Type * 100 + conf.Level] = id
+	end
+end
+
+-- 出生区中心常常落在资源上，在 safeRadius 里挑离中心最近的空地
+local function nearest_birth(x, y, radius, w, h)
+	local best, best_d
+	for dy = -radius, radius do
+		for dx = -radius, radius do
+			local d = dx * dx + dy * dy
+			if d <= radius * radius then
+				local nx, ny = x + dx, y + dy
+				if nx >= 0 and ny >= 0 and nx < w and ny < h then
+					local idx = cell_id_of(nx, ny, w) + 1
+					if map_obj:is_birth_cell(idx) and (not best_d or d < best_d) then
+						best, best_d = idx, d
+					end
+				end
+			end
 		end
 	end
-	nav_obj = navigation.new(w, map_res.h, obstacles)
+	return best
+end
+
+function init()
+	local manifest = dofile(MAP_DIR .. "manifest.lua")
+	local map_res = dofile(MAP_DIR .. "mapRes_0.lua")
+	local terrain = dofile(MAP_DIR .. "terrain.lua")
+	local campaign = dofile(MAP_DIR .. "campaign-map.lua")
+	assert(map_res and map_res.w and map_res.h and map_res.list and map_res.emptyCells, "load mapRes_0 failed")
+	assert(manifest.width == map_res.w and manifest.height == map_res.h, "map size mismatch")
+	local w, h = map_res.w, map_res.h
+	map_obj = MAP_BASE.cls_map:New({
+		_width = w,
+		_height = h,
+	})
+	map_revision = manifest.mapRevision
+
+	local obstacles = {}
+	local block_cnt = 0
+	for _, cell_id in ipairs(terrain.blockedCells) do
+		if map_obj:set_block(cell_id + 1) then
+			block_cnt = block_cnt + 1
+			obstacles[#obstacles + 1] = { cell_id % w, cell_id // w }
+		end
+	end
+
+	local reserved = {}
+	for _, cell_id in ipairs(terrain.reservedCityCells) do
+		reserved[cell_id] = true
+	end
+	local empty_cnt = 0
+	for _, cell_id in ipairs(map_res.emptyCells) do
+		if not reserved[cell_id] and map_obj:allow_birth(cell_id + 1) then
+			empty_cnt = empty_cnt + 1
+		end
+	end
+
+	local spawn_cnt = 0
+	for _, zone in ipairs(campaign.spawnZones) do
+		local idx = nearest_birth(zone.x, zone.y, zone.safeRadius or 0, w, h)
+		if idx and map_obj:mark_spawn(idx) then
+			spawn_cnt = spawn_cnt + 1
+		end
+	end
+
+	index_land_cfg()
+	cell_pack = {}
+	local land_cnt = 0
+	for cell_id, cell in pairs(map_res.list) do
+		local cell_type = cell[1]
+		if cell_type ~= 0 then
+			cell_pack[cell_id] = cell_type * 256 + cell[2]
+			local land_type = land_type_of(cell_type)
+			if land_type and land_by_key[land_type * 100 + cell[2]] then
+				land_cnt = land_cnt + 1
+			end
+		end
+	end
+	map_res.list = nil
+
+	nav_obj = navigation.new(w, h, obstacles)
 	load_used_birth()
-	skynet.error("world map init", map_res.w, map_res.h, "block", block_cnt)
+	skynet.error(string.format(
+		"world map init %d %d rev %s block %d empty %d spawn %d land %d",
+		w, h, map_revision, block_cnt, empty_cnt, spawn_cnt, land_cnt))
 end
 
 function get_map()
@@ -73,6 +168,40 @@ function alloc_birth_pos()
 		return
 	end
 	return idx_to_pos(idx, map_obj:get_width())
+end
+
+function alloc_wild_idx()
+	return map_obj:alloc_wild_idx()
+end
+
+function cell_info(x, y)
+	local w = map_obj:get_width()
+	local h = map_obj:get_height()
+	x, y = math.floor(x), math.floor(y)
+	if x < 0 or y < 0 or x >= w or y >= h then
+		return
+	end
+	local packed = cell_pack[cell_id_of(x, y, w)]
+	if not packed then
+		return 0, 0
+	end
+	return packed // 256, packed % 256
+end
+
+function land_id_at(x, y)
+	local cell_type, level = cell_info(x, y)
+	local land_type = cell_type and land_type_of(cell_type)
+	if not land_type then
+		return
+	end
+	return land_by_key[land_type * 100 + level]
+end
+
+-- 先占新格子，成功再放开旧格子。新格子越界、不能落城或已被占用时旧格子不动
+function relocate_birth(old_x, old_y, x, y)
+	x, y = math.floor(x), math.floor(y)
+	old_x, old_y = math.floor(old_x), math.floor(old_y)
+	return map_obj:relocate_birth(idx_of_pos(old_x, old_y), idx_of_pos(x, y))
 end
 
 -- 行军拐点（JPS + 平滑），含起点和终点。不可达返回 nil
