@@ -19,6 +19,16 @@ local function pos_to_idx(pos, w)
 	return math.floor(pos.y) * w + math.floor(pos.x) + 1
 end
 
+-- 已经落库的出生点占住，避免重启后分到同一格。没有出生点的旧号不补
+local function load_used_birth()
+	local all = MONGO_SLAVE.common_load_tbl(MONGO_SLAVE.COL.USER_INFO)
+	for _, dat in pairs(all) do
+		if dat._has_birth then
+			map_obj:hold_birth_idx(pos_to_idx({x = dat._birth_x, y = dat._birth_y}, map_obj:get_width()))
+		end
+	end
+end
+
 function init()
 	map_res = dofile(MAP_RES_PATH)
 	assert(map_res and map_res.w and map_res.h and map_res.list, "load map_res failed")
@@ -37,6 +47,7 @@ function init()
 		end
 	end
 	nav_obj = navigation.new(w, map_res.h, obstacles)
+	load_used_birth()
 	skynet.error("world map init", map_res.w, map_res.h, "block", block_cnt)
 end
 
@@ -46,6 +57,14 @@ end
 
 function is_block(idx)
 	return map_obj:is_block(idx)
+end
+
+function alloc_birth_pos()
+	local idx = map_obj:alloc_birth_idx()
+	if not idx then
+		return
+	end
+	return idx_to_pos(idx, map_obj:get_width())
 end
 
 function find_path(from_idx, to_idx)

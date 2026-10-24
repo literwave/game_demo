@@ -20,6 +20,9 @@ user_data {
     _gift_diamond number
     _sum_recharge_diamond number
     _head_icon number
+    _has_birth boolean
+    _birth_x number
+    _birth_y number
     _lottery_times number
     _level number
     _exp number

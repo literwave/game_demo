@@ -8,6 +8,7 @@ CB_MGR		= Import("../common/cb_mgr.lua")
 CALL_OUT	= Import("../common/call_out.lua")
 EVENT		= Import("../common/event.lua")
 
+MONGO_SLAVE	= Import("../logic/base/mongo_slave.lua")
 USER_MGR	= Import("../logic/service/world/module/user/mgr.lua")
 
 QTREE		= Import("../logic/service/world/module/qtree/base.lua")

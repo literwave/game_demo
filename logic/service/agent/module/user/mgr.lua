@@ -234,9 +234,20 @@ local function on_user_create(fd, packet)
 	if not user or user:get_sex() ~= CONST.SEX_NONE then
 		return
 	end
+	local pos = skynet.call(".world", "lua", "alloc_birth_pos")
+	if not pos then
+		tell_me(user:get_user_id(), "没有可用的出生点")
+		return
+	end
+	user:set_birth_pos(pos.x, pos.y)
 	user:set_sex(sex)
 	user:set_name(name)
-	for_caller.s2c_user_create(fd, packet)
+	for_caller.s2c_user_create(fd, {
+		name = name,
+		sex = sex,
+		birthX = pos.x,
+		birthY = pos.y,
+	})
 end
 
 local function on_change_head_icon(fd, packet)

@@ -15,6 +15,10 @@ function CMD.sync_to_map(oci)
 	ENTITY_MGR.sync_to_map(oci)
 end
 
+function CMD.alloc_birth_pos()
+	return MAP_MGR.alloc_birth_pos()
+end
+
 skynet.start(function()
 	skynet.error("boot world success")
 	dofile "../logic/service/world/preload.lua"

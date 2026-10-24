@@ -160,6 +160,24 @@ function cls_user:set_born_server_id(server_id)
 	self._data._born_server_id = server_id
 end
 
+function cls_user:has_birth_pos()
+	return self._data._has_birth
+end
+
+function cls_user:get_birth_x()
+	return self._data._birth_x
+end
+
+function cls_user:get_birth_y()
+	return self._data._birth_y
+end
+
+function cls_user:set_birth_pos(x, y)
+	self._data._birth_x = x
+	self._data._birth_y = y
+	self._data._has_birth = true
+end
+
 function cls_user:get_diamond()
 	return self._data._real_diamond + self._data._gift_diamond
 end
@@ -270,6 +288,8 @@ function cls_user:get_client_pto_info()
 		birthTime = self:get_birth_time(),
 		level = self:get_level(),
 		exp = self:get_exp(),
+		birthX = self:get_birth_x(),
+		birthY = self:get_birth_y(),
 	}
 end
 

@@ -4,7 +4,8 @@ description: >-
   Guides Game Demo Framework ORM schema, Mongo persistence, and gameplay Lua style.
   Use when adding/changing .td schemas, clsXxx _data, saveDoc/saveDocField,
   mongo_slave persist, migrating modules off opMongoValue/@ paths, or writing
-  game logic that checks protocol fields.
+  game logic that checks or sends protocol fields. Protocol files live in the
+  game_common submodule and must be pulled, not edited here.
 ---
 
 # Game Demo ORM 存盘
@@ -23,6 +24,12 @@ description: >-
 4. `clsXxx:__init__`：`self._data = ORM.new(CLS_*, oci)`（oci 已是该类型 orm 对象时原样返回）
 5. mgr 加载用 `local doc, is_loaded = ORM.load(MONGO_SLAVE.COL.XXX, id, CLS_*_DOC)`，`is_loaded` 为 true 时遍历 bag 建对象。集合名只用 `logic/base/mongo_slave.lua` 里的 `COL` 枚举。子对象在 `__init__` 里直接赋值挂进文档：`ORM.get(col, id)._heroes[k] = self._data`，删除赋 `nil`。不要在模块里再存一份 doc 表。改字段会把根标脏，`flush` 整包写回；下线 `ORM.unbind(col, id)`
 6. 不要再写 `save_col.lua`、`persist*` 或在 setter 里 `saveField`。删整份独立文档仍用 `delDoc`
+
+## 协议
+
+- 不改 `game_common` 里的协议。`.proto`、`.pb`、`net_pb.lua`，以及 `ptotools` 下的协议描述，都不要在这个仓库里改
+- 协议只通过子模块拉取：`git submodule update --init --remote game_common`。不要不带路径的 `--remote`，那会把 `skynet` 拉离开钉住的版本
+- 业务可以先加字段。存盘 schema、对象的 getter/setter、发给客户端的 table 里可以先写上新字段。子模块的 pb 还没有该字段时，编码会报未知字段；等协议仓库提交后再拉取，不要为了能发出去去改 pb
 
 ## 禁止
 
