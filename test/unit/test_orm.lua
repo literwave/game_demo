@@ -119,4 +119,23 @@ function T.removing_child_by_nil()
 	assert(doc and doc.dat._res_tbl["2"] == nil)
 end
 
+function T.report_nested_roundtrip()
+	local doc = orm.new("user_report_doc", {})
+	orm.bind(doc, "unit_report", 1)
+	orm.drain()
+	doc._reports[1] = {
+		_report_id = 1,
+		_is_read = false,
+		_atk_side = {_name = "a", _units = {{_pos = 1, _before_count = 100, _after_count = 80, _after_hurt = 20}}},
+		_actions = {{_round = 1, _effects = {{_target_side = 2, _value = 40}}}},
+	}
+	local dumped = find(orm.drain(), 1).dat
+	local back = orm.new("user_report_doc", dumped)
+	local r = back._reports[1]
+	assert(r._atk_side._units[1]._after_count == 80 and r._atk_side._units[1]._after_hurt == 20)
+	assert(r._actions[1]._effects[1]._value == 40)
+	assert(r._def_side._name == "", "missing struct field gets default")
+	assert(r._is_read == false)
+end
+
 return T

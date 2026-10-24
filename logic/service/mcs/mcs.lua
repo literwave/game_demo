@@ -96,6 +96,9 @@ local function get_hot_update_targets()
 	for _, name in ipairs(HOT_UPDATE_SERVICE_LIST) do
 		table.insert(list, {name = name, addr = name})
 	end
+	for i = 1, tonumber(skynet.getenv("battle_cnt")) or 1 do
+		table.insert(list, {name = ".battle" .. i, addr = ".battle" .. i})
+	end
 	return list
 end
 

@@ -1,6 +1,6 @@
 local skynet = require "skynet"
 
-local function world_call(cmd, ...)
+function world_call(cmd, ...)
 	local addr = skynet.localname(".world")
 	if not addr then
 		return
@@ -58,15 +58,8 @@ function on_arrive(user_id, troop_idx, end_time)
 	end
 	local fd = USER_MGR.get_fd_by_user_id(user_id)
 	if troop:get_target_type() == CONST.TARGET_TYPE.ATTACK_MONSTER then
-		local target_id = troop:get_target_id()
 		troop:set_arrived()
-		local cfg_id = world_call("kill_monster", target_id)
-		if cfg_id then
-			local conf = DATA_COMMON.get_monster_group(cfg_id)
-			if conf and conf.Reward then
-				REWARD_MGR.reward_user(user_id, conf.Reward, {CONST.FLOW_REASON.MARCH, cfg_id})
-			end
-		end
+		BATTLE_MGR.attack_monster(user, troop)
 		if begin_return(user, troop) and fd then
 			for_caller.s2c_sync_march(fd, {marchInfo = troop:get_march_pto()})
 		end

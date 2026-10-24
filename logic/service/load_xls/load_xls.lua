@@ -49,6 +49,7 @@ DATA_FILE_LIST = {
 	"../game_common/server/res/WeekTask.lua",
 	"../game_common/server/res/MonsterGroup.lua",
 	"../game_common/server/res/Monster.lua",
+	"../game_common/server/res/Skill.lua",
 	"../game_common/server/res/EntityType.lua",
 	"../game_common/server/res/TargetType.lua",
 	"../res/innerCity.lua",

@@ -27,7 +27,9 @@ skynet.start(function()
 	skynet.newservice("world")
 	skynet.newservice("activity")
 	skynet.newservice("union") -- 联盟
-	-- skynet.newservice("battleserver")
+	for i = 1, tonumber(skynet.getenv("battle_cnt")) or 1 do
+		skynet.newservice("battle", i)
+	end
 	-- 作为启动成功的logo
 	skynet.error("***       *******   *******   *******   *******     ***     ***       ***     ***   ***    ********")
 	skynet.error("***         ***       ***     ***       ***   **    ***     ***      *****    ***   ***    ***     ")

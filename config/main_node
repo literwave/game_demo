@@ -73,6 +73,7 @@ maxonline = 2000  -- 单服人数
 nodelay = true    -- 尽可能快socket发送包 会有零碎小包
 
 agent_init_cnt = 4    -- agent 数量，玩家按 user_id % agent_init_cnt 固定分配
+battle_cnt = 1        -- 战斗服务数量，按目标 id % battle_cnt 分配，同一目标串行结算
 
 ------------ http相关 --------------
 http_port = 33023

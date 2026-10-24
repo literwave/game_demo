@@ -21,6 +21,7 @@ CLS_USER_TROOP_DOC = "user_troop_doc"
 CLS_USER_TASK_DOC = "user_task_doc"
 CLS_USER_ACTIVITY_DOC = "user_activity_doc"
 CLS_SERVER_DATA = "server_data"
+CLS_USER_REPORT_DOC = "user_report_doc"
 
 local SCHEMA_FILES = {
 	"user.td",
@@ -34,6 +35,7 @@ local SCHEMA_FILES = {
 	"task.td",
 	"activity.td",
 	"server.td",
+	"report.td",
 }
 
 local function load_schemas()

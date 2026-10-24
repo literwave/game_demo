@@ -66,6 +66,7 @@ FLOW_REASON = {
 	TASK = 7,
 	ACTIVITY = 8,
 	MARCH = 9,
+	BATTLE = 10,
 }
 
 ONE_HOUR_SEC = 3600
@@ -177,6 +178,81 @@ RANK_TYPE = {
 	POWER = 1,
 	CITY = 2,
 }
+
+-- ---------- 战斗 ----------
+-- 和 ReportType 配置一致
+REPORT_TYPE = {
+	ATTACK_MONSTER = 1,
+	ATTACK_PLAYER = 2,
+	DEFEND = 3,
+}
+
+BATTLE_SIDE = {
+	ATK = 1,
+	DEF = 2,
+}
+
+BATTLE_RESULT = {
+	WIN = 1,
+	LOSE = 2,
+}
+
+-- 快照里的单位类型：武将读 Hero 配置，怪物读 Monster 配置
+BATTLE_UNIT = {
+	HERO = 1,
+	MONSTER = 2,
+}
+
+-- 回放 actType，和 report.proto 一致
+BATTLE_ACT = {
+	ATTACK = 1,
+	ACTIVE = 2,
+	PASSIVE = 3,
+	PURSUE = 4,
+	COMMAND = 5,
+	HEAL = 6,
+	STATE = 7,
+}
+
+-- 回放 flags 的位
+BATTLE_FLAG = {
+	CRIT = 1,
+}
+
+-- Skill.Trigger
+SKILL_TRIGGER = {
+	ACTIVE = 1,		-- 自己行动时按概率发动
+	PASSIVE = 2,	-- 开战时生效
+	PURSUE = 3,		-- 普攻后按概率追加
+	COMMAND = 4,	-- 开战时生效，先于被动
+}
+
+-- Skill.Target
+SKILL_TARGET = {
+	SELF = 1,
+	ALLY_ALL = 4,
+	ENEMY_ONE = 5,
+	ENEMY_1_2 = 6,
+	ENEMY_2_3 = 7,
+	ENEMY_ALL = 8,
+}
+
+-- Skill.IncludeEffect，和 Levels[].effect_value / effect_round 按下标对应
+SKILL_EFFECT = {
+	DAMAGE = 1,		-- 伤害率 %
+	ATTACK = 2,		-- 攻击 %
+	DEFENSE = 3,	-- 防御 %
+	INTEL = 4,		-- 谋略 %
+	SPEED = 5,		-- 速度 %
+}
+
+-- 配置里没有的数值先放这里
+BATTLE_MAX_ROUND = 20
+BATTLE_DAMAGE_RATE = 0.3		-- 伤害 = 带兵 * 伤害率 * 攻/(攻+防) * 这个系数
+BATTLE_CRIT_RATE = 150			-- 暴击伤害 %
+BATTLE_HURT_RATE = 50			-- 损失的兵里转为伤兵的 %，其余阵亡
+BATTLE_HERO_LV_GROWTH = 5		-- 武将每升一级属性 +%
+REPORT_MAX = 30					-- 每人保留的战报数
 
 EVENT = {
 	ON_USER_LOGIN = "on_user_login",

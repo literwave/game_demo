@@ -16,6 +16,8 @@ local DATA_DAILY_TASK = sharedata.query("DailyTask")
 local DATA_WEEK_TASK = sharedata.query("WeekTask")
 local DATA_ACTIVITY = sharedata.query("Activity")
 local DATA_MONSTER_GROUP = sharedata.query("MonsterGroup")
+local DATA_MONSTER = sharedata.query("Monster")
+local DATA_SKILL = sharedata.query("Skill")
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -217,4 +219,12 @@ end
 
 function get_monster_group_tbl()
 	return DATA_MONSTER_GROUP
+end
+
+function get_monster_conf(monster_id)
+	return DATA_MONSTER[monster_id]
+end
+
+function get_skill_conf(skill_id)
+	return DATA_SKILL[skill_id]
 end
