@@ -5,10 +5,10 @@ server_doc = nil
 rank_tbl = {}
 
 local function entry_tbl(rank_type)
-	if rank_type == CONST.RANK_TYPE.POWER then
+	if rank_type == DATA_COMMON.RANK_TYPE.POWER then
 		return server_doc._power_tbl
 	end
-	if rank_type == CONST.RANK_TYPE.CITY then
+	if rank_type == DATA_COMMON.RANK_TYPE.CITY_LEVEL then
 		return server_doc._city_tbl
 	end
 end
@@ -18,7 +18,7 @@ local function zadd(z, user_id, entry)
 	z:add(entry._score, tostring(user_id), entry._time)
 end
 
-function set_score(rank_type, user_id, score)
+function set_score(rank_type, user_id, score, name, head_icon)
 	local tbl = entry_tbl(rank_type)
 	local z = rank_tbl[rank_type]
 	if not tbl or not z or not user_id then
@@ -33,10 +33,48 @@ function set_score(rank_type, user_id, score)
 	end
 	local entry = tbl[user_id]
 	if entry and entry._score == score then
+		if name then
+			entry._name = name
+		end
+		if head_icon then
+			entry._head_icon = head_icon
+		end
 		return
 	end
-	tbl[user_id] = {_score = score, _time = TIME.os_bj_sec()}
+	tbl[user_id] = {
+		_score = score,
+		_time = TIME.os_bj_sec(),
+		_name = name or (entry and entry._name) or "",
+		_head_icon = head_icon or (entry and entry._head_icon) or 0,
+	}
 	zadd(z, user_id, tbl[user_id])
+end
+
+local function item_of(rank, user_id, entry)
+	return {rank = rank, uid = user_id, name = entry._name, head_icon = entry._head_icon, score = entry._score}
+end
+
+-- 名次从 1 起；返回 {list, self}，自己没上榜时 rank = 0、score = 0
+function get_rank_list(rank_type, start, count, self_id)
+	local tbl = entry_tbl(rank_type)
+	local z = rank_tbl[rank_type]
+	if not tbl or not z then
+		return
+	end
+	local list = {}
+	local total = z:count()
+	if start <= total then
+		local last = math.min(total, start + count - 1)
+		for i, member in ipairs(z:rev_range(start, last)) do
+			local user_id = tonumber(member)
+			list[#list + 1] = item_of(start + i - 1, user_id, tbl[user_id])
+		end
+	end
+	local self_rank = {rank = 0, uid = self_id, name = "", head_icon = 0, score = 0}
+	if tbl[self_id] then
+		self_rank = item_of(get_rank(rank_type, self_id), self_id, tbl[self_id])
+	end
+	return {list = list, self = self_rank}
 end
 
 -- 没上榜返回 0
@@ -59,7 +97,7 @@ end
 function __init__()
 	MONGO_SLAVE.system_startup()
 	server_doc = ORM.load(MONGO_SLAVE.COL.SERVER, 1, ORM.CLS_SERVER_DATA)
-	for _, rank_type in pairs(CONST.RANK_TYPE) do
+	for _, rank_type in pairs(DATA_COMMON.RANK_TYPE) do
 		build_rank(rank_type)
 	end
 end

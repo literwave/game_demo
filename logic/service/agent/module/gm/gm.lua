@@ -18,6 +18,7 @@ local CMD_DESC = {
 	{ "add_exp", "增加主角经验 [add_exp exp]" },
 	{ "open_system", "解锁系统 [open_system systemId]，0为全部" },
 	{ "add_heart", "加减心跳时间 [add_heart sec]，负数为减，之后拦截客户端心跳" },
+	{ "super", "超级号：主角升级、开全部系统、全部武将满级满技能、建筑满级、资源兵力道具加满 [super] 或 [super 主角等级]" },
 }
 
 local function tell(vfd, msg)
@@ -67,8 +68,10 @@ function CMD.full_build(vfd)
 	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
 	local build_tbl = BUILD_MGR.get_user_build_tbl(user_id)
 	for _, build in pairs(build_tbl) do
-		build:set_level(DATA_COMMON.get_build_max_level(build:get_build_type()))
+		local level = DATA_COMMON.get_build_max_level(build:get_build_type())
+		build:set_level(level)
 		build:sync_to_client()
+		EVENT.dispatch(CONST.EVENT.ON_BUILD_LEVEL, user_id, build:get_bid(), level)
 	end
 end
 
@@ -180,6 +183,53 @@ function CMD.open_system(vfd, system_id)
 		tell(vfd, "系统之前已开启 " .. system_id)
 		SYSTEM_OPEN.sync_all(user)
 	end
+end
+
+-- 一键拉满：主角等级、全部系统、全部武将满级满技能、建筑满级、资源、兵、道具。可重复执行
+function CMD.super(vfd, level)
+	level = level or CONST.GM_SUPER_LEVEL
+	local user = USER_MGR.get_user_by_fd(vfd)
+	assert(user)
+	local user_id = user:get_user_id()
+	if user:get_level() < level then
+		user:add_exp((level - user:get_level()) * DATA_COMMON.get_user_level_up_exp() - user:get_exp())
+	end
+	SYSTEM_OPEN.open_all(user)
+	SYSTEM_OPEN.sync_all(user)
+
+	CMD.full_hero(vfd)
+	local hero_max = DATA_COMMON.get_hero_max_level()
+	for _, hero in pairs(HERO_MGR.get_hero_tbl_by_user_id(user_id)) do
+		hero:set_level(hero_max)
+		local skill_ids = {}
+		for skill_id in pairs(hero:get_skill_tbl()) do
+			skill_ids[#skill_ids + 1] = skill_id
+		end
+		for _, skill_id in ipairs(skill_ids) do
+			hero:set_skill_lv(skill_id, DATA_COMMON.get_skill_max_level(skill_id))
+		end
+		hero:sync_to_client()
+	end
+
+	CMD.full_build(vfd)
+
+	local res_list = {}
+	for res_type = CONST.RES_TYPE_FOOD, CONST.RES_TYPE_WOOD do
+		user:add_res(res_type, CONST.GM_SUPER_RES, {CONST.FLOW_REASON.GM})
+		res_list[#res_list + 1] = res_type
+	end
+	user:sync_res(res_list)
+	user:add_soldier(DATA_COMMON.get_soldier_max())
+	user:sync_soldier()
+
+	local reward_list = {}
+	for _, item_id in ipairs(DATA_COMMON.get_all_item_ids()) do
+		local overlap = DATA_COMMON.get_item_overlap(item_id) or 1
+		reward_list[#reward_list + 1] = GLOBAL_FUNC.gen_reward_info(CONST.REWARD_TYPE_ITEM, item_id, math.max(1, overlap))
+	end
+	REWARD_MGR.reward_user(user_id, reward_list, {CONST.FLOW_REASON.GM})
+
+	tell(vfd, string.format("超级号完成：主角 %d 级，武将 %d 级", user:get_level(), hero_max))
 end
 
 local function on_gm_command(fd, packet)

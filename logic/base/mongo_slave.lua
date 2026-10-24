@@ -11,6 +11,7 @@ COL = {
 	USER_TASK = "user_task_col",
 	USER_ACTIVITY = "user_activity_col",
 	USER_REPORT = "user_report_col",
+	ALLIANCE = "alliance_col",
 	SERVER = "server_col",
 	GAME_SID = "game_sid_col",
 	MAIL = "mail_col",

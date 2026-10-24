@@ -34,6 +34,7 @@ end
 -- 这里先这样手动加载数据，后续优化成遍历dir目录下的文件，然后new
 DATA_FILE_LIST = {
 	"../game_common/server/res/Hero.lua",
+	"../game_common/server/res/HeroLv.lua",
 	"../game_common/server/res/ReportInfo.lua",
 	"../game_common/server/res/ServerGroup.lua",
 	"../game_common/server/res/Global.lua",
@@ -52,6 +53,12 @@ DATA_FILE_LIST = {
 	"../game_common/server/res/Skill.lua",
 	"../game_common/server/res/EntityType.lua",
 	"../game_common/server/res/TargetType.lua",
+	"../game_common/server/res/RankType.lua",
+	"../game_common/server/res/ReportType.lua",
+	"../game_common/server/res/ChatChannel.lua",
+	"../game_common/server/res/AllianceLv.lua",
+	"../game_common/server/res/AlliancePos.lua",
+	"../game_common/server/res/AllianceJoinType.lua",
 	"../res/innerCity.lua",
 }
 

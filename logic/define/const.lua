@@ -87,18 +87,7 @@ MAP_CELL_TYPE = {
 	FORTRESS = 56,
 }
 
-ENTITY_TYPE = {
-	MAIN_HALL = 1,
-	CITY = 1,
-	TROOP = 2,
-	MONSTER_GROUP = 3,
-}
-
--- 和 EntityType / TargetType 配置一致
-TARGET_TYPE = {
-	RETURN_CITY = 1,
-	ATTACK_MONSTER = 2,
-}
+-- 实体类型、行军目标、战报类型、排行榜、聊天频道、联盟职位和加入方式都有枚举表，用 DATA_COMMON.XXX
 
 MARCH_STATE = {
 	MOVING = 1,
@@ -174,19 +163,7 @@ ACTIVITY_TIME = {
 	DAILY = 4,
 }
 
-RANK_TYPE = {
-	POWER = 1,
-	CITY = 2,
-}
-
 -- ---------- 战斗 ----------
--- 和 ReportType 配置一致
-REPORT_TYPE = {
-	ATTACK_MONSTER = 1,
-	ATTACK_PLAYER = 2,
-	DEFEND = 3,
-}
-
 BATTLE_SIDE = {
 	ATK = 1,
 	DEF = 2,
@@ -254,6 +231,33 @@ BATTLE_HURT_RATE = 50			-- 损失的兵里转为伤兵的 %，其余阵亡
 BATTLE_HERO_LV_GROWTH = 5		-- 武将每升一级属性 +%
 REPORT_MAX = 30					-- 每人保留的战报数
 
+GM_SUPER_LEVEL = 50				-- 超级号默认主角等级
+GM_SUPER_RES = 10000000			-- 超级号每种资源加多少
+
+RANK_PAGE_DEFAULT = 50			-- 排行榜请求 count = 0 或超过上限时用
+RANK_PAGE_MAX = 100
+
+-- ---------- 聊天 ----------
+CHAT_CONTENT_MAX_LEN = 100		-- 字符数（utf8）
+CHAT_INTERVAL = 1				-- 发言间隔秒
+
+-- ---------- 联盟 ----------
+-- s2c_sync_member_change.changeType，没有枚举表
+ALLIANCE_CHANGE = {
+	JOIN = 1,
+	LEAVE = 2,
+	KICK = 3,
+	POS = 4,
+}
+
+ALLIANCE_NAME_MAX_LEN = 8		-- 字符数（utf8）
+ALLIANCE_NOTICE_MAX_LEN = 100
+ALLIANCE_MANIFESTO_MAX_LEN = 100
+ALLIANCE_APPLY_MAX = 50			-- 每个联盟待审批的申请数
+ALLIANCE_LIST_DEFAULT = 20		-- 联盟列表 count = 0 或超过上限时用
+ALLIANCE_LIST_MAX = 50
+ALLIANCE_INVITE_EXPIRE = 86400	-- 邀请有效期，只存内存
+
 EVENT = {
 	ON_USER_LOGIN = "on_user_login",
 	ON_USER_LOGOUT = "on_user_logout",
@@ -265,9 +269,11 @@ EVENT = {
 	ON_NEW_WEEK = "on_new_week",
 	ON_NEW_MONTH = "on_new_month",
 	ON_ONLINE_MINUTE = "on_online_minute",
+	ON_USER_LEVEL = "on_user_level",	-- (user_id)，玩家等级提升
 	ON_LOTTERY = "on_lottery",
 	ON_HEAD_ICON = "on_head_icon",
 	ON_HERO_ADD = "on_hero_add",
+	ON_HERO_LEVEL = "on_hero_level",	-- (user_id, hero_type)，战力会变
 	ON_BUILD_LEVEL = "on_build_level",
 	ON_ITEM_CHANGE = "on_item_change",
 	ON_MARCH = "on_march",

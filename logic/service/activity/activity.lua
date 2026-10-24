@@ -11,8 +11,12 @@ function CMD.hot_update(path_list)
 	return hot_update(path_list)
 end
 
-function CMD.set_score(rank_type, user_id, score)
-	RANK_MGR.set_score(rank_type, user_id, score)
+function CMD.set_score(rank_type, user_id, score, name, head_icon)
+	RANK_MGR.set_score(rank_type, user_id, score, name, head_icon)
+end
+
+function CMD.get_rank_list(rank_type, start, count, self_id)
+	return RANK_MGR.get_rank_list(rank_type, start, count, self_id)
 end
 
 function CMD.get_rank(rank_type, user_id)

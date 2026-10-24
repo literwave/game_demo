@@ -51,6 +51,15 @@ function pos_at(path, start_time, end_time, now)
 	return last_pos(path)
 end
 
+-- 协议里的 repeated p_pos_f
+function to_pto(path)
+	local ret = {}
+	for i, p in ipairs(path) do
+		ret[i] = {x = p._x, y = p._y}
+	end
+	return ret
+end
+
 -- 转成不带 orm 元表的纯 table，跨服务传
 function copy(path)
 	local ret = {}

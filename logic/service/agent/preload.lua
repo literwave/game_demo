@@ -21,6 +21,9 @@ local PROTO_FILE_LIST = {
 	"../game_common/pb/activity.pb",
 	"../game_common/pb/battle.pb",
 	"../game_common/pb/report.pb",
+	"../game_common/pb/rank.pb",
+	"../game_common/pb/alliance.pb",
+	"../game_common/pb/chat.pb",
 }
 
 function __G__TRACKBACK__(msg)

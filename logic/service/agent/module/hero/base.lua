@@ -30,6 +30,15 @@ function cls_hero:get_level()
 	return self._data._level
 end
 
+function cls_hero:set_level(level)
+	if self._data._level == level then
+		return
+	end
+	self._data._level = level
+	self._data._exp = 0
+	EVENT.dispatch(CONST.EVENT.ON_HERO_LEVEL, self:get_user_id(), self:get_hero_type())
+end
+
 function cls_hero:get_hero_pto_base_info()
 	local skill_list = {}
 	for skill_id, skill_lv in pairs(self._data._skill_tbl) do

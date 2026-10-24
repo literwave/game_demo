@@ -1,6 +1,7 @@
 local sharedata = require "skynet.sharedata"
 
 local DATA_HERO = sharedata.query("Hero")
+local DATA_HERO_LV = sharedata.query("HeroLv")
 local DATA_REPORT = sharedata.query("ReportInfo")
 local DATA_SERVER_GROUP = sharedata.query("ServerGroup")
 local DATA_GLOBAL = sharedata.query("Global")
@@ -18,6 +19,14 @@ local DATA_ACTIVITY = sharedata.query("Activity")
 local DATA_MONSTER_GROUP = sharedata.query("MonsterGroup")
 local DATA_MONSTER = sharedata.query("Monster")
 local DATA_SKILL = sharedata.query("Skill")
+local DATA_RANK_TYPE = sharedata.query("RankType")
+local DATA_CHAT_CHANNEL = sharedata.query("ChatChannel")
+local DATA_ALLIANCE_LV = sharedata.query("AllianceLv")
+local DATA_ALLIANCE_POS = sharedata.query("AlliancePos")
+local DATA_ALLIANCE_JOIN_TYPE = sharedata.query("AllianceJoinType")
+local DATA_ENTITY_TYPE = sharedata.query("EntityType")
+local DATA_TARGET_TYPE = sharedata.query("TargetType")
+local DATA_REPORT_TYPE = sharedata.query("ReportType")
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -25,6 +34,26 @@ local DATA_SKILL = sharedata.query("Skill")
 -- 		return DATA_NAME_CN
 -- 	end,
 -- }
+
+-- 带 Enum 列的表转成 {[Enum] = Id}
+local function build_enum(data)
+	local ret = {}
+	for id, conf in pairs(data) do
+		ret[conf.Enum] = id
+	end
+	return ret
+end
+
+-- 枚举直接取配置表，用 DATA_COMMON.XXX.ENUM，不要在加载时缓存成 local（重载配置会换新表）
+local function init_enum()
+	ENTITY_TYPE = build_enum(DATA_ENTITY_TYPE)
+	TARGET_TYPE = build_enum(DATA_TARGET_TYPE)
+	REPORT_TYPE = build_enum(DATA_REPORT_TYPE)
+	RANK_TYPE = build_enum(DATA_RANK_TYPE)
+	CHAT_CHANNEL = build_enum(DATA_CHAT_CHANNEL)
+	ALLIANCE_POS = build_enum(DATA_ALLIANCE_POS)
+	ALLIANCE_JOIN_TYPE = build_enum(DATA_ALLIANCE_JOIN_TYPE)
+end
 
 -- 二次处理配置表的内容。放在 __init__ 里：热更 / 重载配置时会先恢复旧模块变量再调 __init__，这里才能重算
 local function init_config_data()
@@ -38,6 +67,10 @@ local function init_config_data()
 		if not main_task_head or conf.Order < DATA_MAIN_TASK[main_task_head].Order then
 			main_task_head = task_id
 		end
+	end
+	hero_max_level = 0
+	for _, conf in pairs(DATA_HERO_LV) do
+		hero_max_level = math.max(hero_max_level, conf.Lv)
 	end
 	-- [build_type] = { [lv] = conf }，build_max_level_tbl[build_type] = 配置里的最高等级
 	build_lv_tbl = {}
@@ -61,6 +94,7 @@ end
 
 function __init__()
 	init_config_data()
+	init_enum()
 	init_system_open_enum()
 end
 
@@ -227,4 +261,47 @@ end
 
 function get_skill_conf(skill_id)
 	return DATA_SKILL[skill_id]
+end
+
+function get_hero_max_level()
+	return hero_max_level
+end
+
+function get_skill_max_level(skill_id)
+	local conf = DATA_SKILL[skill_id]
+	return conf and #conf.Levels or 0
+end
+
+function get_all_item_ids()
+	local list = {}
+	for item_id in pairs(DATA_ITEM) do
+		list[#list + 1] = item_id
+	end
+	table.sort(list)
+	return list
+end
+
+function get_rank_type_conf(rank_type)
+	return DATA_RANK_TYPE[rank_type]
+end
+
+function get_chat_channel_conf(channel)
+	return DATA_CHAT_CHANNEL[channel]
+end
+
+-- 单频道（私聊按会话）保留的历史条数
+function get_chat_history_max()
+	return get_value_by_key(9)
+end
+
+function get_alliance_lv_conf(lv)
+	return DATA_ALLIANCE_LV[lv]
+end
+
+function get_alliance_pos_conf(pos)
+	return DATA_ALLIANCE_POS[pos]
+end
+
+function get_alliance_join_type_conf(join_type)
+	return DATA_ALLIANCE_JOIN_TYPE[join_type]
 end

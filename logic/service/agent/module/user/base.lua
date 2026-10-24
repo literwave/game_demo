@@ -493,6 +493,9 @@ function cls_user:add_exp(exp)
 		self._data._level = self:get_level() + add_level
 	end
 	self:sync_user_base_info()
+	if add_level > 0 then
+		EVENT.dispatch(CONST.EVENT.ON_USER_LEVEL, self:get_user_id())
+	end
 end
 
 function cls_user:get_system_open_tbl()

@@ -160,8 +160,8 @@ function attack_monster(user, troop)
 		end
 	end
 	local report = REPORT_MGR.add_report(user_id, {
-		_report_type = CONST.REPORT_TYPE.ATTACK_MONSTER,
-		_target_type = CONST.TARGET_TYPE.ATTACK_MONSTER,
+		_report_type = DATA_COMMON.REPORT_TYPE.ATTACK_MONSTER,
+		_target_type = DATA_COMMON.TARGET_TYPE.ATTACK_MONSTER,
 		_target_id = pos.cfg_id,
 		_result = res.result,
 		_time = TIME.os_bj_sec(),

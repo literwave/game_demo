@@ -18,13 +18,19 @@ local function agent_of(user_id)
 end
 
 local function entity_pto(e)
-	return {
+	local pto = {
 		entityId = e.id,
 		entityType = e.entity_type,
 		pos = {x = math.floor(e.x), y = math.floor(e.y)},
 		ownerId = e.owner_id or 0,
 		cfgId = e.cfg_id or 0,
 	}
+	if e.moving then
+		pto.path = MARCH_PATH.to_pto(e.path)
+		pto.startTime = e.start_time
+		pto.endTime = e.end_time
+	end
+	return pto
 end
 
 local function in_view(f, e)
@@ -92,7 +98,7 @@ local function place_group(group_id)
 	local pos = MAP_MGR.pos_of_idx(idx)
 	local e = {
 		id = eid,
-		entity_type = CONST.ENTITY_TYPE.MONSTER_GROUP,
+		entity_type = DATA_COMMON.ENTITY_TYPE.MONSTER_GROUP,
 		x = pos.x,
 		y = pos.y,
 		owner_id = 0,
@@ -109,7 +115,7 @@ function upsert_city(user_id, x, y)
 	if not e then
 		e = {
 			id = id,
-			entity_type = CONST.ENTITY_TYPE.CITY,
+			entity_type = DATA_COMMON.ENTITY_TYPE.CITY,
 			owner_id = user_id,
 			cfg_id = 0,
 			user_id = user_id,
@@ -126,7 +132,7 @@ function start_march(info)
 	local x, y = MARCH_PATH.pos_at(info.path, info.start_time, info.end_time, TIME.os_bj_sec())
 	local e = {
 		id = id,
-		entity_type = CONST.ENTITY_TYPE.TROOP,
+		entity_type = DATA_COMMON.ENTITY_TYPE.TROOP,
 		owner_id = info.user_id,
 		cfg_id = 0,
 		user_id = info.user_id,
@@ -176,7 +182,7 @@ end
 
 function monster_pos(entity_id)
 	local e = entities[entity_id]
-	if not e or e.entity_type ~= CONST.ENTITY_TYPE.MONSTER_GROUP then
+	if not e or e.entity_type ~= DATA_COMMON.ENTITY_TYPE.MONSTER_GROUP then
 		return
 	end
 	return {x = e.x, y = e.y, cfg_id = e.cfg_id}
@@ -184,7 +190,7 @@ end
 
 function kill_monster(entity_id)
 	local e = entities[entity_id]
-	if not e or e.entity_type ~= CONST.ENTITY_TYPE.MONSTER_GROUP then
+	if not e or e.entity_type ~= DATA_COMMON.ENTITY_TYPE.MONSTER_GROUP then
 		return
 	end
 	local cfg_id = e.cfg_id

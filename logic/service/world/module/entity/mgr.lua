@@ -3,7 +3,7 @@ all_entity = {
 }
 
 local ENTITY_TO_MOD = {
-	[CONST.ENTITY_TYPE.MAIN_HALL] = Import("../logic/service/world/module/entity/base.lua"),
+	[DATA_COMMON.ENTITY_TYPE.CITY] = Import("../logic/service/world/module/entity/base.lua"),
 }
 
 

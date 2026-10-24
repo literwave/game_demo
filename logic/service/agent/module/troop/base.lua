@@ -136,6 +136,7 @@ function cls_troop:get_march_pto()
 		startTime = self._data._start_time,
 		endTime = self._data._end_time,
 		state = self:get_march_state(),
+		path = MARCH_PATH.to_pto(self._data._path),
 	}
 end
 

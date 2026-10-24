@@ -271,7 +271,7 @@ local function on_change_head_icon(fd, packet)
 		return
 	end
 	local user = get_user_by_fd(fd)
-	if not user then
+	if not user or not user:is_system_open(HEAD_ICON) then
 		return
 	end
 	user:set_head_icon(head_icon)

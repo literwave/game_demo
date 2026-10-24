@@ -207,8 +207,38 @@ end
 
 local function report_score(user_id)
 	local user = USER_MGR.try_init_user(user_id)
-	call_rank("set_score", CONST.RANK_TYPE.POWER, user_id, user:get_power())
-	call_rank("set_score", CONST.RANK_TYPE.CITY, user_id, user:get_city_level())
+	local name, head_icon = user:get_name(), user:get_head_icon()
+	call_rank("set_score", DATA_COMMON.RANK_TYPE.POWER, user_id, user:get_power(), name, head_icon)
+	call_rank("set_score", DATA_COMMON.RANK_TYPE.CITY_LEVEL, user_id, user:get_city_level(), name, head_icon)
+end
+
+local function rank_item_pto(item)
+	return {rank = item.rank, uid = item.uid, name = item.name, headIcon = item.head_icon, score = item.score}
+end
+
+local function on_req_rank_list(fd, packet)
+	local user_id = USER_MGR.get_user_id_by_fd(fd)
+	if not user_id or not DATA_COMMON.get_rank_type_conf(packet.rankType) then
+		return
+	end
+	local start = math.max(1, packet.start)
+	local count = packet.count
+	if count == 0 or count > CONST.RANK_PAGE_MAX then
+		count = CONST.RANK_PAGE_DEFAULT
+	end
+	local ret = call_rank("get_rank_list", packet.rankType, start, count, user_id)
+	if not ret then
+		return
+	end
+	local list = {}
+	for _, item in ipairs(ret.list) do
+		list[#list + 1] = rank_item_pto(item)
+	end
+	for_caller.s2c_req_rank_list(fd, {
+		rankType = packet.rankType,
+		rankList = list,
+		selfRank = rank_item_pto(ret.self),
+	})
 end
 
 -- type_set 为空时刷新全部活动
@@ -258,6 +288,14 @@ function on_recharge(user_id)
 end
 
 function on_hero_add(user_id)
+	report_score(user_id)
+end
+
+function on_head_icon(user_id)
+	report_score(user_id)
+end
+
+function on_hero_level(user_id)
 	report_score(user_id)
 end
 
@@ -411,6 +449,7 @@ function __init__()
 	for_maker.c2s_req_activity_list = on_req_activity_list
 	for_maker.c2s_get_activity_reward = on_get_activity_reward
 	for_maker.c2s_activity_exchange = on_activity_exchange
+	for_maker.c2s_req_rank_list = on_req_rank_list
 	EVENT.listen(CONST.EVENT.ON_USER_LOGIN)
 	EVENT.listen(CONST.EVENT.ON_USER_LOGOUT)
 	EVENT.listen(CONST.EVENT.ON_NEW_DAY)
@@ -418,6 +457,8 @@ function __init__()
 	EVENT.listen(CONST.EVENT.ON_RECHARGE)
 	EVENT.listen(CONST.EVENT.ON_HERO_ADD)
 	EVENT.listen(CONST.EVENT.ON_BUILD_LEVEL)
+	EVENT.listen(CONST.EVENT.ON_HEAD_ICON)
+	EVENT.listen(CONST.EVENT.ON_HERO_LEVEL)
 	EVENT.listen(CONST.EVENT.ON_CALC_ITEM_REWARD)
 	EVENT.listen(CONST.EVENT.ON_CALC_LOTTERY_COST)
 end

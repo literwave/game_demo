@@ -6,6 +6,11 @@ FUNCLIB 	= Import("../common/funclib.lua")
 CB_MGR		= Import("../common/cb_mgr.lua")
 CALL_OUT	= Import("../common/call_out.lua")
 EVENT		= Import("../common/event.lua")
+TIME		= Import("../common/time.lua")
+
+ORM		= Import("../orm/init.lua")
+MONGO_SLAVE	= Import("../logic/base/mongo_slave.lua")
 
 USER_MGR	= Import("../logic/service/union/module/user/mgr.lua")
-UNION_MGR	= Import("../logic/service/union/module/union/mgr.lua")
+ALLIANCE_MGR	= Import("../logic/service/union/module/alliance/mgr.lua")
+CHAT_MGR	= Import("../logic/service/union/module/chat/mgr.lua")

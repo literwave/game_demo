@@ -41,7 +41,7 @@ local function begin_return(user, troop)
 	if not user:has_birth_pos() then
 		return false
 	end
-	return begin_march(user, troop, CONST.TARGET_TYPE.RETURN_CITY, 0, user:get_birth_x(), user:get_birth_y())
+	return begin_march(user, troop, DATA_COMMON.TARGET_TYPE.RETURN_CITY, 0, user:get_birth_x(), user:get_birth_y())
 end
 
 function on_arrive(user_id, troop_idx, end_time)
@@ -57,7 +57,7 @@ function on_arrive(user_id, troop_idx, end_time)
 		return
 	end
 	local fd = USER_MGR.get_fd_by_user_id(user_id)
-	if troop:get_target_type() == CONST.TARGET_TYPE.ATTACK_MONSTER then
+	if troop:get_target_type() == DATA_COMMON.TARGET_TYPE.ATTACK_MONSTER then
 		troop:set_arrived()
 		BATTLE_MGR.attack_monster(user, troop)
 		if begin_return(user, troop) and fd then
@@ -103,7 +103,7 @@ function on_user_login(user_id)
 			else
 				world_call("start_march", troop:get_march_info())
 			end
-		elseif state == CONST.MARCH_STATE.ARRIVED and troop:get_target_type() == CONST.TARGET_TYPE.ATTACK_MONSTER then
+		elseif state == CONST.MARCH_STATE.ARRIVED and troop:get_target_type() == DATA_COMMON.TARGET_TYPE.ATTACK_MONSTER then
 			if begin_return(user, troop) then
 				local fd = user:get_fd()
 				if fd then
@@ -132,7 +132,7 @@ local function on_march(fd, packet)
 		return
 	end
 	local ex, ey, target_id
-	if packet.targetType == CONST.TARGET_TYPE.ATTACK_MONSTER then
+	if packet.targetType == DATA_COMMON.TARGET_TYPE.ATTACK_MONSTER then
 		local pos = world_call("monster_pos", packet.targetId)
 		if not pos then
 			USER_MGR.tell_me(user_id, "目标不存在")
@@ -140,7 +140,7 @@ local function on_march(fd, packet)
 		end
 		ex, ey = pos.x, pos.y
 		target_id = packet.targetId
-	elseif packet.targetType == CONST.TARGET_TYPE.RETURN_CITY then
+	elseif packet.targetType == DATA_COMMON.TARGET_TYPE.RETURN_CITY then
 		ex, ey = user:get_birth_x(), user:get_birth_y()
 		target_id = 0
 	else
@@ -151,7 +151,7 @@ local function on_march(fd, packet)
 		return
 	end
 	for_caller.s2c_march(fd, {marchInfo = troop:get_march_pto()})
-	if packet.targetType == CONST.TARGET_TYPE.ATTACK_MONSTER then
+	if packet.targetType == DATA_COMMON.TARGET_TYPE.ATTACK_MONSTER then
 		EVENT.dispatch(CONST.EVENT.ON_MARCH, user_id, 1)
 	end
 end
@@ -165,7 +165,7 @@ local function on_cancel_march(fd, packet)
 	if not troop or troop:get_march_state() ~= CONST.MARCH_STATE.MOVING then
 		return
 	end
-	if troop:get_target_type() == CONST.TARGET_TYPE.RETURN_CITY then
+	if troop:get_target_type() == DATA_COMMON.TARGET_TYPE.RETURN_CITY then
 		return
 	end
 	if not begin_return(user, troop) then

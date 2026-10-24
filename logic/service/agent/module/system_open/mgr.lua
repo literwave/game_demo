@@ -33,6 +33,42 @@ function open_system(user, system_id)
 	return true
 end
 
+local COND_CHECK = {
+	level = function(user, need)
+		return user:get_level() >= need
+	end,
+}
+
+-- Cond 是 { {level = 5}, ... }，全部满足才开；不认识的条件不开
+local function cond_ok(user, cond_list)
+	for _, cond in ipairs(cond_list or EMPTY_TABLE) do
+		for key, need in pairs(cond) do
+			local check = COND_CHECK[key]
+			if not check or not check(user, need) then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+-- 按 Cond 把满足条件的系统都开了
+function check_open(user)
+	for system_id, conf in pairs(DATA_COMMON.get_system_open_tbl()) do
+		if not user:is_system_open(system_id) and cond_ok(user, conf.Cond) then
+			open_system(user, system_id)
+		end
+	end
+end
+
+function on_user_login(user_id)
+	check_open(USER_MGR.try_init_user(user_id))
+end
+
+function on_user_level(user_id)
+	check_open(USER_MGR.try_init_user(user_id))
+end
+
 -- 返回本次新开启的数量
 function open_all(user)
 	local cnt = 0
@@ -65,4 +101,6 @@ end
 
 function __init__()
 	for_maker.c2s_req_system_open = on_req_system_open
+	EVENT.listen(CONST.EVENT.ON_USER_LOGIN)
+	EVENT.listen(CONST.EVENT.ON_USER_LEVEL)
 end
