@@ -1,6 +1,6 @@
-# 编译 Skynet（submodule）、pbc protobuf.so、slg-navigation
+# 编译 Skynet（submodule）、pbc protobuf.so、slg-navigation、cloudwu/aoi
 
-.PHONY: all linux macosx skynet protobuf navigation clean
+.PHONY: all linux macosx skynet protobuf navigation aoi clean
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -24,10 +24,14 @@ NAV_SO := $(LUACLIB)/navigation/c.so
 NAV_SRC := $(NAV_DIR)/luabinding.c $(NAV_DIR)/map.c $(NAV_DIR)/jps.c \
 	$(NAV_DIR)/fibheap.c $(NAV_DIR)/smooth.c
 
+AOI_DIR := vendor/aoi
+AOI_SO := $(LUACLIB)/aoi/c.so
+AOI_SRC := lualib/aoi_binding.c $(AOI_DIR)/aoi.c
+
 PBC_SRC := $(wildcard $(PBC_DIR)/src/*.c)
 PBC_LUA := $(PBC_DIR)/binding/lua53/pbc-lua53.c
 
-all: skynet protobuf navigation
+all: skynet protobuf navigation aoi
 
 linux macosx:
 	$(MAKE) all PLAT=$@
@@ -48,6 +52,12 @@ $(NAV_SO): $(NAV_SRC)
 	mkdir -p $(LUACLIB)/navigation
 	$(CC) $(CFLAGS) $(SHARED) -o $@ $(NAV_SRC) -I$(NAV_DIR) -I$(LUA_INC)
 
+aoi: $(AOI_SO)
+
+$(AOI_SO): $(AOI_SRC) $(AOI_DIR)/aoi.h
+	mkdir -p $(LUACLIB)/aoi
+	$(CC) $(CFLAGS) $(SHARED) -o $@ $(AOI_SRC) -I$(AOI_DIR) -I$(LUA_INC)
+
 clean:
 	-$(MAKE) -C skynet cleanall
-	rm -f $(PROTOBUF_SO) $(NAV_SO)
+	rm -f $(PROTOBUF_SO) $(NAV_SO) $(AOI_SO)

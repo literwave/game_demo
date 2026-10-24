@@ -8,3 +8,6 @@
 	path = game_common
 	url = git@github.com:literwave/game_common.git
 	branch = master
+[submodule "vendor/aoi"]
+	path = vendor/aoi
+	url = git@github.com:cloudwu/aoi.git

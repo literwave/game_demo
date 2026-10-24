@@ -56,6 +56,7 @@
 - **存储**：MongoDB 3.6 及以上（驱动为 OP_MSG）、Redis（登录 token 等）
 - **数据模型**：ORM（`lualib/orm` + `orm/schema/*.td`）
 - **大地图寻路**：JPS（`vendor/slg-navigation` submodule）
+- **视野**：AOI（[`cloudwu/aoi`](https://github.com/cloudwu/aoi)，`vendor/aoi` submodule）。`require "aoi"`，半径在上游写死为 10
 
 ---
 
@@ -196,9 +197,12 @@ slg_game/
 │   └── schema/               # 持久化 schema（user.td / hero.td）
 ├── lualib/                   # 游戏侧 Lua 库（非 Skynet 官方）
 │   ├── orm/                  # create / dump / typedef
-│   └── protobuf.lua
+│   ├── protobuf.lua
+│   ├── aoi.lua               # AOI 的 Lua 入口
+│   └── aoi_binding.c         # 编译成 skynet/luaclib/aoi/c.so
 ├── vendor/pbc/               # pbc 源码（protobuf C 实现）
 ├── vendor/slg-navigation/    # submodule：SLG JPS 寻路
+├── vendor/aoi/               # submodule：cloudwu/aoi，视野
 ├── skynet/                   # submodule：cloudwu/skynet（当前 v1.6.0）
 ├── game_common/              # submodule：协议、pb、导表（literwave/game_common）
 ├── res/innerCity.lua         # 本服内城布局，不在 game_common 里
@@ -376,10 +380,10 @@ git submodule update --init --remote game_common
 确认：
 
 ```bash
-ls skynet/Makefile game_common/server/res/Item.lua game_common/pb/common.pb game_common/server/net_pb.lua vendor/slg-navigation/Makefile
+ls skynet/Makefile game_common/server/res/Item.lua game_common/pb/common.pb game_common/server/net_pb.lua vendor/slg-navigation/Makefile vendor/aoi/aoi.h
 ```
 
-### 4. 编译 Skynet、protobuf 与寻路
+### 4. 编译 Skynet、protobuf、寻路与 AOI
 
 编译产物（`skynet/skynet`、`skynet/luaclib/*.so`）已 gitignore，克隆后必须本地编一次：
 
@@ -394,6 +398,7 @@ macOS 会走 `make macosx`。成功后应存在：
 - `skynet/skynet`
 - `skynet/luaclib/protobuf.so`
 - `skynet/luaclib/navigation/c.so`
+- `skynet/luaclib/aoi/c.so`
 
 `make` 提示 `Nothing to be done` 且上述文件都在，就是已经编过了。
 
@@ -572,7 +577,7 @@ doc._heroes[hero_type] = nil
 
 | 脚本 | 作用 |
 |------|------|
-| `shell/build.sh` | 编译 Skynet、`protobuf.so`、`navigation/c.so` |
+| `shell/build.sh` | 编译 Skynet、`protobuf.so`、`navigation/c.so`、`aoi/c.so` |
 | `shell/start.sh` | 后台启动主节点，输出在 `log/skynet.log`；`-f` 前台 |
 | `shell/stop.sh` | 安全关服：下线、落盘后进程自己退出 |
 | `shell/restart.sh` | `stop.sh` 之后再 `start.sh`，参数透传（`-f`） |
