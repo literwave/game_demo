@@ -13,6 +13,9 @@ local CMD_DESC = {
 	{ "set_open_time", "设置开服时间 [set_open_time 年,月,日] 或 [set_open_time 年,月,日,时,分,秒]，[set_open_time 0] 恢复配置，重启后失效" },
 	{ "add_item", "增加道具 [add_item itemId,cnt]" },
 	{ "del_item", "删除道具 [del_item itemId,cnt]" },
+	{ "mail", "给自己发模板邮件 [mail mailId] 或 [mail mailId,itemId,cnt]" },
+	{ "srv_mail", "发全服模板邮件 [srv_mail mailId] 或 [srv_mail mailId,itemId,cnt]" },
+	{ "notice", "发全服公告邮件 [notice 标题,内容]" },
 	{ "add_hero", "添加武将 [add_hero heroType]" },
 	{ "full_hero", "获得全部武将 [full_hero]" },
 	{ "add_exp", "增加主角经验 [add_exp exp]" },
@@ -135,6 +138,27 @@ function CMD.del_item(vfd, item_id, cnt)
 			count = cnt,
 		},
 	}, {CONST.FLOW_REASON.GM}))
+end
+
+local function gm_mail_rewards(item_id, cnt)
+	if item_id and cnt and cnt > 0 then
+		return {GLOBAL_FUNC.gen_reward_info(CONST.REWARD_TYPE_ITEM, item_id, cnt)}
+	end
+end
+
+function CMD.mail(vfd, mail_id, item_id, cnt)
+	assert(DATA_COMMON.get_mail_conf(mail_id))
+	MAIL.send_user_mail(USER_MGR.get_user_id_by_vfd(vfd), mail_id, nil, gm_mail_rewards(item_id, cnt))
+end
+
+function CMD.srv_mail(vfd, mail_id, item_id, cnt)
+	assert(DATA_COMMON.get_mail_conf(mail_id))
+	MAIL.send_srv_mail(mail_id, nil, gm_mail_rewards(item_id, cnt))
+end
+
+function CMD.notice(vfd, title, content)
+	assert(title and content)
+	MAIL.send_srv_mail(CONST.MAIL_ID.NOTICE, {tostring(title), tostring(content)})
 end
 
 function CMD.add_hero(vfd, hero_type)

@@ -27,6 +27,10 @@ function CMD.find_march_path(_, sx, sy, ex, ey)
 	return MAP_MGR.find_march_path(sx, sy, ex, ey)
 end
 
+function CMD.set_user_alliance(_, user_id, alliance_id)
+	ENCOUNTER_MGR.set_user_alliance(user_id, alliance_id)
+end
+
 function CMD.start_march(_, info)
 	return AOI_MGR.start_march(info)
 end
@@ -41,6 +45,18 @@ end
 
 function CMD.kill_monster(_, entity_id)
 	return AOI_MGR.kill_monster(entity_id)
+end
+
+function CMD.res_land_info(_, entity_id)
+	return AOI_MGR.res_land_info(entity_id)
+end
+
+function CMD.occupy_res_land(_, entity_id, user_id, troop_idx)
+	return AOI_MGR.occupy_res_land(entity_id, user_id, troop_idx)
+end
+
+function CMD.leave_res_land(_, entity_id, user_id, troop_idx, gathered)
+	return AOI_MGR.leave_res_land(entity_id, user_id, troop_idx, gathered)
 end
 
 function CMD.aoi_focus(_, user_id, x, y)

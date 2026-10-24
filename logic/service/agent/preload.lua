@@ -24,6 +24,7 @@ local PROTO_FILE_LIST = {
 	"../game_common/pb/rank.pb",
 	"../game_common/pb/alliance.pb",
 	"../game_common/pb/chat.pb",
+	"../game_common/pb/mail.pb",
 }
 
 function __G__TRACKBACK__(msg)
@@ -59,9 +60,6 @@ local function init_dofile()
 	-- 这里要优化一下前端发给后端的协议不需要加载进table
 	local function create_send_message(id, pack_name)
 		return function(fd, data)
-			if pack_name ~= "Heartbeat.s2c_heart_beat" then
-				skynet.error(id, pack_name)
-			end
 			local gate_srv = USER_MGR.get_gate_srv_by_fd(fd)
 			skynet.send(gate_srv, "lua", "send_client_pack", fd, encode_pack(data, id, pack_name))
 		end

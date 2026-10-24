@@ -29,6 +29,11 @@ function os_bj_sec()
 	return math.floor(skynet.time()) + offset
 end
 
+-- 带小数的秒，给地图帧用。os_bj_sec 是整秒，帧间隔比 1 秒短时不能用它当步长
+function now()
+	return skynet.time() + offset
+end
+
 -- 按北京时间格式化
 function format(time, fmt)
 	return os.date("!" .. (fmt or "%Y-%m-%d %H:%M:%S"), (time or os_bj_sec()) + BJ_OFFSET)

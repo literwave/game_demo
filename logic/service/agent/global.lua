@@ -41,9 +41,6 @@ LOTTERY		= Import("../logic/service/agent/module/lottery/lottery.lua")
 CLS_BASE_ITEM 	= Import("../logic/service/agent/module/item/base.lua")
 CLS_HERO_EQUIP_ITEM = Import("../logic/service/agent/module/item/hero_equip.lua")
 
-QUEUE_BASE = Import("../logic/service/agent/module/queue/base.lua")
-QUEUE_MGR = Import("../logic/service/agent/module/queue/mgr.lua")
-
 GM = Import("../logic/service/agent/module/gm/gm.lua")
 
 SYSTEM_OPEN = Import("../logic/service/agent/module/system_open/mgr.lua")
@@ -57,3 +54,4 @@ MARCH_MGR = Import("../logic/service/agent/module/march/mgr.lua")
 REPORT_MGR = Import("../logic/service/agent/module/report/mgr.lua")
 BATTLE_MGR = Import("../logic/service/agent/module/battle/mgr.lua")
 SOCIAL_MGR = Import("../logic/service/agent/module/social/mgr.lua")
+MAIL_MGR = Import("../logic/service/agent/module/mail/mgr.lua")

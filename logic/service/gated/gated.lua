@@ -7,6 +7,10 @@ local socket = require "skynet.socket"
 
 local GATE_CNT = tonumber(skynet.getenv("gate_cnt")) or 1
 local AGENT_CNT = tonumber(skynet.getenv("agent_init_cnt")) or 1
+local LISTEN_BACKLOG = math.floor(tonumber(skynet.getenv("listen_backlog")) or 32)
+if LISTEN_BACKLOG < 1 then
+	LISTEN_BACKLOG = 32
+end
 
 local CMD = {}
 local LISTEN_FD = nil
@@ -25,8 +29,8 @@ function CMD.open(conf)
 		table.insert(worker_list, worker)
 	end
 	local address = conf.address or "0.0.0.0"
-	LISTEN_FD = socket.listen(address, conf.port)
-	skynet.error(string.format("gate listen on %s:%s, worker=%d, agent=%d", address, conf.port, GATE_CNT, AGENT_CNT))
+	LISTEN_FD = socket.listen(address, conf.port, LISTEN_BACKLOG)
+	skynet.error(string.format("gate listen on %s:%s, worker=%d, agent=%d, backlog=%d", address, conf.port, GATE_CNT, AGENT_CNT, LISTEN_BACKLOG))
 	socket.start(LISTEN_FD, function(fd, addr)
 		if is_closing then
 			socket.close_fd(fd)

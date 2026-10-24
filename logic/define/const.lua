@@ -20,10 +20,6 @@ BUILD_TYPE = {
 	MAIN_HALL = 1,
 }
 
-WORK_QUEUE_TYPE = {
-	BUILD = 1,
-}
-
 SEX_NONE = 0
 SEX_MAN = 1
 SEX_WOMAN = 2
@@ -51,22 +47,19 @@ ITEM_KIND = {
 NO_NAME = ""
 USER_NAME_MAX_LEN = 12
 
-FIRST_QUEUE_IDX = 1
-QUEUE_PRIORITY = {1, 2, 3}
-
-
 -- 资源流水原因，reason_list[1]
 FLOW_REASON = {
 	RECHARGE = 1,
 	WIZ = 2,
 	MAIL = 3,
 	LOTTERY = 4,
-	BUY_BUILD_QUEUE = 5,
 	GM = 6,
 	TASK = 7,
 	ACTIVITY = 8,
 	MARCH = 9,
 	BATTLE = 10,
+	ALLIANCE = 11,
+	GATHER = 12,
 }
 
 ONE_HOUR_SEC = 3600
@@ -98,11 +91,15 @@ MARCH_STATE = {
 MARCH_SPEED = 5
 AOI_RADIUS = 10
 
+-- 大地图目标帧间隔（秒）。定时器不会刚好这么久，实际用两次唤醒的时间差补帧
+WORLD_TICK_SEC = 0.05
+
 -- 实体 id 分段，避免主城、部队、怪物组互相撞
 ENTITY_ID = {
 	MONSTER = 1000000000000000,
 	TROOP = 2000000000000000,
 	CITY = 3000000000000000,
+	RES_LAND = 4000000000000000,
 }
 
 function city_entity_id(user_id)
@@ -116,6 +113,16 @@ end
 function monster_entity_id(group_id)
 	return ENTITY_ID.MONSTER + group_id
 end
+
+function res_land_entity_id(land_id)
+	return ENTITY_ID.RES_LAND + land_id
+end
+
+function res_land_id_of_entity(entity_id)
+	return entity_id - ENTITY_ID.RES_LAND
+end
+
+RES_LAND_REFRESH = 300			-- 资源地采空后多少秒在别处刷新
 
 TASK_TYPE = {
 	MAIN = 1,
@@ -250,13 +257,26 @@ ALLIANCE_CHANGE = {
 	POS = 4,
 }
 
-ALLIANCE_NAME_MAX_LEN = 8		-- 字符数（utf8）
-ALLIANCE_NOTICE_MAX_LEN = 100
-ALLIANCE_MANIFESTO_MAX_LEN = 100
-ALLIANCE_APPLY_MAX = 50			-- 每个联盟待审批的申请数
+-- 名字/公告/宣言长度、申请上限、创建消耗数量读 Global 10~14
+ALLIANCE_CREATE_ITEM = 4		-- 创建联盟消耗的令牌道具 id
 ALLIANCE_LIST_DEFAULT = 20		-- 联盟列表 count = 0 或超过上限时用
 ALLIANCE_LIST_MAX = 50
 ALLIANCE_INVITE_EXPIRE = 86400	-- 邀请有效期，只存内存
+
+-- ---------- 邮件 ----------
+-- Mail 表的模板 id（没有 Enum 列）
+MAIL_ID = {
+	WELCOME = 1,
+	REWARD_REISSUE = 2,
+	ACTIVITY_REWARD = 3,
+	RANK_REWARD = 4,
+	MAINTAIN = 5,
+	SERVER_OPEN = 6,
+	ALLIANCE_JOIN = 7,
+	ALLIANCE_LEAVE = 8,
+	ALLIANCE_POS = 9,
+	NOTICE = 10,
+}
 
 EVENT = {
 	ON_USER_LOGIN = "on_user_login",

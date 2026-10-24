@@ -52,6 +52,11 @@ local function cond_ok(user, cond_list)
 	return true
 end
 
+-- 单个条件表，如资源地的 OpenCond = {level = 1}
+function is_cond_ok(user, cond)
+	return cond_ok(user, {cond})
+end
+
 -- 按 Cond 把满足条件的系统都开了
 function check_open(user)
 	for system_id, conf in pairs(DATA_COMMON.get_system_open_tbl()) do

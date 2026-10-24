@@ -7,6 +7,7 @@ CB_MGR		= Import("../common/cb_mgr.lua")
 CALL_OUT	= Import("../common/call_out.lua")
 EVENT		= Import("../common/event.lua")
 TIME		= Import("../common/time.lua")
+MAIL		= Import("../common/mail.lua")
 
 ORM		= Import("../orm/init.lua")
 MONGO_SLAVE	= Import("../logic/base/mongo_slave.lua")

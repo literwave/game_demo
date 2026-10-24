@@ -22,6 +22,7 @@ end
 local ALLIANCE_LV = load_conf("AllianceLv")
 local JOIN_TYPE = load_conf("AllianceJoinType")
 local CHANNEL = load_conf("ChatChannel")
+local GLOBAL = load_conf("Global")
 
 local function init_orm()
 	if orm.inited then
@@ -41,11 +42,45 @@ local function setup(opts)
 	local clock = {now = 1000}
 	local sent = {}
 	local mongo = {saved = opts.saved or {}, deleted = {}}
+	local costs = {}
+	local mails = {}
 	local CONST = setmetatable({}, {__index = _G})
 	assert(loadfile("logic/define/const.lua", "t", CONST))()
+	-- union 回 agent 扣令牌；opts.cost_fail 模拟令牌不足
+	local skynet_stub = {
+		call = function(_, _, cmd, user_id, cost_list)
+			if cmd == "get_agent_list" then
+				return {"agent"}
+			end
+			if cmd == "cost_items" then
+				if opts.cost_fail then
+					return false
+				end
+				costs[#costs + 1] = {uid = user_id, cost = cost_list[1]}
+				return true
+			end
+		end,
+	}
+	local function mail_of(uid, mail_id, details)
+		mails[#mails + 1] = {uid = uid, mail_id = mail_id, details = details}
+	end
 	local shared = {
 		CONST = CONST,
 		EMPTY_TABLE = {},
+		require = function(name)
+			if name == "skynet" then
+				return skynet_stub
+			end
+			return require(name)
+		end,
+		MAIL = {
+			send_user_mail = mail_of,
+			send_group_mail = function(uid_list, mail_id, details)
+				for _, uid in ipairs(uid_list) do
+					mail_of(uid, mail_id, details)
+				end
+			end,
+		},
 		TIME = {os_bj_sec = function() return clock.now end},
 		DATA_COMMON = {
 			ALLIANCE_POS = enum_of(load_conf("AlliancePos")),
@@ -55,6 +90,11 @@ local function setup(opts)
 			get_alliance_join_type_conf = function(t) return JOIN_TYPE[t] end,
 			get_chat_channel_conf = function(c) return CHANNEL[c] end,
 			get_chat_history_max = function() return opts.history_max or 100 end,
+			get_alliance_create_cost = function() return GLOBAL[10].value1 end,
+			get_alliance_name_max_len = function() return GLOBAL[11].value1 end,
+			get_alliance_notice_max_len = function() return GLOBAL[12].value1 end,
+			get_alliance_manifesto_max_len = function() return GLOBAL[13].value1 end,
+			get_alliance_apply_max = function() return GLOBAL[14].value1 end,
 		},
 		ORM = {
 			CLS_ALLIANCE_DATA = "alliance_data",
@@ -104,7 +144,7 @@ local function setup(opts)
 	shared.CHAT_MGR.__init__()
 	local U = shared.USER_MGR
 
-	local api = {shared = shared, sent = sent, clock = clock, mongo = mongo}
+	local api = {shared = shared, sent = sent, clock = clock, mongo = mongo, costs = costs, mails = mails}
 	-- fd 直接用 uid，方便看发给了谁
 	function api.online(uid, power)
 		U.on_user_login(uid, uid, "gate")
@@ -152,6 +192,47 @@ function A.create_and_free_join()
 	assert(change.changeType == 1 and change.member.uid == 2)
 	t.req(1, "c2s_req_my_alliance")
 	assert(t.last(1, "s2c_req_my_alliance").info.brief.memberCount == 2)
+end
+
+function A.create_costs_token()
+	local t = setup()
+	t.online(1)
+	create(t, 1, "甲")
+	local c = t.costs[1]
+	assert(#t.costs == 1 and c.uid == 1)
+	assert(c.cost.itemId == 4 and c.cost.count == 100 and c.cost.cost_type == t.shared.CONST.COST_TYPE.ITEM)
+end
+
+function A.create_fail_keeps_name_free()
+	local t = setup({cost_fail = true})
+	t.online(1)
+	t.req(1, "c2s_create_alliance", {name = "甲", flag = 1, joinType = 1, notice = ""})
+	assert(t.last(1, "s2c_tell_me").msg == "令牌不足")
+	assert(not t.last(1, "s2c_create_alliance"))
+	assert(not next(t.shared.ALLIANCE_MGR.creating_names) and not next(t.shared.ALLIANCE_MGR.creating_users))
+	assert(t.shared.ALLIANCE_MGR.can_join(1))
+end
+
+function A.member_mails()
+	local t = setup()
+	for uid = 1, 3 do
+		t.online(uid)
+	end
+	local aid = create(t, 1, "甲")
+	local MAIL_ID = t.shared.CONST.MAIL_ID
+	t.req(2, "c2s_apply_alliance", {allianceId = aid})
+	t.req(3, "c2s_apply_alliance", {allianceId = aid})
+	local m = t.mails[#t.mails]
+	assert(m.uid == 3 and m.mail_id == MAIL_ID.ALLIANCE_JOIN and m.details[1] == "甲")
+	t.req(1, "c2s_set_member_pos", {uid = 2, pos = 2})
+	m = t.mails[#t.mails]
+	assert(m.uid == 2 and m.mail_id == MAIL_ID.ALLIANCE_POS and m.details[2] == "2")
+	t.req(3, "c2s_leave_alliance")
+	m = t.mails[#t.mails]
+	assert(m.uid == 3 and m.mail_id == MAIL_ID.ALLIANCE_LEAVE)
+	local n = #t.mails
+	t.req(1, "c2s_dissolve_alliance")
+	assert(#t.mails == n + 2, "dissolve mails leader and remaining member")
 end
 
 function A.name_unique_and_length()

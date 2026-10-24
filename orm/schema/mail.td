@@ -1,24 +1,49 @@
-# mail persist（邮件正文仍为 plain serialize；用户/全服索引走 schema）
+# mail persist（mail 服务）
+# 每个玩家一份 user_mail_doc，_mails 按 mailUid 存；单类型超过 Global 15 删最早的
+# 全服邮件存一份 svr_mail_doc，按序号存；玩家 _fetch_idx 之后的、没过期的登录时补发
 
-user_mail_status {
-    is_read boolean
-    is_got_reward boolean
-    is_lock boolean
-    lv number
+mail_detail_list [string]
+
+mail_reward {
+    _reward_type number
+    _item_id number
+    _item_count number
 }
 
-mail_id_status_map <number, user_mail_status>
+mail_reward_list [mail_reward]
 
-mail_kind_bag <number, mail_id_status_map>
+mail_data {
+    _mail_uid number
+    _mail_id number
+    _mail_kind number
+    _details mail_detail_list
+    _rewards mail_reward_list
+    _start_time number
+    _end_time number
+    _is_read boolean
+    _is_got_reward boolean
+    _is_lock boolean
+}
+
+mail_bag <number, mail_data>
 
 user_mail_doc {
-    mail_tbl mail_kind_bag
-    fetch_svr_idx number
+    _mails mail_bag
+    _next_uid number
+    _fetch_idx number
 }
 
-svr_mail_id_map <number, number>
+svr_mail {
+    _mail_id number
+    _details mail_detail_list
+    _rewards mail_reward_list
+    _start_time number
+    _end_time number
+}
+
+svr_mail_bag <number, svr_mail>
 
 svr_mail_doc {
-    global_idx number
-    svr_mail_tbl svr_mail_id_map
+    _mails svr_mail_bag
+    _next_idx number
 }

@@ -235,7 +235,7 @@ local function on_get_task_reward(fd, packet)
 		doc._main_id = conf.NextId
 		accept(user, doc, conf.NextId)
 	end
-	REWARD_MGR.reward_user(user_id, conf.Reward or EMPTY_TABLE, {CONST.FLOW_REASON.TASK, task_id})
+	REWARD_MGR.reward_user_and_show(user_id, conf.Reward or EMPTY_TABLE, {CONST.FLOW_REASON.TASK, task_id})
 	for_caller.s2c_get_task_reward(fd, {taskId = task_id})
 end
 

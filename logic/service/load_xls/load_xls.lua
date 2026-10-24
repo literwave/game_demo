@@ -59,6 +59,10 @@ DATA_FILE_LIST = {
 	"../game_common/server/res/AllianceLv.lua",
 	"../game_common/server/res/AlliancePos.lua",
 	"../game_common/server/res/AllianceJoinType.lua",
+	"../game_common/server/res/Mail.lua",
+	"../game_common/server/res/MailKind.lua",
+	"../game_common/server/res/ResLand.lua",
+	"../game_common/server/res/ResLandType.lua",
 	"../res/innerCity.lua",
 }
 

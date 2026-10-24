@@ -24,9 +24,6 @@ local function init_dofile()
 	end
 	local function create_send_message(id, pack_name)
 		return function(fd, data)
-			if pack_name ~= "Heartbeat.s2c_heart_beat" then
-				skynet.error(id, pack_name)
-			end
 			local gate_srv = USER_MGR.get_gate_srv_by_fd(fd)
 			skynet.send(gate_srv, "lua", "send_client_pack", fd, encode_pack(data, id, pack_name))
 		end

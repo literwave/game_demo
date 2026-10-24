@@ -2,15 +2,74 @@ local skynet = require "skynet"
 
 local entities = {}
 local focus_tbl = {}
-local march_token = {}
-local agent_list
+-- 桶边长等于视野半径。距离不超过半径时，横竖最多隔一个桶，查周围 3×3 即可
+local BUCKET = CONST.AOI_RADIUS
+local BUCKET_KEY = 1024
 local RADIUS2 = CONST.AOI_RADIUS * CONST.AOI_RADIUS
+local entity_buckets = {}
+local focus_buckets = {}
+-- 这一拍里同一个人的进出合并成一条 aoi_push。帧外的状态变化马上发
+local batching = false
+local pending
+-- 热更留在模块上。帧里只读这份缓存，不能 skynet.call
+agent_list = agent_list
+
+local function bucket_key(x, y)
+	return math.floor(x / BUCKET) * BUCKET_KEY + math.floor(y / BUCKET)
+end
+
+local function unbucket(buckets, obj, id)
+	local old = obj.aoi_bucket
+	if not old then
+		return
+	end
+	local b = buckets[old]
+	if b then
+		b[id] = nil
+		if not next(b) then
+			buckets[old] = nil
+		end
+	end
+	obj.aoi_bucket = nil
+end
+
+local function put_bucket(buckets, obj, id, x, y)
+	local k = bucket_key(x, y)
+	if obj.aoi_bucket == k then
+		return
+	end
+	unbucket(buckets, obj, id)
+	local b = buckets[k]
+	if not b then
+		b = {}
+		buckets[k] = b
+	end
+	b[id] = obj
+	obj.aoi_bucket = k
+end
+
+local function each_near(buckets, x, y, fn)
+	local bx = math.floor(x / BUCKET)
+	local by = math.floor(y / BUCKET)
+	for ox = -1, 1 do
+		for oy = -1, 1 do
+			local b = buckets[(bx + ox) * BUCKET_KEY + (by + oy)]
+			if b then
+				for id, obj in pairs(b) do
+					fn(id, obj)
+				end
+			end
+		end
+	end
+end
+
+-- 帧里只查缓存。拉列表会 skynet.call，不能放在帧里
+local function load_agent_list()
+	agent_list = skynet.call(".gated", "lua", "get_agent_list")
+end
 
 local function agent_of(user_id)
-	if not agent_list then
-		agent_list = skynet.call(".gated", "lua", "get_agent_list")
-	end
-	local n = #agent_list
+	local n = agent_list and #agent_list or 0
 	if n < 1 then
 		return
 	end
@@ -54,28 +113,215 @@ local function push(user_id, enter, leave, update)
 	})
 end
 
-local function refresh_entity(e)
-	for user_id, f in pairs(focus_tbl) do
-		local seen = f.seen[e.id]
-		local inside = in_view(f, e)
-		if inside and not seen then
-			f.seen[e.id] = true
-			push(user_id, {entity_pto(e)}, {}, {})
-		elseif inside and seen then
-			push(user_id, {}, {}, {entity_pto(e)})
-		elseif seen and not inside then
-			f.seen[e.id] = nil
-			push(user_id, {}, {e.id}, {})
-		end
+local function list_del(list, index, id, id_of)
+	local i = index[id]
+	if not i then
+		return
+	end
+	local n = #list
+	index[id] = nil
+	if i ~= n then
+		local last = list[n]
+		list[i] = last
+		index[id_of(last)] = i
+	end
+	list[n] = nil
+end
+
+local function pack_of(user_id)
+	if not pending then
+		pending = {}
+	end
+	local p = pending[user_id]
+	if not p then
+		p = {enter = {}, leave = {}, update = {}, enter_i = {}, leave_i = {}, update_i = {}}
+		pending[user_id] = p
+	end
+	return p
+end
+
+local function note_update(user_id, pto)
+	local p = pack_of(user_id)
+	local id = pto.entityId
+	local i = p.enter_i[id]
+	if i then
+		p.enter[i] = pto
+		return
+	end
+	if p.leave_i[id] then
+		list_del(p.leave, p.leave_i, id, function(v)
+			return v
+		end)
+	end
+	i = p.update_i[id]
+	if i then
+		p.update[i] = pto
+		return
+	end
+	local n = #p.update + 1
+	p.update[n] = pto
+	p.update_i[id] = n
+end
+
+local function note_enter(user_id, pto)
+	local p = pack_of(user_id)
+	local id = pto.entityId
+	if p.leave_i[id] then
+		list_del(p.leave, p.leave_i, id, function(v)
+			return v
+		end)
+		note_update(user_id, pto)
+		return
+	end
+	local i = p.enter_i[id]
+	if i then
+		p.enter[i] = pto
+		return
+	end
+	local n = #p.enter + 1
+	p.enter[n] = pto
+	p.enter_i[id] = n
+end
+
+local function note_leave(user_id, id)
+	local p = pack_of(user_id)
+	if p.enter_i[id] then
+		list_del(p.enter, p.enter_i, id, function(v)
+			return v.entityId
+		end)
+		return
+	end
+	if p.update_i[id] then
+		list_del(p.update, p.update_i, id, function(v)
+			return v.entityId
+		end)
+	end
+	if p.leave_i[id] then
+		return
+	end
+	local n = #p.leave + 1
+	p.leave[n] = id
+	p.leave_i[id] = n
+end
+
+local function emit_enter(user_id, pto)
+	if batching then
+		note_enter(user_id, pto)
+		return
+	end
+	push(user_id, {pto}, {}, {})
+end
+
+local function emit_leave(user_id, id)
+	if batching then
+		note_leave(user_id, id)
+		return
+	end
+	push(user_id, {}, {id}, {})
+end
+
+local function emit_update(user_id, pto)
+	if batching then
+		note_update(user_id, pto)
+		return
+	end
+	push(user_id, {}, {}, {pto})
+end
+
+local function flush_pending()
+	local pack = pending
+	pending = nil
+	if not pack then
+		return
+	end
+	for user_id, p in pairs(pack) do
+		push(user_id, p.enter, p.leave, p.update)
 	end
 end
 
-local function leave_all(e)
-	for user_id, f in pairs(focus_tbl) do
-		if f.seen[e.id] then
-			f.seen[e.id] = nil
-			push(user_id, {}, {e.id}, {})
+local function watch(e, user_id, on)
+	local w = e.watchers
+	if on then
+		if not w then
+			w = {}
+			e.watchers = w
 		end
+		w[user_id] = true
+		return
+	end
+	if w then
+		w[user_id] = nil
+	end
+end
+
+-- with_update：停步、改路、开打这类状态变化才推 update。沿原路径过格只推走进和走出
+local function sync_entity(e, with_update)
+	put_bucket(entity_buckets, e, e.id, e.x, e.y)
+	local pto
+	local function snap()
+		if not pto then
+			pto = entity_pto(e)
+		end
+		return pto
+	end
+	local seen_now = {}
+	each_near(focus_buckets, e.x, e.y, function(user_id, f)
+		seen_now[user_id] = true
+		local was = f.seen[e.id]
+		local inside = in_view(f, e)
+		if inside and not was then
+			f.seen[e.id] = true
+			watch(e, user_id, true)
+			emit_enter(user_id, snap())
+		elseif inside and was and with_update then
+			emit_update(user_id, snap())
+		elseif was and not inside then
+			f.seen[e.id] = nil
+			watch(e, user_id, false)
+			emit_leave(user_id, e.id)
+		end
+	end)
+	local w = e.watchers
+	if not w then
+		return
+	end
+	local gone = {}
+	for user_id in pairs(w) do
+		if not seen_now[user_id] then
+			gone[#gone + 1] = user_id
+		end
+	end
+	for _, user_id in ipairs(gone) do
+		w[user_id] = nil
+		local f = focus_tbl[user_id]
+		if f then
+			f.seen[e.id] = nil
+		end
+		emit_leave(user_id, e.id)
+	end
+end
+
+local function refresh_entity(e)
+	sync_entity(e, true)
+end
+
+local function sync_cross(e)
+	sync_entity(e, false)
+end
+
+local function leave_all(e)
+	unbucket(entity_buckets, e, e.id)
+	local w = e.watchers
+	e.watchers = nil
+	if not w then
+		return
+	end
+	for user_id in pairs(w) do
+		local f = focus_tbl[user_id]
+		if f then
+			f.seen[e.id] = nil
+		end
+		emit_leave(user_id, e.id)
 	end
 end
 
@@ -109,6 +355,96 @@ local function place_group(group_id)
 	refresh_entity(e)
 end
 
+-- 资源地：每个配置一块，remain 是剩余储量；采空后在别处重新刷
+local function place_res_land(land_id)
+	local conf = DATA_COMMON.get_res_land_conf(land_id)
+	if not conf then
+		return
+	end
+	local eid = CONST.res_land_entity_id(land_id)
+	if entities[eid] then
+		return
+	end
+	local idx = MAP_MGR.get_map():alloc_birth_idx()
+	if not idx then
+		skynet.timeout(6000, function()
+			place_res_land(land_id)
+		end)
+		return
+	end
+	local pos = MAP_MGR.pos_of_idx(idx)
+	local e = {
+		id = eid,
+		entity_type = DATA_COMMON.ENTITY_TYPE.RES_LAND,
+		x = pos.x,
+		y = pos.y,
+		owner_id = 0,
+		cfg_id = land_id,
+		birth_idx = idx,
+		remain = conf.Capacity,
+	}
+	entities[eid] = e
+	refresh_entity(e)
+end
+
+function res_land_info(entity_id)
+	local e = entities[entity_id]
+	if not e or e.entity_type ~= DATA_COMMON.ENTITY_TYPE.RES_LAND then
+		return
+	end
+	return {x = e.x, y = e.y, cfg_id = e.cfg_id, owner_id = e.owner_id, troop_idx = e.troop_idx or 0, remain = e.remain}
+end
+
+-- 占领后开始采集，采满时通知 agent；返回采满时间，已被占领返回 nil
+function occupy_res_land(entity_id, user_id, troop_idx)
+	local e = entities[entity_id]
+	if not e or e.entity_type ~= DATA_COMMON.ENTITY_TYPE.RES_LAND or e.owner_id ~= 0 then
+		return
+	end
+	local conf = DATA_COMMON.get_res_land_conf(e.cfg_id)
+	local cost = math.ceil(e.remain * CONST.ONE_HOUR_SEC / conf.GatherSpeed)
+	local end_time = TIME.os_bj_sec() + cost
+	local token = {}
+	e.owner_id = user_id
+	e.troop_idx = troop_idx
+	e.gather_token = token
+	skynet.timeout(cost * 100, function()
+		if e.gather_token ~= token then
+			return
+		end
+		local agent = agent_of(user_id)
+		if agent then
+			skynet.send(agent, "lua", "gather_full", user_id, troop_idx, end_time)
+		end
+	end)
+	refresh_entity(e)
+	return end_time
+end
+
+-- 部队离开：扣掉采走的储量，返回实际采到的量；不是这支部队占着的返回 nil
+function leave_res_land(entity_id, user_id, troop_idx, gathered)
+	local e = entities[entity_id]
+	if not e or e.entity_type ~= DATA_COMMON.ENTITY_TYPE.RES_LAND or e.owner_id ~= user_id or e.troop_idx ~= troop_idx then
+		return
+	end
+	local real = math.min(gathered, e.remain)
+	e.remain = e.remain - real
+	e.owner_id = 0
+	e.troop_idx = nil
+	e.gather_token = nil
+	if e.remain > 0 then
+		refresh_entity(e)
+		return real
+	end
+	entities[entity_id] = nil
+	MAP_MGR.get_map():release_birth_idx(e.birth_idx)
+	leave_all(e)
+	skynet.timeout(CONST.RES_LAND_REFRESH * 100, function()
+		place_res_land(e.cfg_id)
+	end)
+	return real
+end
+
 function upsert_city(user_id, x, y)
 	local id = CONST.city_entity_id(user_id)
 	local e = entities[id]
@@ -127,9 +463,194 @@ function upsert_city(user_id, x, y)
 	refresh_entity(e)
 end
 
+local function restore_move(e, gen)
+	if e.battle_gen ~= gen then
+		return
+	end
+	e.battle_gen = nil
+	e.fighting = false
+	if entities[e.id] ~= e then
+		return
+	end
+	if e.was_moving then
+		e.moving = true
+		e.was_moving = nil
+	end
+end
+
+local function abort_encounter(atk, def, gen, x, y)
+	restore_move(atk, gen)
+	restore_move(def, gen)
+	for _, e in ipairs(ENCOUNTER_MGR.release_cell(x, y)) do
+		if entities[e.id] == e and e.was_moving then
+			e.moving = true
+			e.was_moving = nil
+		end
+	end
+end
+
+local function send_encounter(e, role, atk_pack, def_pack, res, x, y, plan)
+	local agent = agent_of(e.user_id)
+	if not agent then
+		return
+	end
+	local snap = role == CONST.BATTLE_SIDE.ATK and atk_pack or def_pack
+	skynet.send(agent, "lua", "encounter_result", e.user_id, e.troop_idx, {
+		role = role,
+		result = res.result,
+		atk_side = atk_pack.side,
+		def_side = def_pack.side,
+		atk_left = res.atk_left,
+		def_left = res.def_left,
+		actions = res.actions,
+		max_round = res.max_round,
+		x = x,
+		y = y,
+		stamp = snap.end_time,
+		state = snap.state,
+		resume = plan and plan.resume or nil,
+		go_home = plan and plan.go_home or false,
+	})
+end
+
+-- 赢的一方接着走。已经站在终点上就等结算包先落地再按到达处理，这里只返回计划
+local function winner_plan(e)
+	if entities[e.id] ~= e then
+		return
+	end
+	e.fighting = false
+	if not e.was_moving then
+		e.was_moving = nil
+		refresh_entity(e)
+		return
+	end
+	local ex, ey = MARCH_PATH.last_pos(e.path)
+	local dx, dy = math.floor(ex), math.floor(ey)
+	if dx == e.hold_x and dy == e.hold_y then
+		e.was_moving = nil
+		e.moving = false
+		e.x, e.y = ex, ey
+		refresh_entity(e)
+		return {arrive = true, end_time = e.end_time}
+	end
+	local path = MAP_MGR.find_march_path(e.hold_x, e.hold_y, dx, dy)
+	if not path then
+		e.was_moving = nil
+		ENCOUNTER_MGR.note_flee(e)
+		refresh_entity(e)
+		return {go_home = true}
+	end
+	local now = TIME.now()
+	local cost = math.max(1, math.ceil(MARCH_PATH.length(path) / CONST.MARCH_SPEED))
+	e.path = path
+	e.start_time = now
+	e.end_time = now + cost
+	e.moving = true
+	e.was_moving = nil
+	e.scan_time = now
+	e.x, e.y = path[1]._x, path[1]._y
+	ENCOUNTER_MGR.index_at(e, e.hold_x, e.hold_y)
+	refresh_entity(e)
+	return {resume = {path = path, start_time = now, end_time = e.end_time}}
+end
+
+local function launch_encounter(f)
+	local atk, def, gen, x, y = f.atk, f.def, f.gen, f.x, f.y
+	skynet.fork(function()
+		local atk_agent = agent_of(atk.user_id)
+		local def_agent = agent_of(def.user_id)
+		if not atk_agent or not def_agent then
+			abort_encounter(atk, def, gen, x, y)
+			return
+		end
+		local ok1, atk_pack = pcall(skynet.call, atk_agent, "lua", "encounter_snap", atk.user_id, atk.troop_idx)
+		local ok2, def_pack = pcall(skynet.call, def_agent, "lua", "encounter_snap", def.user_id, def.troop_idx)
+		if not ok1 or not ok2 or not atk_pack or not def_pack or not atk_pack.side or not def_pack.side then
+			if ok1 and not atk_pack and entities[atk.id] == atk then
+				remove_troop(atk.user_id, atk.troop_idx)
+			end
+			if ok2 and not def_pack and entities[def.id] == def then
+				remove_troop(def.user_id, def.troop_idx)
+			end
+			abort_encounter(atk, def, gen, x, y)
+			return
+		end
+		if atk.battle_gen ~= gen or def.battle_gen ~= gen then
+			return
+		end
+		local cnt = tonumber(skynet.getenv("battle_cnt")) or 1
+		local slot = (x * 1024 + y) % cnt + 1
+		local ok3, res = pcall(skynet.call, ".battle" .. slot, "lua", "fight_batch", def_pack.side, {atk_pack.side})
+		if atk.battle_gen ~= gen or def.battle_gen ~= gen then
+			return
+		end
+		if not ok3 or not res or not res[1] then
+			abort_encounter(atk, def, gen, x, y)
+			return
+		end
+		local one = res[1]
+		local atk_here = entities[atk.id] == atk
+		local def_here = entities[def.id] == def
+		if not atk_here or not def_here then
+			send_encounter(atk, CONST.BATTLE_SIDE.ATK, atk_pack, def_pack, one, x, y, nil)
+			send_encounter(def, CONST.BATTLE_SIDE.DEF, atk_pack, def_pack, one, x, y, nil)
+			abort_encounter(atk, def, gen, x, y)
+			return
+		end
+		local atk_win = one.result == CONST.BATTLE_RESULT.WIN
+		local ret = ENCOUNTER_MGR.conclude(atk, def, gen, atk_win)
+		local winner = atk_win and atk or def
+		local loser = atk_win and def or atk
+		refresh_entity(loser)
+		local plan
+		if not ret or not ret.chain then
+			plan = winner_plan(winner)
+		end
+		send_encounter(loser, atk_win and CONST.BATTLE_SIDE.DEF or CONST.BATTLE_SIDE.ATK, atk_pack, def_pack, one, x, y, {go_home = true})
+		send_encounter(winner, atk_win and CONST.BATTLE_SIDE.ATK or CONST.BATTLE_SIDE.DEF, atk_pack, def_pack, one, x, y, plan)
+		if plan and plan.arrive then
+			local agent = agent_of(winner.user_id)
+			if agent then
+				skynet.send(agent, "lua", "march_arrive", winner.user_id, winner.troop_idx, plan.end_time)
+			end
+		end
+		if ret and ret.chain then
+			refresh_entity(ret.chain.atk)
+			refresh_entity(ret.chain.def)
+			if ret.stops then
+				for _, stopped in ipairs(ret.stops) do
+					refresh_entity(stopped)
+				end
+			end
+			-- 另开一轮，避免这场结算还卡在玩家进程里时再 call 回去
+			local chain = ret.chain
+			skynet.fork(function()
+				launch_encounter(chain)
+			end)
+		end
+	end)
+end
+
+function apply_encounter(fights, stops)
+	for _, e in ipairs(stops) do
+		refresh_entity(e)
+	end
+	for _, f in ipairs(fights) do
+		refresh_entity(f.atk)
+		refresh_entity(f.def)
+		launch_encounter(f)
+	end
+end
+
 function start_march(info)
 	local id = CONST.troop_entity_id(info.user_id, info.troop_idx)
-	local x, y = MARCH_PATH.pos_at(info.path, info.start_time, info.end_time, TIME.os_bj_sec())
+	local old = entities[id]
+	if old then
+		ENCOUNTER_MGR.unindex(old)
+		unbucket(entity_buckets, old, old.id)
+	end
+	local now = TIME.now()
+	local x, y = MARCH_PATH.pos_at(info.path, info.start_time, info.end_time, now)
 	local e = {
 		id = id,
 		entity_type = DATA_COMMON.ENTITY_TYPE.TROOP,
@@ -143,39 +664,30 @@ function start_march(info)
 		end_time = info.end_time,
 		x = x,
 		y = y,
+		scan_time = now,
 	}
+	if old then
+		e.watchers = old.watchers
+		old.watchers = nil
+	end
 	entities[id] = e
-	local token = {}
-	local key = info.user_id .. ":" .. info.troop_idx
-	march_token[key] = token
-	local delay = math.max(1, (info.end_time - TIME.os_bj_sec()) * 100)
-	skynet.timeout(delay, function()
-		if march_token[key] ~= token then
-			return
-		end
-		march_token[key] = nil
-		local cur = entities[id]
-		if cur then
-			cur.moving = false
-			cur.x, cur.y = MARCH_PATH.last_pos(cur.path)
-			refresh_entity(cur)
-		end
-		local agent = agent_of(info.user_id)
-		if agent then
-			skynet.send(agent, "lua", "march_arrive", info.user_id, info.troop_idx, info.end_time)
-		end
-	end)
+	ENCOUNTER_MGR.index_at(e, math.floor(x), math.floor(y))
+	local fight, extra = ENCOUNTER_MGR.touch(e)
+	if fight or (extra and extra[1]) then
+		apply_encounter(fight and {fight} or {}, extra or {})
+	end
 	refresh_entity(e)
 	return true
 end
 
 function remove_troop(user_id, troop_idx)
-	march_token[user_id .. ":" .. troop_idx] = nil
 	local id = CONST.troop_entity_id(user_id, troop_idx)
 	local e = entities[id]
 	if not e then
 		return
 	end
+	ENCOUNTER_MGR.unindex(e)
+	ENCOUNTER_MGR.clear_flee(e)
 	entities[id] = nil
 	leave_all(e)
 end
@@ -218,20 +730,26 @@ function focus(user_id, x, y)
 	end
 	f.x = x
 	f.y = y
+	put_bucket(focus_buckets, f, user_id, x, y)
 	local now_seen = {}
 	local enter = {}
 	local leave = {}
-	for id, e in pairs(entities) do
+	each_near(entity_buckets, x, y, function(id, e)
 		if in_view(f, e) then
 			now_seen[id] = true
 			if not f.seen[id] then
 				enter[#enter + 1] = entity_pto(e)
+				watch(e, user_id, true)
 			end
 		end
-	end
+	end)
 	for id in pairs(f.seen) do
 		if not now_seen[id] then
 			leave[#leave + 1] = id
+			local e = entities[id]
+			if e then
+				watch(e, user_id, false)
+			end
 		end
 	end
 	f.seen = now_seen
@@ -239,22 +757,113 @@ function focus(user_id, x, y)
 end
 
 function clear_focus(user_id)
+	local f = focus_tbl[user_id]
+	if not f then
+		return
+	end
+	for id in pairs(f.seen) do
+		local e = entities[id]
+		if e then
+			watch(e, user_id, false)
+		end
+	end
+	unbucket(focus_buckets, f, user_id)
 	focus_tbl[user_id] = nil
 end
 
-local function tick()
-	local now = TIME.os_bj_sec()
+-- 到达并在终点再看一眼同格。只 send，不 call
+local function finish_arrive(e)
+	if not e.moving or e.fighting or e.waiting or entities[e.id] ~= e then
+		return
+	end
+	e.x, e.y = MARCH_PATH.last_pos(e.path)
+	ENCOUNTER_MGR.index_at(e, math.floor(e.x), math.floor(e.y))
+	local fight, extra = ENCOUNTER_MGR.touch(e)
+	if fight or (extra and extra[1]) then
+		apply_encounter(fight and {fight} or {}, extra or {})
+		return
+	end
+	e.moving = false
+	refresh_entity(e)
+	local agent = agent_of(e.user_id)
+	if agent then
+		skynet.send(agent, "lua", "march_arrive", e.user_id, e.troop_idx, e.end_time)
+	end
+end
+
+-- 推进到真实时间 now。now 和上一拍的差不一定是 WORLD_TICK_SEC，晚到的时间在这一拍里补上
+-- 这里不能 skynet.call / sleep，否则补帧的耗时对不上
+-- 沿路径过格只做走进/走出；停步和开打走 refresh_entity。这一拍的推送在结束时合成一条
+local function do_step(now)
+	local movers = {}
 	for _, e in pairs(entities) do
-		if e.moving then
+		if e.moving and not e.fighting and not e.waiting then
+			movers[#movers + 1] = e
+		end
+	end
+	local fights, stops = ENCOUNTER_MGR.advance(movers, now)
+	apply_encounter(fights, stops)
+	for _, e in ipairs(movers) do
+		if e.moving and now >= e.end_time then
+			finish_arrive(e)
+		elseif e.moving then
 			local x, y = MARCH_PATH.pos_at(e.path, e.start_time, e.end_time, now)
-			if x ~= e.x or y ~= e.y then
-				e.x = x
-				e.y = y
-				refresh_entity(e)
+			local cx, cy = math.floor(x), math.floor(y)
+			local moved = cx ~= math.floor(e.x) or cy ~= math.floor(e.y)
+			e.x, e.y = x, y
+			if moved then
+				sync_cross(e)
 			end
 		end
 	end
-	skynet.timeout(100, tick)
+end
+
+function step(now)
+	batching = true
+	local ok, err = xpcall(do_step, debug.traceback, now)
+	batching = false
+	flush_pending()
+	if not ok then
+		error(err, 0)
+	end
+end
+
+-- 只盯这一拍的协程。战斗结算在 fork 里，挂起是允许的，不能算进帧
+-- 热更时保留原始函数，避免包两层
+yield_raw = yield_raw or {}
+
+local function watch_yield(name)
+	local raw = yield_raw[name]
+	if not raw then
+		raw = skynet[name]
+		yield_raw[name] = raw
+	end
+	skynet[name] = function(...)
+		if coroutine.running() == tick_co then
+			skynet.error(debug.traceback(string.format("世界帧里发生了挂起 skynet.%s", name), 2))
+		end
+		return raw(...)
+	end
+end
+
+watch_yield("call")
+watch_yield("rawcall")
+watch_yield("sleep")
+watch_yield("wait")
+
+local function tick()
+	tick_co = coroutine.running()
+	local t0 = TIME.now()
+	local ok, err = xpcall(step, debug.traceback, t0)
+	tick_co = nil
+	if not ok then
+		skynet.error("世界帧执行出错\n" .. tostring(err))
+	end
+	local wait = CONST.WORLD_TICK_SEC - (TIME.now() - t0)
+	if wait < 0.01 then
+		wait = 0.01
+	end
+	skynet.timeout(math.floor(wait * 100 + 0.5), tick)
 end
 
 local function restore_marches()
@@ -288,12 +897,17 @@ function init()
 	for group_id in pairs(DATA_COMMON.get_monster_group_tbl()) do
 		place_group(group_id)
 	end
+	for land_id in pairs(DATA_COMMON.get_res_land_tbl()) do
+		place_res_land(land_id)
+	end
 	local users = MONGO_SLAVE.common_load_tbl(MONGO_SLAVE.COL.USER_INFO)
 	for _, dat in pairs(users) do
 		if dat._has_birth and dat._user_id then
 			upsert_city(dat._user_id, dat._birth_x, dat._birth_y)
 		end
 	end
+	ENCOUNTER_MGR.load_alliances()
+	load_agent_list()
 	restore_marches()
-	skynet.timeout(100, tick)
+	skynet.timeout(1, tick)
 end

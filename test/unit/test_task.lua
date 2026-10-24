@@ -61,7 +61,7 @@ local function setup()
 	}
 	env.ORM = {load = function() return doc, false end, get = function() return doc end}
 	env.MONGO_SLAVE = {COL = {}, flush = function() end}
-	env.REWARD_MGR = {reward_user = function(_, list) user.rewarded[#user.rewarded + 1] = list end}
+	env.REWARD_MGR = {reward_user_and_show = function(_, list) user.rewarded[#user.rewarded + 1] = list end}
 	env.EVENT = {listen = function() end}
 	env.for_maker = {}
 	env.for_caller = {

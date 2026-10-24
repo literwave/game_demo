@@ -64,6 +64,8 @@ log_level = "debug"
 gate_address = "127.0.0.1"
 gate_port = 33022
 gate_cnt = 3    -- gate_worker 数量，同一端口，连接轮流分给各 worker 做读写
+-- 登录和网关 listen 的等待队列，启动时读一次。内核 somaxconn 会封顶
+listen_backlog = 512
 
 ------------ 登录相关 --------------
 address = "0.0.0.0"

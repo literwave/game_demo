@@ -76,6 +76,10 @@ function cls_troop:get_target_id()
 	return self._data._target_id
 end
 
+function cls_troop:get_start_time()
+	return self._data._start_time
+end
+
 function cls_troop:get_end_time()
 	return self._data._end_time
 end
@@ -99,6 +103,22 @@ end
 
 function cls_troop:set_arrived()
 	self._data._march_state = CONST.MARCH_STATE.ARRIVED
+end
+
+-- 占领资源地后停在原地采集，start/end 改记采集开始和采满的时间
+function cls_troop:set_gather(start_time, end_time)
+	self._data._march_state = CONST.MARCH_STATE.ARRIVED
+	self._data._start_time = start_time
+	self._data._end_time = end_time
+end
+
+function cls_troop:is_gathering()
+	return self:get_march_state() == CONST.MARCH_STATE.ARRIVED
+		and self:get_target_type() == DATA_COMMON.TARGET_TYPE.OCCUPY_RES_LAND
+end
+
+function cls_troop:get_end_pos()
+	return MARCH_PATH.last_pos(self._data._path)
 end
 
 function cls_troop:clear_march()

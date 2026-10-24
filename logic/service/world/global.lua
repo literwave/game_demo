@@ -19,5 +19,6 @@ MAP_MGR		= Import("../logic/service/world/module/map/mgr.lua")
 SCENE_BASE	= Import("../logic/service/world/module/scene/base.lua")
 SCENE_MGR	= Import("../logic/service/world/module/scene/mgr.lua")
 ENTITY_MGR	= Import("../logic/service/world/module/entity/mgr.lua")
+ENCOUNTER_MGR	= Import("../logic/service/world/module/encounter/mgr.lua")
 AOI_MGR		= Import("../logic/service/world/module/aoi/mgr.lua")
 

@@ -19,7 +19,14 @@ local function reward_item(ret, user_id, reward_info_list, reason_list)
 			ITEM_MGR.add_item(user_id, item_id, new_item_count, reason_list)
 			table.insert(ret, GLOBAL_FUNC.gen_reward_info(reward_info.reward_type, item_id, new_item_count))
 		end
-		-- todo -- 这是溢出的要发邮件
+	end
+	-- 超过单次可加上限的部分走补发邮件
+	local reissue_list = {}
+	for item_id, cnt in pairs(over_limit_item_tbl) do
+		table.insert(reissue_list, GLOBAL_FUNC.gen_reward_info(CONST.REWARD_TYPE_ITEM, item_id, cnt))
+	end
+	if #reissue_list > 0 then
+		MAIL.send_user_mail(user_id, CONST.MAIL_ID.REWARD_REISSUE, nil, reissue_list)
 	end
 end
 

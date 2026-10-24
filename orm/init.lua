@@ -9,8 +9,6 @@ CLS_HERO_DATA = "hero_data"
 CLS_USER_HERO_DOC = "user_hero_doc"
 CLS_ITEM_DATA = "item_data"
 CLS_USER_ITEM_DOC = "user_item_doc"
-CLS_QUEUE_DATA = "queue_data"
-CLS_USER_QUEUE_DOC = "user_queue_doc"
 CLS_USER_MAIL_DOC = "user_mail_doc"
 CLS_SVR_MAIL_DOC = "svr_mail_doc"
 CLS_GAME_SID_DATA = "game_sid_data"
@@ -28,7 +26,6 @@ local SCHEMA_FILES = {
 	"user.td",
 	"hero.td",
 	"item.td",
-	"queue.td",
 	"mail.td",
 	"game_sid.td",
 	"build.td",

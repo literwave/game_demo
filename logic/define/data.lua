@@ -27,6 +27,10 @@ local DATA_ALLIANCE_JOIN_TYPE = sharedata.query("AllianceJoinType")
 local DATA_ENTITY_TYPE = sharedata.query("EntityType")
 local DATA_TARGET_TYPE = sharedata.query("TargetType")
 local DATA_REPORT_TYPE = sharedata.query("ReportType")
+local DATA_MAIL = sharedata.query("Mail")
+local DATA_MAIL_KIND = sharedata.query("MailKind")
+local DATA_RES_LAND = sharedata.query("ResLand")
+local DATA_RES_LAND_TYPE = sharedata.query("ResLandType")
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -53,6 +57,8 @@ local function init_enum()
 	CHAT_CHANNEL = build_enum(DATA_CHAT_CHANNEL)
 	ALLIANCE_POS = build_enum(DATA_ALLIANCE_POS)
 	ALLIANCE_JOIN_TYPE = build_enum(DATA_ALLIANCE_JOIN_TYPE)
+	MAIL_KIND = build_enum(DATA_MAIL_KIND)
+	RES_LAND_TYPE = build_enum(DATA_RES_LAND_TYPE)
 end
 
 -- 二次处理配置表的内容。放在 __init__ 里：热更 / 重载配置时会先恢复旧模块变量再调 __init__，这里才能重算
@@ -180,21 +186,6 @@ function get_item_kind(item_id)
 	return DATA_ITEM[item_id].Kind
 end
 
-function can_lock_mail()
-end
-
-function get_queue_capacity()
-	return 5
-end
-
-function get_build_level_up_limit()
-	return {}
-end
-
-function get_build_create_limit()
-	return {}
-end
-
 function get_build_max_level(b_type)
 	return build_max_level_tbl[b_type] or 0
 end
@@ -304,4 +295,51 @@ end
 
 function get_alliance_join_type_conf(join_type)
 	return DATA_ALLIANCE_JOIN_TYPE[join_type]
+end
+
+-- 创建联盟消耗的令牌数
+function get_alliance_create_cost()
+	return get_value_by_key(10)
+end
+
+function get_alliance_name_max_len()
+	return get_value_by_key(11)
+end
+
+function get_alliance_notice_max_len()
+	return get_value_by_key(12)
+end
+
+function get_alliance_manifesto_max_len()
+	return get_value_by_key(13)
+end
+
+function get_alliance_apply_max()
+	return get_value_by_key(14)
+end
+
+function get_mail_conf(mail_id)
+	return DATA_MAIL[mail_id]
+end
+
+function get_mail_kind_conf(mail_kind)
+	return DATA_MAIL_KIND[mail_kind]
+end
+
+-- 单个邮件类型最多保留的条数
+function get_mail_kind_max()
+	return get_value_by_key(15)
+end
+
+-- 模板 ExpireDay 为 0 时用的保留天数
+function get_mail_default_expire_day()
+	return get_value_by_key(16)
+end
+
+function get_res_land_conf(land_id)
+	return DATA_RES_LAND[land_id]
+end
+
+function get_res_land_tbl()
+	return DATA_RES_LAND
 end

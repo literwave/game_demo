@@ -29,6 +29,29 @@ function T.pos_along_polyline()
 	assert(x == 3 and y == 4, "after end")
 end
 
+function T.cells_along_fast_march()
+	local M = load_path_mod()
+	-- 1 秒走 5 格，不能只看到终点
+	local path = {{_x = 0, _y = 0}, {_x = 5, _y = 0}}
+	local cells = M.cells_crossed(path, 0, 1, 0, 1)
+	local seen = {}
+	for _, c in ipairs(cells) do
+		seen[c.x .. ":" .. c.y] = true
+		assert(c.y == 0)
+	end
+	for x = 0, 5 do
+		assert(seen[x .. ":0"], "missing cell " .. x)
+	end
+end
+
+function T.cells_stop_at_query_end()
+	local M = load_path_mod()
+	local path = {{_x = 0, _y = 0}, {_x = 10, _y = 0}}
+	local cells = M.cells_crossed(path, 0, 10, 2, 4)
+	assert(cells[1].x == 2, "starts where the second ends")
+	assert(cells[#cells].x == 4, "stops at the fourth second")
+end
+
 function T.empty_path_is_origin()
 	local M = load_path_mod()
 	local x, y = M.pos_at({}, 0, 10, 5)

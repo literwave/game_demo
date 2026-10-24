@@ -1,698 +1,367 @@
+-- 邮件：按 Mail 模板发信，标题/正文的 %s 依次用 detailList 替换（先标题后正文）
+-- 玩家文档在线时常驻，给离线玩家发信时临时加载，写完就卸掉
+-- 领奖要回 agent 发奖，由 agent 调 take_rewards 拿奖励
 
-all_mail_tbl = {}
---[[
-	[mailId] = mail,
---]]
+local SVR_DOC_KEY = "server"
 
-del_mail_id_tbl = {}
---[[
-	[mailId] = true,
---]]
+svr_doc = nil
 
-user_mail_info_tbl = {}
---[[
-	[userId] = {
-		mailTbl = {
-			[mailKind] = {
-				[mailId] = {
-					isRead = *,
-					isGotReward = *,
-					isLock = *,
-					lv = *,
-				},
-			},
-		},
-		fetchSvrIdx = *,
-	}
---]]
-
-svr_mail_info = {}
---[[
-	globalIdx = *,
-	svrMailTbl = {
-		[idx] = mailId,
-	}
---]]
-
-mail_ref_tbl = {}
---[[
-	[mailId] = cnt,
---]]
-
-local SVR_MAIL_DOC_KEY = "1"
-
-local function dump_user_mail_info(info)
-	local mail_tbl = {}
-	for mail_kind, id_map in pairs(info.mail_tbl or {}) do
-		mail_tbl[mail_kind] = {}
-		for mail_id, st in pairs(id_map) do
-			mail_tbl[mail_kind][mail_id] = {
-				is_read = st.isRead,
-				is_got_reward = st.isGotReward,
-				is_lock = st.isLock,
-				lv = st.lv,
-			}
-		end
-	end
-	local doc = ORM.new(ORM.CLS_USER_MAIL_DOC, {
-		mail_tbl = mail_tbl,
-		fetch_svr_idx = info.fetch_svr_idx or 0,
-	})
-	return ORM.dump(doc)
+local function now()
+	return TIME.os_bj_sec()
 end
 
-local function persist_user_mail(user_id)
-	local info = user_mail_info_tbl[user_id]
-	if not info then
+local function get_doc(user_id)
+	return ORM.load(MONGO_SLAVE.COL.USER_MAIL, user_id, ORM.CLS_USER_MAIL_DOC)
+end
+
+-- 离线玩家的文档用完卸掉；先 flush，下次加载读到的就是新数据
+local function release_if_offline(user_id)
+	if USER_MGR.is_online(user_id) then
 		return
 	end
-	MONGO_SLAVE.save_doc(MONGO_SLAVE.COL.USER_MAIL, user_id, dump_user_mail_info(info))
+	MONGO_SLAVE.flush()
+	ORM.unbind(MONGO_SLAVE.COL.USER_MAIL, user_id)
 end
 
-local function persist_svr_mail()
-	local doc = ORM.new(ORM.CLS_SVR_MAIL_DOC, {
-		global_idx = svr_mail_info.global_idx or 0,
-		svr_mail_tbl = svr_mail_info.svr_mail_tbl or {},
-	})
-	MONGO_SLAVE.save_doc(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY, ORM.dump(doc))
+local function expire_time(mail_id, start_time)
+	local day = DATA_COMMON.get_mail_conf(mail_id).ExpireDay
+	if day <= 0 then
+		day = DATA_COMMON.get_mail_default_expire_day()
+	end
+	return start_time + day * CONST.ONE_DAY_SEC
 end
 
-function save_data()
-	local save_mail_tbl = {}
-	for mail_id, mail in pairs(all_mail_tbl) do
-		local info = {}
-		mail:serialize(info)
-		save_mail_tbl[mail_id] = info
-	end
-	MONGO_SLAVE.common_save_many(MONGO_SLAVE.COL.MAIL, save_mail_tbl)
-	local del_mail_tbl = {}
-	for mail_id in pairs(del_mail_id_tbl) do
-		if not save_mail_tbl[mail_id] then
-			del_mail_tbl[mail_id] = true
-		end
-	end
-	MONGO_SLAVE.common_del_many(MONGO_SLAVE.COL.MAIL, del_mail_tbl)
-	for user_id, info in pairs(user_mail_info_tbl) do
-		MONGO_SLAVE.save_doc(MONGO_SLAVE.COL.USER_MAIL, user_id, dump_user_mail_info(info))
-	end
-	persist_svr_mail()
+local function has_reward(m)
+	return #m._rewards > 0 and not m._is_got_reward
 end
 
-local function create_mail(oci)
-	if oci._is_battle_mail then
-		return MAIL_BATTLE.cls_mail:New(oci)
-	end
-	return MAIL_BASE.cls_mail:New(oci)
+-- 锁定的不过期
+local function is_expired(m, t)
+	return not m._is_lock and m._end_time <= t
 end
 
-function load_data()
-	user_mail_info_tbl = {}
-	local raw_user_tbl = MONGO_SLAVE.common_load_tbl(MONGO_SLAVE.COL.USER_MAIL) or {}
-	for user_id, raw in pairs(raw_user_tbl) do
-		local doc = ORM.new(ORM.CLS_USER_MAIL_DOC, raw)
-		local info = {
-			mail_tbl = {},
-			fetch_svr_idx = doc.fetch_svr_idx,
-		}
-		for mail_kind, id_map in pairs(doc.mail_tbl) do
-			info.mail_tbl[mail_kind] = {}
-			for mail_id, st in pairs(id_map) do
-				info.mail_tbl[mail_kind][mail_id] = {
-					isRead = st.is_read,
-					isGotReward = st.is_got_reward,
-					isLock = st.is_lock,
-					lv = st.lv,
-				}
-			end
-		end
-		user_mail_info_tbl[user_id] = info
+local function format_text(mail_id, details)
+	local conf = DATA_COMMON.get_mail_conf(mail_id)
+	local i = 0
+	local function fill()
+		i = i + 1
+		return details[i] or ""
 	end
-
-	local raw_svr = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.SVR_MAIL, SVR_MAIL_DOC_KEY) or {}
-	local svr_doc = ORM.new(ORM.CLS_SVR_MAIL_DOC, raw_svr)
-	svr_mail_info = {
-		global_idx = svr_doc.global_idx,
-		svr_mail_tbl = {},
-	}
-	for idx, mail_id in pairs(svr_doc.svr_mail_tbl) do
-		svr_mail_info.svr_mail_tbl[idx] = mail_id
-	end
-
-	for _, mail_id in pairs(svr_mail_info.svr_mail_tbl) do
-		mail_ref_tbl[mail_id] = (mail_ref_tbl[mail_id] or 0) + 1
-	end
-	for _, user_info in pairs(user_mail_info_tbl) do
-		for _, mail_tbl in pairs(user_info.mail_tbl) do
-			for mail_id, _ in pairs(mail_tbl) do
-				mail_ref_tbl[mail_id] = (mail_ref_tbl[mail_id] or 0) + 1
-			end
-		end
-	end
+	local title = conf.Title:gsub("%%s", fill)
+	local content = conf.Content:gsub("%%s", fill)
+	return title, content
 end
 
-local function try_init_user_mail_info(user_id)
-	if not user_mail_info_tbl[user_id] then
-		user_mail_info_tbl[user_id] = {
-			mail_tbl = {},
-			fetch_svr_idx = svr_mail_info.global_idx,
-		}
-		persist_user_mail(user_id)
-	end
-end
-
-local function try_init_mail_tbl(mail_id_list)
+local function copy_list(list)
 	local ret = {}
-	local query_list = {}
-	for _, mail_id in pairs(mail_id_list) do
-		local mail = all_mail_tbl[mail_id]
-		if mail then
-			ret[mail_id] = mail
-		else
-			table.insert(query_list, mail_id)
-		end
-	end
-	if #query_list > 0 then
-		local data_tbl = MONGO_SLAVE.common_load_many(MONGO_SLAVE.COL.MAIL, query_list)
-		for mail_id, data in pairs(data_tbl) do
-			local mail = create_mail(data)
-			all_mail_tbl[mail_id] = mail
-			ret[mail_id] = mail
-		end
+	for i, v in ipairs(list) do
+		ret[i] = v
 	end
 	return ret
 end
 
-function try_init_mail(mail_id)
-	if not all_mail_tbl[mail_id] then
-		local save_tbl = MONGO_SLAVE.common_load_single(MONGO_SLAVE.COL.MAIL, mail_id)
-		if not save_tbl or not next(save_tbl) then
-			return
-		end
-		all_mail_tbl[mail_id] = create_mail(save_tbl)
+local function reward_data(reward_list)
+	local ret = {}
+	for i, r in ipairs(reward_list) do
+		ret[i] = {
+			_reward_type = r.reward_type,
+			_item_id = r.item_id,
+			_item_count = r.item_count,
+		}
 	end
-	return all_mail_tbl[mail_id]
-end
-
-local function get_user_mail_tbl(user_id)
-	try_init_user_mail_info(user_id)
-	return user_mail_info_tbl[user_id].mail_tbl
-end
-
-local function get_user_mail_by_kind(user_id, mail_kind)
-	local mail_tbl = get_user_mail_tbl(user_id)
-	return mail_tbl[mail_kind]
-end
-
-local function get_user_mail_info(user_id, mail_kind, mail_id)
-	local mail_tbl = get_user_mail_by_kind(user_id, mail_kind)
-	return mail_tbl and mail_tbl[mail_id]
-end
-
-local function set_mail_readed(user_id, mail_kind, mail_id)
-	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
-	if not user_mail_info.isRead then
-		user_mail_info.isRead = true
-		persist_user_mail(user_id)
-	end
-end
-
-local function set_mail_rewarded(user_id, mail_kind, mail_id)
-	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
-	user_mail_info.isGotReward = true
-	persist_user_mail(user_id)
-end
-
-local function set_mail_lock(user_id, mail_kind, mail_id, is_lock)
-	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
-	user_mail_info.isLock = is_lock
-	persist_user_mail(user_id)
-end
-
-local function del_mail(mail_id)
-	assert(not del_mail_id_tbl[mail_id])
-	local mail = all_mail_tbl[mail_id]
-	if mail then
-		del_mail_id_tbl[mail_id] = true
-		mail:release()
-		all_mail_tbl[mail_id] = nil
-	end
-end
-
-local function incr_mail_ref_cnt(mail_id)
-	mail_ref_tbl[mail_id] = (mail_ref_tbl[mail_id] or 0) + 1
-end
-
-local function desc_mail_ref_cnt(mail_id)
-	mail_ref_tbl[mail_id] = mail_ref_tbl[mail_id] - 1
-	if mail_ref_tbl[mail_id] <= 0 then
-		del_mail(mail_id)
-		mail_ref_tbl[mail_id] = nil
-	end
-end
-
-local function del_user_mail(user_id, mail_kind, mail_id)
-	local mail_tbl = user_mail_info_tbl[user_id].mail_tbl
-	if mail_tbl[mail_kind] and mail_tbl[mail_kind][mail_id] then
-		mail_tbl[mail_kind][mail_id] = nil
-		persist_user_mail(user_id)
-		desc_mail_ref_cnt(mail_id)
-	end
-end
-
-local function add_user_mail_info(user_id, mail_kind, mail_id, user_mail_info)
-	local mail_tbl = get_user_mail_tbl(user_id)
-	if not mail_tbl[mail_kind] then
-		mail_tbl[mail_kind] = {}
-	end
-	assert(not mail_tbl[mail_kind][mail_id])
-	mail_tbl[mail_kind][mail_id] = user_mail_info
-	persist_user_mail(user_id)
-	incr_mail_ref_cnt(mail_id)
-end
-
-local function set_user_fetch_svr_idx(user_id, idx)
-	user_mail_info_tbl[user_id].fetch_svr_idx = idx
-	persist_user_mail(user_id)
-end
-
-local function add_svr_mail(mail_id)
-	local idx = svr_mail_info.global_idx + 1
-	incr_mail_ref_cnt(mail_id)
-	svr_mail_info.global_idx = idx
-	svr_mail_info.svr_mail_tbl[idx] = mail_id
-	persist_svr_mail()
-end
-
-local function del_svr_mail(idx)
-	local mail_id = svr_mail_info.svr_mail_tbl[idx]
-	svr_mail_info.svr_mail_tbl[idx] = nil
-	persist_svr_mail()
-	desc_mail_ref_cnt(mail_id)
-end
-
-local function try_clear_svr_mail()
-	for idx, mail_id in pairs(svr_mail_info.svr_mail_tbl) do
-		local mail = try_init_mail(mail_id)
-		if mail:is_timeout() then
-			del_svr_mail(idx)
-		end
-	end
-end
-
-local function gen_mail_sim_pto(user_id, mail_kind, mail_id)
-	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
-	local mail = try_init_mail(mail_id)
-	local ret = {
-		mailId = mail_id,
-		title = mail:get_title(),
-		content = mail:gen_content_str(),
-		startTime = mail:get_start_time(),
-		endTime = mail:get_end_time(),
-		mailType = mail:get_mail_type(),
-		mail_avatar_type = mail:get_mail_avatar_type(),
-		isRead = user_mail_info.isRead,
-		isLock = user_mail_info.isLock,
-		isGotReward = user_mail_info.isGotReward,
-	}
 	return ret
 end
 
-local function put_mail_to_user(user_id, mail_kind, mail_id)
-	local user_mail_info = {
-		isRead = false,
-		isGotReward = true,
-		isLock = false,
+local function reward_list_of(m)
+	local ret = {}
+	for i, r in ipairs(m._rewards) do
+		ret[i] = {reward_type = r._reward_type, item_id = r._item_id, item_count = r._item_count}
+	end
+	return ret
+end
+
+local function reward_pto_list(m)
+	local ret = {}
+	for i, r in ipairs(m._rewards) do
+		ret[i] = {rewardType = r._reward_type, itemId = r._item_id, itemCount = r._item_count}
+	end
+	return ret
+end
+
+local function mail_pto(m)
+	local title, content = format_text(m._mail_id, m._details)
+	return {
+		mailId = m._mail_id,
+		mailUid = m._mail_uid,
+		title = title,
+		content = content,
+		isRead = m._is_read,
+		isLock = m._is_lock,
+		isGotReward = m._is_got_reward,
+		startTime = m._start_time,
+		endTime = m._end_time,
 	}
-	local mail = try_init_mail(mail_id)
-	if COMMON_FUNC.has_element(mail:get_reward_list()) then
-		user_mail_info.isGotReward = false
-	end
-	add_user_mail_info(user_id, mail_kind, mail_id, user_mail_info)
 end
 
-local function put_mail_to_user_and_sync(user_id, mail_kind, mail_id)
-	put_mail_to_user(user_id, mail_kind, mail_id)
-	local vfd = USER_MGR.get_vfd_by_user_id(user_id)
-	if vfd then
-		local info = gen_mail_sim_pto(user_id, mail_kind, mail_id)
-		for_caller.c_sync_new_mail(vfd, mail_kind, info)
+local function send_del(user_id, mail_kind, uid_list)
+	if #uid_list > 0 then
+		USER_MGR.send(user_id, "s2c_del_mail_list", {mailKind = mail_kind, mailUidList = uid_list})
 	end
 end
 
-local function try_get_svr_mail(user_id)
-	try_init_user_mail_info(user_id)
-	local last_fetch_idx = user_mail_info_tbl[user_id].fetch_svr_idx
-	local all_svr_mail_tbl = svr_mail_info.svr_mail_tbl
-	for idx = last_fetch_idx+1, svr_mail_info.global_idx do
-		set_user_fetch_svr_idx(user_id, idx)
-		local mail_id = all_svr_mail_tbl[idx]
-		local mail = mail_id and try_init_mail(mail_id)
-		if mail and not mail:is_timeout() then
-			put_mail_to_user_and_sync(user_id, mail:get_mail_kind(), mail_id)
+-- 超过单类型上限删最早的：锁定的不删，先删没有待领奖励的
+local function trim_kind(user_id, doc, mail_kind)
+	local list = {}
+	local cnt = 0
+	for _, m in pairs(doc._mails) do
+		if m._mail_kind == mail_kind then
+			cnt = cnt + 1
+			if not m._is_lock then
+				list[#list + 1] = m
+			end
 		end
 	end
-end
-
-local function create_new_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
-	assert(life_sec)
-	local mail_id = get_id_by_srv_id_and_timestamp()
-	local start_time = TIME.os_bj_sec()
-	local end_time = -1
-	if life_sec > 0 then
-		end_time = start_time + life_sec
-	end
-	local oci = {
-		_mail_id = mail_id,
-		_mail_kind = mail_kind,
-		_mail_type = mail_type,
-		_title = title,
-		_content_tbl = content_tbl,
-		_detail_tbl = detail_tbl,
-		_reward_list = reward_list,
-		_start_time = start_time,
-		_end_time = end_time,
-	}
-	local mail = create_mail(oci)
-	mail:save_to_db()
-	all_mail_tbl[mail_id] = mail
-	return mail_id
-end
-
-local function create_new_battle_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, mail_battle_rec, life_sec, mail_avatar_type)
-	assert(life_sec)
-	local mail_id = get_id_by_srv_id_and_timestamp()
-	local start_time = TIME.os_bj_sec()
-	local end_time = -1
-	if life_sec > 0 then
-		end_time = start_time + life_sec
-	end
-	local oci = {
-		_mail_id = mail_id,
-		_mail_kind = mail_kind,
-		_mail_type = mail_type,
-		_title = title,
-		_content_tbl = content_tbl,
-		_detail_tbl = detail_tbl,
-		_reward_list = reward_list,
-		_start_time = start_time,
-		_end_time = end_time,
-		_mail_avatar_type = mail_avatar_type,
-		_result = mail_battle_rec.result,
-		_camp_rec_tbl = mail_battle_rec.camp_rec_tbl,
-		_user_rec_tbl = mail_battle_rec.user_rec_tbl,
-		_soldier_rec_list = mail_battle_rec.soldier_rec_list,
-		_hero_info_list = mail_battle_rec.heroInfoList,
-		_battle_attr_rate_list = mail_battle_rec.battle_attr_rate_list,
-		_is_battle_mail = true,
-	}
-	local mail = create_mail(oci)
-	mail:save_to_db()
-	all_mail_tbl[mail_id] = mail
-	loaded_tbl[mail_id] = true
-	return mail_id
-end
-
-function slice_get_svr_mail(ulist, pro, param_tbl)
-	local user_id = ulist[pro]
-	try_get_svr_mail(user_id)
-end
-
-function on_user_login(user)
-	local user_id = user:get_user_id()
-	try_init_user_mail_info(user_id)
-	try_get_svr_mail(user_id)
-end
-
-local function check_mail_reward_over_limit(user_id, mail_kind, mail_id)
-	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
-	if not user_mail_info then
-		return false
-	end
-	local mail = try_init_mail(mail_id)
-	if not mail then
-		return false
-	end
-	local reward_item_tbl = {}
-	for _, reward_info in pairs(mail:get_reward_list()) do
-		if reward_info.reward_type == CONST.REWARD_TYPE_ITEM then
-			local item_id = reward_info.item_id
-			reward_item_tbl[item_id] = (reward_item_tbl[item_id] or 0) + reward_info.item_count
-		end
-	end
-	for item_id, reward_item_cnt in pairs(reward_item_tbl) do
-		local limit_add_cnt = ITEM_MGR.get_limit_add_cnt(user_id, item_id)
-		if limit_add_cnt and reward_item_cnt > limit_add_cnt then
-			return true
-		end
-	end
-	return false
-end
-
-local function try_get_mail_reward(user_id, mail_kind, mail_id)
-	local user_mail_info = get_user_mail_info(user_id, mail_kind, mail_id)
-	if not user_mail_info then
-		return false
-	end
-	if not user_mail_info.isRead then
-		set_mail_readed(user_id, mail_kind, mail_id)
-	end
-	if user_mail_info.isGotReward then
-		return false
-	end
-	local mail = try_init_mail(mail_id)
-	if not mail then
-		return false
-	end
-	set_mail_rewarded(user_id, mail_kind, mail_id)
-	local actual_rwd_list = REWARD_MGR.reward_user(user_id, mail:get_reward_list(), {CONST.FLOW_REASON.MAIL, mail:get_mail_type()})
-	return true, actual_rwd_list
-end
-
-local function try_del_user_mail_by_kind(user_id, mail_kind)
-	local mail_tbl = get_user_mail_by_kind(user_id, mail_kind)
-	if not mail_tbl then
+	local need = cnt - DATA_COMMON.get_mail_kind_max()
+	if need <= 0 then
 		return
 	end
-	local del_mail_tbl = {}
-	local mail_list = {}
-	local query_mail_id_list = {}
-	for mail_id, info in pairs(mail_tbl) do
-		if not info.isLock then
-			table.insert(query_mail_id_list, mail_id)
+	table.sort(list, function(a, b)
+		local ra, rb = has_reward(a), has_reward(b)
+		if ra ~= rb then
+			return rb
 		end
-	end
-	local query_mail_tbl = try_init_mail_tbl(query_mail_id_list)
-	for mail_id, mail in pairs(query_mail_tbl) do
-		if mail:is_timeout(mail_id) then
-			del_mail_tbl[mail_id] = true
-		else
-			table.insert(mail_list, mail)
-		end
-	end
-	local limit_cnt = DATA_COMMON.get_value_by_key(3)
-	local need_del_cnt = #mail_list - limit_cnt
-	if need_del_cnt <= 0 then
-		return
-	end
-	table.sort(mail_list, function(mail1, mail2)
-		return mail1:get_start_time() < mail2:get_start_time()
+		return a._mail_uid < b._mail_uid
 	end)
-	for _, mail in ipairs(mail_list) do
-		local mail_id = mail:get_mail_id()
-		del_mail_tbl[mail_id] = true
-		need_del_cnt = need_del_cnt - 1
-		if need_del_cnt <= 0 then
-			break
+	local del = {}
+	for i = 1, math.min(need, #list) do
+		local uid = list[i]._mail_uid
+		doc._mails[uid] = nil
+		del[#del + 1] = uid
+	end
+	send_del(user_id, mail_kind, del)
+end
+
+local function clear_expired(user_id, doc)
+	local t = now()
+	local del_tbl = {}
+	for uid, m in pairs(doc._mails) do
+		if is_expired(m, t) then
+			del_tbl[m._mail_kind] = del_tbl[m._mail_kind] or {}
+			table.insert(del_tbl[m._mail_kind], uid)
 		end
 	end
-	local del_list = {}
-	for mail_id in pairs(del_mail_tbl) do
-		try_get_mail_reward(user_id, mail_kind, mail_id)
-		del_user_mail(user_id, mail_kind, mail_id)
-		table.insert(del_list, mail_id)
-	end
-	local vfd = USER_MGR.get_vfd_by_user_id(user_id)
-	if vfd then
-		for_caller.s2c_del_mail_list(vfd, mail_kind, del_list)
+	for mail_kind, uid_list in pairs(del_tbl) do
+		for _, uid in ipairs(uid_list) do
+			doc._mails[uid] = nil
+		end
+		send_del(user_id, mail_kind, uid_list)
 	end
 end
 
-function try_del_mail_by_id(del_mail_id)
-	if not mail_ref_tbl[del_mail_id] then
+local function put_mail(user_id, doc, mail_id, details, rewards, start_time, end_time)
+	local mail_kind = DATA_COMMON.get_mail_conf(mail_id).Kind
+	local uid = doc._next_uid + 1
+	doc._next_uid = uid
+	doc._mails[uid] = {
+		_mail_uid = uid,
+		_mail_id = mail_id,
+		_mail_kind = mail_kind,
+		_details = copy_list(details),
+		_rewards = rewards,
+		_start_time = start_time,
+		_end_time = end_time,
+		_is_read = false,
+		_is_got_reward = false,
+		_is_lock = false,
+	}
+	USER_MGR.send(user_id, "s2c_sync_mail", {mailKind = mail_kind, mailInfo = mail_pto(doc._mails[uid])})
+	trim_kind(user_id, doc, mail_kind)
+end
+
+-- 补发 _fetch_idx 之后没过期的全服邮件
+local function fetch_svr_mail(user_id, doc)
+	local t = now()
+	for idx = doc._fetch_idx + 1, svr_doc._next_idx do
+		local s = svr_doc._mails[idx]
+		if s and s._end_time > t then
+			put_mail(user_id, doc, s._mail_id, s._details, reward_data(reward_list_of(s)), s._start_time, s._end_time)
+		end
+	end
+	doc._fetch_idx = svr_doc._next_idx
+end
+
+local function clear_svr_expired()
+	local t = now()
+	for idx, s in pairs(svr_doc._mails) do
+		if s._end_time <= t then
+			svr_doc._mails[idx] = nil
+		end
+	end
+end
+
+function send_user_mail(user_id, mail_id, details, reward_list)
+	if not DATA_COMMON.get_mail_conf(mail_id) then
+		LOG._error("mail conf not found: %s", mail_id)
 		return
 	end
-	for idx, mail_id in pairs(svr_mail_info.svr_mail_tbl) do
-		if mail_id == del_mail_id then
-			del_svr_mail(idx)
-			if not mail_ref_tbl[del_mail_id] then
-				return
-			end
-		end
-	end
-	for user_id, user_info in pairs(user_mail_info_tbl) do
-		for mail_kind, mail_tbl in pairs(user_info.mail_tbl) do
-			if mail_tbl[del_mail_id] then
-				del_user_mail(user_id, mail_kind, del_mail_id)
-				local vfd = USER_MGR.get_vfd_by_user_id(user_id)
-				if vfd then
-					for_caller.c_del_mail_list(vfd, mail_kind, {del_mail_id})
-				end
-				if not mail_ref_tbl[del_mail_id] then
-					return
-				end
-			end
-		end
+	local doc = get_doc(user_id)
+	local t = now()
+	put_mail(user_id, doc, mail_id, details, reward_data(reward_list), t, expire_time(mail_id, t))
+	release_if_offline(user_id)
+end
+
+function send_group_mail(user_id_list, mail_id, details, reward_list)
+	for _, user_id in ipairs(user_id_list) do
+		send_user_mail(user_id, mail_id, details, reward_list)
 	end
 end
 
-function send_user_mail(user_id, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
-	local mail_id = create_new_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
-	put_mail_to_user_and_sync(user_id, mail_kind, mail_id)
-	try_del_user_mail_by_kind(user_id, mail_kind)
-	return mail_id
-end
-
-function send_srv_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
-	local mail_id = create_new_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
-	add_svr_mail(mail_id)
-	local user_id_list = COMMON_FUNC.get_tbl_value_list(USER_MGR.get_vfd_user_id_tbl())
-	SLICE_TASK.slice_func_no_save("MAIL_MGR", "slice_get_svr_mail", user_id_list, 30)
-	try_clear_svr_mail()
-	return mail_id
-end
-
-function send_group_mail(user_id_tbl, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
-	local mail_id = create_new_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, life_sec, mail_avatar_type)
-	for user_id, _ in pairs(user_id_tbl) do
-		put_mail_to_user_and_sync(user_id, mail_kind, mail_id)
-		try_del_user_mail_by_kind(user_id, mail_kind)
-	end
-	return mail_id
-end
-
-function send_battle_mail(user_id_tbl, mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, mail_battle_rec, life_sec, mail_avatar_type)
-	local mail_id = create_new_battle_mail(mail_kind, mail_type, title, content_tbl, detail_tbl, reward_list, mail_battle_rec, life_sec, mail_avatar_type)
-	for user_id, _ in pairs(user_id_tbl) do
-		put_mail_to_user_and_sync(user_id, mail_kind, mail_id)
-		try_del_user_mail_by_kind(user_id, mail_kind)
-	end
-end
-
-local function on_req_mail_list(vfd, mail_kind)
-	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
-	try_del_user_mail_by_kind(user_id, mail_kind)
-	local list = {}
-	local tbl = get_user_mail_by_kind(user_id, mail_kind)
-	if tbl then
-		for mail_id, _ in pairs(tbl) do
-			table.insert(list, gen_mail_sim_pto(user_id, mail_kind, mail_id))
-		end
-	end
-	for_caller.c_req_mail_list(vfd, mail_kind, list)
-end
-
-local function on_req_mail_detail(vfd, mail_kind, mail_id)
-	mail_id = tonumber(mail_id)
-	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
-	local tbl = get_user_mail_by_kind(user_id, mail_kind)
-	if tbl and tbl[mail_id] then
-		set_mail_readed(user_id, mail_kind, mail_id)
-		local mail = try_init_mail(mail_id)
-		mail:sync_detail(vfd, user_id)
-	end
-end
-
-local function on_req_unread_cnt_list(vfd)
-	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
-	local mail_tbl = get_user_mail_tbl(user_id)
-	local list = {}
-	for mail_kind, tbl in pairs(mail_tbl) do
-		local unread_cnt = 0
-		for _, info in pairs(tbl) do
-			if not info.isRead then
-				unread_cnt = unread_cnt + 1
-			end
-		end
-		table.insert(list, { k = mail_kind, v = unread_cnt, })
-	end
-	for_caller.c_req_unread_mail_cnt_list(vfd, list)
-end
-
-local function try_del_mail(user_id, mail_kind, mail_id, info)
-	if info.isLock then
-		return false
-	end
-	if not info.isGotReward then
-		return false
-	end
-	try_init_mail(mail_id)
-	del_user_mail(user_id, mail_kind, mail_id)
-	return true
-end
-
-local function on_del_mail_list(vfd, mail_kind, mail_id_list)
-	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
-	local tbl = get_user_mail_by_kind(user_id, mail_kind)
-	if not tbl then
+function send_srv_mail(mail_id, details, reward_list)
+	if not DATA_COMMON.get_mail_conf(mail_id) then
+		LOG._error("mail conf not found: %s", mail_id)
 		return
 	end
-	local del_mail_id_list = {}
-	for _, mail_id in pairs(mail_id_list) do
-		mail_id = tonumber(mail_id)
-		local info = tbl[mail_id]
-		if info then
-			if try_del_mail(user_id, mail_kind, mail_id, info) then
-				table.insert(del_mail_id_list, mail_id)
-			end
-		end
-	end
-	for_caller.s2c_del_mail_list(vfd, mail_kind, del_mail_id_list)
-end
-
-local function on_set_mail_lock(vfd, mail_kind, mail_id, is_lock)
-	mail_id = tonumber(mail_id)
-	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
-	local tbl = get_user_mail_by_kind(user_id, mail_kind)
-	local info = tbl and tbl[mail_id]
-	if info and info.isLock ~= is_lock then
-		if is_lock then
-			local mail = try_init_mail(mail_id)
-			if not mail:can_lock() then
-				return
-			end
-		end
-		set_mail_lock(user_id, mail_kind, mail_id, is_lock)
-		for_caller.c_set_mail_lock(vfd, mail_kind, mail_id, is_lock)
+	clear_svr_expired()
+	local t = now()
+	local idx = svr_doc._next_idx + 1
+	svr_doc._next_idx = idx
+	svr_doc._mails[idx] = {
+		_mail_id = mail_id,
+		_details = copy_list(details),
+		_rewards = reward_data(reward_list),
+		_start_time = t,
+		_end_time = expire_time(mail_id, t),
+	}
+	for user_id in pairs(USER_MGR.user_id_to_fd) do
+		fetch_svr_mail(user_id, get_doc(user_id))
 	end
 end
 
-local function on_get_mail_reward(vfd, mail_kind_id_list)
-	local user_id = USER_MGR.get_user_id_by_vfd(vfd)
-	local all_reward_list = {}
-	local reward_mail_id_list = {}
-	for _, info in pairs(mail_kind_id_list) do
-		local mail_kind = info.k
-		local mail_id = tonumber(info.v)
-		if check_mail_reward_over_limit(user_id, mail_kind, mail_id) then
-			USER_MGR.tell_me_by_language_id(user_id, 110277)
-		else
-			local ret, reward_list = try_get_mail_reward(user_id, mail_kind, mail_id)
-			if ret then
-				table.insert(all_reward_list, reward_list)
-				table.insert(reward_mail_id_list, mail_id)
+-- agent 领奖：标记已领并返回 {kind_uid_list = 领到的 {k, v}, rewards = 合并前的奖励列表}
+-- kind_uid_list 为空表示领全部
+function take_rewards(user_id, kind_uid_list)
+	local doc = get_doc(user_id)
+	local targets = {}
+	if #kind_uid_list == 0 then
+		for _, m in pairs(doc._mails) do
+			targets[#targets + 1] = m
+		end
+	else
+		for _, info in ipairs(kind_uid_list) do
+			local m = doc._mails[tonumber(info.v) or 0]
+			if m and m._mail_kind == (info.k or 0) then
+				targets[#targets + 1] = m
 			end
 		end
 	end
-	local show_reward_list = FUNCLIB.merge_reward_list(table.unpack(all_reward_list))
-	REWARD_MGR.show_reward(user_id, show_reward_list)
-	for_caller.c_get_mail_reward(vfd, reward_mail_id_list)
+	local done = {}
+	local rewards = {}
+	local t = now()
+	for _, m in ipairs(targets) do
+		if has_reward(m) and not is_expired(m, t) then
+			m._is_got_reward = true
+			m._is_read = true
+			done[#done + 1] = {k = m._mail_kind, v = tostring(m._mail_uid)}
+			for _, r in ipairs(reward_list_of(m)) do
+				rewards[#rewards + 1] = r
+			end
+		end
+	end
+	return {kind_uid_list = done, rewards = rewards}
+end
+
+-- ---------- 协议 ----------
+
+local function find_mail(doc, mail_kind, mail_uid)
+	local m = doc._mails[mail_uid or 0]
+	if m and m._mail_kind == mail_kind then
+		return m
+	end
+end
+
+local function on_req_mail_list(user_id, packet)
+	local mail_kind = packet.mailKind or 0
+	if not DATA_COMMON.get_mail_kind_conf(mail_kind) then
+		return
+	end
+	local doc = get_doc(user_id)
+	clear_expired(user_id, doc)
+	local list = {}
+	for _, m in pairs(doc._mails) do
+		if m._mail_kind == mail_kind then
+			list[#list + 1] = m
+		end
+	end
+	table.sort(list, function(a, b)
+		return a._mail_uid > b._mail_uid
+	end)
+	local pto_list = {}
+	for i, m in ipairs(list) do
+		pto_list[i] = mail_pto(m)
+	end
+	USER_MGR.send(user_id, "s2c_req_mail_list", {mailKind = mail_kind, mailInfoList = pto_list})
+end
+
+local function on_req_mail_detail(user_id, packet)
+	local m = find_mail(get_doc(user_id), packet.mailKind or 0, packet.mailUid)
+	if not m then
+		USER_MGR.tell_me(user_id, "邮件不存在")
+		return
+	end
+	m._is_read = true
+	USER_MGR.send(user_id, "s2c_req_mail_detail", {
+		mailUid = m._mail_uid,
+		detailList = copy_list(m._details),
+		rewardList = reward_pto_list(m),
+	})
+end
+
+-- 锁定的、还有奖励没领的不删
+local function on_del_mail_list(user_id, packet)
+	local mail_kind = packet.mailKind or 0
+	local doc = get_doc(user_id)
+	local del = {}
+	for _, uid in ipairs(packet.mailUidList or EMPTY_TABLE) do
+		local m = find_mail(doc, mail_kind, uid)
+		if m and not m._is_lock and not has_reward(m) then
+			doc._mails[uid] = nil
+			del[#del + 1] = uid
+		end
+	end
+	USER_MGR.send(user_id, "s2c_del_mail_list", {mailKind = mail_kind, mailUidList = del})
+end
+
+local function on_set_mail_lock(user_id, packet)
+	local mail_kind = packet.mailKind or 0
+	local is_lock = packet.isLock or false
+	local m = find_mail(get_doc(user_id), mail_kind, packet.mailUid)
+	if not m then
+		return
+	end
+	m._is_lock = is_lock
+	USER_MGR.send(user_id, "s2c_set_mail_lock", {mailKind = mail_kind, mailUid = m._mail_uid, isLock = is_lock})
+end
+
+-- ---------- 上下线 ----------
+
+function on_user_login(user_id)
+	local doc = get_doc(user_id)
+	clear_expired(user_id, doc)
+	fetch_svr_mail(user_id, doc)
+end
+
+function on_user_logout(user_id)
+	MONGO_SLAVE.flush()
+	ORM.unbind(MONGO_SLAVE.COL.USER_MAIL, user_id)
 end
 
 function __init__()
+	if not svr_doc then
+		MONGO_SLAVE.system_startup()
+		svr_doc = ORM.load(MONGO_SLAVE.COL.SVR_MAIL, SVR_DOC_KEY, ORM.CLS_SVR_MAIL_DOC)
+	end
 	for_maker.c2s_req_mail_list = on_req_mail_list
 	for_maker.c2s_req_mail_detail = on_req_mail_detail
-	for_maker.c2s_req_unread_mail_cnt_list = on_req_unread_cnt_list
 	for_maker.c2s_del_mail_list = on_del_mail_list
 	for_maker.c2s_set_mail_lock = on_set_mail_lock
-	for_maker.c2s_get_mail_reward = on_get_mail_reward
 end

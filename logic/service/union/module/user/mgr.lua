@@ -1,6 +1,10 @@
 -- 在线玩家（登录事件里拿到 fd 和 gate）和玩家名片缓存
 -- 名片 brief = {uid, name, head_icon, level, power}，由 agent 转发协议或刷新时带过来
 
+local skynet = require "skynet"
+
+local agent_list
+
 fd_to_user_id = {}
 user_id_to_fd = {}
 fd_to_gate_srv = {}
@@ -40,6 +44,26 @@ end
 
 function tell_me(user_id, msg)
 	send(user_id, "s2c_tell_me", {msg = msg})
+end
+
+local function agent_of(user_id)
+	if not agent_list then
+		agent_list = skynet.call(".gated", "lua", "get_agent_list")
+	end
+	local n = #agent_list
+	if n < 1 then
+		return
+	end
+	return agent_list[user_id % n + 1]
+end
+
+-- 回 agent 扣玩家的消耗，会让出协程；扣不了（不够或不在线）返回 false
+function cost_items(user_id, cost_list, reason_list)
+	local agent = agent_of(user_id)
+	if not agent then
+		return false
+	end
+	return skynet.call(agent, "lua", "cost_items", user_id, cost_list, reason_list)
 end
 
 local function disconnect(fd, user_id)

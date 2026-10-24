@@ -40,6 +40,11 @@ local PRE_CHECK = {
 			USER_MGR.tell_me(user:get_user_id(), "创建联盟未开放")
 			return false
 		end
+		-- 先挡一下，真正扣令牌在 .union 校验完名字后回调 cost_items
+		if ITEM_MGR.get_item_count(user:get_user_id(), CONST.ALLIANCE_CREATE_ITEM) < DATA_COMMON.get_alliance_create_cost() then
+			USER_MGR.tell_me(user:get_user_id(), "令牌不足")
+			return false
+		end
 		return true
 	end,
 }

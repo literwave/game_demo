@@ -14,6 +14,9 @@ user_applies = {}
 name_tbl = {}
 -- [user_id] = {[alliance_id] = {inviter_id, inviter_name, time}}
 invite_tbl = {}
+-- 创建中（等 agent 扣令牌）：[name] = user_id，[user_id] = true
+creating_names = {}
+creating_users = {}
 max_id = 0
 loaded = false
 
@@ -24,6 +27,10 @@ end
 local function utf8_len_ok(s, min, max)
 	local len = utf8.len(s)
 	return len and len >= min and len <= max
+end
+
+function can_join(user_id)
+	return not user_alliance[user_id] and not creating_users[user_id]
 end
 
 function get_user_alliance(user_id)
@@ -194,24 +201,37 @@ local function new_member(brief, pos)
 	}
 end
 
+local function tell_world(user_id, alliance_id)
+	skynet.send(".world", "lua", "set_user_alliance", user_id, alliance_id or 0)
+end
+
 -- 入盟后清掉他所有申请和邀请
 local function join(doc, brief)
 	local user_id = brief.uid
 	doc._members[user_id] = new_member(brief, DATA_COMMON.ALLIANCE_POS.MEMBER)
 	user_alliance[user_id] = doc._alliance_id
+	tell_world(user_id, doc._alliance_id)
 	clear_user_applies(user_id)
 	invite_tbl[user_id] = nil
 	member_change(doc, CHANGE.JOIN, member_pto(doc._members[user_id]))
 	sync_alliance(doc)
 	sync_my(user_id)
+	MAIL.send_user_mail(user_id, CONST.MAIL_ID.ALLIANCE_JOIN, {doc._name})
 end
 
 local function remove_member(doc, user_id, change_type)
 	doc._members[user_id] = nil
 	user_alliance[user_id] = nil
+	tell_world(user_id, 0)
 	member_change(doc, change_type, {uid = user_id})
 	sync_alliance(doc)
 	sync_my(user_id)
+	MAIL.send_user_mail(user_id, CONST.MAIL_ID.ALLIANCE_LEAVE, {doc._name})
+end
+
+-- AlliancePos 的名字只导出到前端，详情里填职位 id
+local function send_pos_mail(doc, user_id, pos)
+	MAIL.send_user_mail(user_id, CONST.MAIL_ID.ALLIANCE_POS, {doc._name, tostring(pos)})
 end
 
 local function index_alliance(doc)
@@ -237,10 +257,10 @@ local function check_settings(flag, join_type, notice, manifesto)
 	if flag < 0 then
 		return false
 	end
-	if not utf8_len_ok(notice, 0, CONST.ALLIANCE_NOTICE_MAX_LEN) then
+	if not utf8_len_ok(notice, 0, DATA_COMMON.get_alliance_notice_max_len()) then
 		return false
 	end
-	if manifesto and not utf8_len_ok(manifesto, 0, CONST.ALLIANCE_MANIFESTO_MAX_LEN) then
+	if manifesto and not utf8_len_ok(manifesto, 0, DATA_COMMON.get_alliance_manifesto_max_len()) then
 		return false
 	end
 	return true
@@ -299,8 +319,17 @@ local function on_req_alliance_list(user_id, packet)
 	USER_MGR.send(user_id, "s2c_req_alliance_list", {allianceList = page})
 end
 
+local function create_cost_list()
+	return {{
+		cost_type = CONST.COST_TYPE.ITEM,
+		itemId = CONST.ALLIANCE_CREATE_ITEM,
+		count = DATA_COMMON.get_alliance_create_cost(),
+	}}
+end
+
+-- 扣令牌要回 agent，期间先占住名字、标记创建中，回来后不用再查
 local function on_create_alliance(user_id, packet)
-	if user_alliance[user_id] then
+	if not can_join(user_id) then
 		USER_MGR.tell_me(user_id, "已有联盟")
 		return
 	end
@@ -308,12 +337,21 @@ local function on_create_alliance(user_id, packet)
 	local flag = packet.flag or 0
 	local join_type = packet.joinType or 0
 	local notice = packet.notice or ""
-	if not utf8_len_ok(name, 1, CONST.ALLIANCE_NAME_MAX_LEN) or not check_settings(flag, join_type, notice) then
+	if not utf8_len_ok(name, 1, DATA_COMMON.get_alliance_name_max_len()) or not check_settings(flag, join_type, notice) then
 		USER_MGR.tell_me(user_id, "联盟设置不合法")
 		return
 	end
-	if name_tbl[name] then
+	if name_tbl[name] or creating_names[name] then
 		USER_MGR.tell_me(user_id, "联盟名字已被使用")
+		return
+	end
+	creating_names[name] = user_id
+	creating_users[user_id] = true
+	local ok = USER_MGR.cost_items(user_id, create_cost_list(), {CONST.FLOW_REASON.ALLIANCE})
+	creating_names[name] = nil
+	creating_users[user_id] = nil
+	if not ok then
+		USER_MGR.tell_me(user_id, "令牌不足")
 		return
 	end
 	local brief = USER_MGR.get_brief(user_id)
@@ -334,6 +372,7 @@ local function on_create_alliance(user_id, packet)
 	ORM.bind(doc, MONGO_SLAVE.COL.ALLIANCE, alliance_id)
 	ORM.touch(doc)
 	index_alliance(doc)
+	tell_world(user_id, alliance_id)
 	clear_user_applies(user_id)
 	invite_tbl[user_id] = nil
 	USER_MGR.send(user_id, "s2c_create_alliance", {info = info_pto(doc)})
@@ -364,6 +403,7 @@ local function on_dissolve_alliance(user_id)
 	name_tbl[doc._name] = nil
 	for _, uid in ipairs(members) do
 		user_alliance[uid] = nil
+		tell_world(uid, 0)
 	end
 	-- 先把之前的改动发出去再删，删除排在最后
 	MONGO_SLAVE.flush()
@@ -371,6 +411,7 @@ local function on_dissolve_alliance(user_id)
 	MONGO_SLAVE.del_doc(MONGO_SLAVE.COL.ALLIANCE, alliance_id)
 	CHAT_MGR.on_alliance_dissolve(alliance_id)
 	USER_MGR.send(user_id, "s2c_dissolve_alliance", {})
+	MAIL.send_group_mail(members, CONST.MAIL_ID.ALLIANCE_LEAVE, {doc._name})
 	for _, uid in ipairs(members) do
 		sync_my(uid)
 	end
@@ -407,7 +448,7 @@ local function on_kick_member(user_id, packet)
 end
 
 local function on_apply_alliance(user_id, packet)
-	if user_alliance[user_id] then
+	if not can_join(user_id) then
 		USER_MGR.tell_me(user_id, "已有联盟")
 		return
 	end
@@ -438,7 +479,7 @@ local function on_apply_alliance(user_id, packet)
 	for _ in pairs(doc._applies) do
 		apply_cnt = apply_cnt + 1
 	end
-	if apply_cnt >= CONST.ALLIANCE_APPLY_MAX then
+	if apply_cnt >= DATA_COMMON.get_alliance_apply_max() then
 		USER_MGR.tell_me(user_id, "该联盟申请人数已满")
 		return
 	end
@@ -504,7 +545,7 @@ local function on_handle_apply(user_id, packet)
 	}
 	remove_apply(doc._alliance_id, target_id)
 	if agree then
-		if user_alliance[target_id] then
+		if not can_join(target_id) then
 			USER_MGR.tell_me(user_id, "对方已加入其它联盟")
 			return
 		end
@@ -558,7 +599,7 @@ local function on_handle_invite(user_id, packet)
 			USER_MGR.tell_me(user_id, "邀请已失效")
 			return
 		end
-		if user_alliance[user_id] then
+		if not can_join(user_id) then
 			USER_MGR.tell_me(user_id, "已有联盟")
 			return
 		end
@@ -642,6 +683,7 @@ local function on_set_member_pos(user_id, packet)
 	member_change(doc, CHANGE.POS, member_pto(target))
 	sync_my(target_id)
 	USER_MGR.send(user_id, "s2c_set_member_pos", {uid = target_id, pos = pos})
+	send_pos_mail(doc, target_id, pos)
 end
 
 -- 新盟主原来的职位给老盟主，官员数不会超
@@ -665,6 +707,8 @@ local function on_transfer_leader(user_id, packet)
 	sync_my(target_id)
 	sync_my(user_id)
 	USER_MGR.send(user_id, "s2c_transfer_leader", {uid = target_id})
+	send_pos_mail(doc, target_id, target._pos)
+	send_pos_mail(doc, user_id, me._pos)
 end
 
 -- ---------- 名片刷新 / 上下线 ----------

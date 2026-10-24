@@ -1,4 +1,3 @@
-
 LOG		= Import("../logic/base/log.lua")
 GAME		= Import("../logic/game.lua")
 CONST		= Import("../logic/define/const.lua")
@@ -10,11 +9,7 @@ TIME		= Import("../common/time.lua")
 EVENT		= Import("../common/event.lua")
 
 ORM		= Import("../orm/init.lua")
-
 MONGO_SLAVE	= Import("../logic/base/mongo_slave.lua")
-LMDB		= Import("../logic/service/mail/lua_mdb.lua")
 
 USER_MGR	= Import("../logic/service/mail/module/user/mgr.lua")
-MAIL_BASE	= Import("../logic/service/mail/module/mail/base.lua")
-MAIL_BATTLE	= Import("../logic/service/mail/module/mail/battle.lua")
 MAIL_MGR	= Import("../logic/service/mail/module/mail/mgr.lua")

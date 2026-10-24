@@ -25,9 +25,6 @@ local function decode_pack(packet)
 	local id, pos = string.unpack(">I2", packet, 3)
 	local pto_name = ID_TO_PTONAME[id]
 	local pack_name = ID_TO_PACK_NAME[id]
-	if pto_name ~= "c2s_heart_beat" then
-		skynet.error(id, pos)
-	end
 	return protobuf.decode(pack_name, packet:sub(pos)), pto_name
 end
 
@@ -118,6 +115,39 @@ function CMD.march_arrive(user_id, troop_idx, end_time)
 	end)
 end
 
+-- 其它服务扣玩家消耗（创建联盟扣令牌等），只扣在线玩家
+function CMD.cost_items(user_id, cost_list, reason_list)
+	return get_user_queue(user_id)(function()
+		if not USER_MGR.get_fd_by_user_id(user_id) then
+			return false
+		end
+		return ITEM_MGR.del_cost_list(user_id, cost_list, reason_list)
+	end)
+end
+
+function CMD.gather_full(user_id, troop_idx, end_time)
+	get_user_queue(user_id)(function()
+		MARCH_MGR.on_gather_full(user_id, troop_idx, end_time)
+	end)
+end
+
+function CMD.encounter_snap(user_id, troop_idx)
+	return get_user_queue(user_id)(function()
+		return BATTLE_MGR.snap_troop(user_id, troop_idx)
+	end)
+end
+
+function CMD.encounter_result(user_id, troop_idx, pack)
+	local defer = get_user_queue(user_id)(function()
+		return BATTLE_MGR.on_encounter(user_id, troop_idx, pack)
+	end)
+	if defer then
+		skynet.timeout(0, function()
+			get_user_queue(user_id)(defer)
+		end)
+	end
+end
+
 function CMD.aoi_push(user_id, pack)
 	local fd = USER_MGR.get_fd_by_user_id(user_id)
 	if not fd then
@@ -182,16 +212,10 @@ skynet.start(function()
 			return
 		end
 		local msg, pto_name = decode_pack(packet)
-		if pto_name ~= "c2s_heart_beat" then
-			skynet.error("fd", fd, pto_name, user_id)
-		end
 		assert(fd)
 		if not for_maker[pto_name] then
 			skynet.error("ptoName not registerptoName", pto_name)
 			return
-		end
-		if pto_name ~= "c2s_heart_beat" then
-			skynet.error(table2str(msg))
 		end
 		if not msg then
 			return

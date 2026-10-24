@@ -92,7 +92,6 @@ function sync_all_build_to_client(user_id)
 	for _, build in pairs(build_tbl) do
 		build:sync_to_client()
 	end
-	for_caller.s2c_req_all_build_end(fd, {})
 end
 
 local function on_create_build(fd, packet)
@@ -103,12 +102,6 @@ local function on_create_build(fd, packet)
 	end
 	if not DATA_COMMON.get_build_type_by_id(bid) then
 		return
-	end
-	if not packet.isInstant then
-		local ok = QUEUE_MGR.try_add_new_work(user_id, bid)
-		if not ok then
-			return
-		end
 	end
 	local build = create_build({
 		_user_id = user_id,
@@ -136,12 +129,6 @@ local function on_up_build(fd, packet)
 	for _, limit in ipairs(next_conf.ItemLimit or EMPTY_TABLE) do
 		local need_build = get_build_by_bid(user_id, limit.bid)
 		if not need_build or need_build:get_level() < limit.lev then
-			return
-		end
-	end
-	if not packet.isInstant then
-		local ok = QUEUE_MGR.try_add_new_work(user_id, packet.bid)
-		if not ok then
 			return
 		end
 	end
