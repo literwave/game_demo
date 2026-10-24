@@ -60,11 +60,6 @@ function get_gate_srv_by_fd(fd)
 	return gate_srv
 end
 
-local function module_on_user_logout(user_id)
-	BUILD_MGR.on_user_logout(user_id)
-	TROOP_MGR.on_user_logout(user_id)
-end
-
 kicking_user = {}
 ignore_heart_beat = {}
 
@@ -73,6 +68,9 @@ function disconnect(fd, user_id)
 	if not user then
 		return
 	end
+	user:on_logout()
+	-- 各模块在这里存盘解绑自己的数据，所以要在玩家对象释放前发
+	EVENT.fire(CONST.EVENT.ON_USER_LOGOUT, user_id, fd)
 	MONGO_SLAVE.flush()
 	ORM.unbind(MONGO_SLAVE.COL.USER_INFO, user_id)
 	all_user_tbl[user_id] = nil
@@ -80,7 +78,6 @@ function disconnect(fd, user_id)
 	user_id_to_fd[user_id] = nil
 	kicking_user[user_id] = nil
 	ignore_heart_beat[user_id] = nil
-	module_on_user_logout(user_id)
 end
 
 function is_new_user(user_id)
@@ -141,14 +138,23 @@ function create_new_user(gate_srv, fd, user_id, server_id)
 	-- USER_MGR.updateUserPower(userId, CONST.POWER_TYPE.HERO)
 end
 
+-- 玩家自己的登录数据先记好，其它模块在 ON_USER_LOGIN 里处理。返回 user:on_login 的跨周期结果
 function module_on_user_login(user, is_first_login)
-	user:on_login()
-	BUILD_MGR.on_user_login(user, is_first_login)
-	QUEUE_MGR.on_user_login(user, is_first_login)
+	return user:on_login()
 end
 
-function module_on_user_next_day(user_id, times)
-	times = times or 1
+-- 离线跨过多天也只发一次
+function dispatch_cross(user_id, cross)
+	if not cross then
+		return
+	end
+	EVENT.dispatch(CONST.EVENT.ON_NEW_DAY, user_id)
+	if cross.week then
+		EVENT.dispatch(CONST.EVENT.ON_NEW_WEEK, user_id)
+	end
+	if cross.month then
+		EVENT.dispatch(CONST.EVENT.ON_NEW_MONTH, user_id)
+	end
 end
 
 function kick_user(fd, user_id, from_heart_beat)
@@ -200,7 +206,13 @@ local function on_heart_beat(fd)
 		return
 	end
 	kicking_user[user_id] = nil
-	user:set_and_sync_heart_beat_time(TIME.os_bj_sec())
+	local now = TIME.os_bj_sec()
+	user:set_and_sync_heart_beat_time(now)
+	local cross, minute_changed = user:tick_online(now)
+	dispatch_cross(user_id, cross)
+	if minute_changed then
+		EVENT.dispatch(CONST.EVENT.ON_ONLINE_MINUTE, user_id)
+	end
 end
 
 local function on_user_baseinfo(fd)
@@ -242,12 +254,15 @@ local function on_user_create(fd, packet)
 	user:set_birth_pos(pos.x, pos.y)
 	user:set_sex(sex)
 	user:set_name(name)
+	local world = skynet.localname(".world")
+	if world then
+		skynet.call(world, "lua", "upsert_city", user:get_user_id(), pos.x, pos.y)
+	end
 	for_caller.s2c_user_create(fd, {
 		name = name,
 		sex = sex,
-		birthX = pos.x,
-		birthY = pos.y,
 	})
+	user:sync_city_pos()
 end
 
 local function on_change_head_icon(fd, packet)
@@ -261,6 +276,7 @@ local function on_change_head_icon(fd, packet)
 	end
 	user:set_head_icon(head_icon)
 	for_caller.s2c_change_head_icon(fd, {headIcon = head_icon})
+	EVENT.dispatch(CONST.EVENT.ON_HEAD_ICON, user:get_user_id(), 1)
 end
 
 function __init__()

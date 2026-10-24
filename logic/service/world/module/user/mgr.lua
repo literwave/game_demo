@@ -31,6 +31,7 @@ function get_gate_srv_by_fd(fd)
 end
 
 local function module_on_user_logout(user_id)
+	AOI_MGR.clear_focus(user_id)
 end
 
 function disconnect(fd, user_id)

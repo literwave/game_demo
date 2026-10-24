@@ -139,6 +139,7 @@ local function do_add_item_cnt(user_id, item_id, cnt, need_sync, reason_list, ne
 		end
 	end
 	LOG._flow("item", user_id, item_id, cnt, get_item_count(user_id, item_id), reason_list)
+	EVENT.dispatch(CONST.EVENT.ON_ITEM_CHANGE, user_id, item_id)
 end
 
 function add_item_cnt(user_id, item_id, cnt, reason_list)
@@ -202,6 +203,7 @@ local function sub_item_cnt(user_id, item_id, cnt, reason_list)
 	end
 	assert(cnt == 0)
 	LOG._flow("item", user_id, item_id, -sub_cnt, get_item_count(user_id, item_id), reason_list)
+	EVENT.dispatch(CONST.EVENT.ON_ITEM_CHANGE, user_id, item_id)
 end
 
 -- cost_info: {cost_type, count, itemId}；itemId 对道具是道具 id，对资源是资源类型

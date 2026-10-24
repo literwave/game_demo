@@ -10,6 +10,7 @@ local CMD_DESC = {
 	{ "add_time", "增加时间 [add_time hour,min,sec]" },
 	{ "reset_time", "重置时间 [reset_time]" },
 	{ "show_time", "显示时间 [show_time]" },
+	{ "set_open_time", "设置开服时间 [set_open_time 年,月,日] 或 [set_open_time 年,月,日,时,分,秒]，[set_open_time 0] 恢复配置，重启后失效" },
 	{ "add_item", "增加道具 [add_item itemId,cnt]" },
 	{ "del_item", "删除道具 [del_item itemId,cnt]" },
 	{ "add_hero", "添加武将 [add_hero heroType]" },
@@ -76,16 +77,41 @@ function CMD.add_time(vfd, hour, min, sec)
 	min = min or 0
 	sec = sec or 0
 	TIME.add_offset(hour * CONST.ONE_HOUR_SEC + min * 60 + sec)
-	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.os_bj_sec()))
+	tell(vfd, TIME.format(TIME.os_bj_sec()))
 end
 
 function CMD.reset_time(vfd)
 	TIME.reset_offset()
-	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.os_bj_sec()))
+	tell(vfd, TIME.format(TIME.os_bj_sec()))
+end
+
+local function tell_open_time(vfd)
+	local open_time = GAME.get_open_time()
+	local open_day = TIME.get_rela_day_no(TIME.os_bj_sec()) - TIME.get_rela_day_no(open_time) + 1
+	tell(vfd, string.format("开服时间 %s，今天是开服第 %d 天", TIME.format(open_time), open_day))
 end
 
 function CMD.show_time(vfd)
-	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", TIME.os_bj_sec()))
+	tell(vfd, TIME.format(TIME.os_bj_sec()))
+	tell_open_time(vfd)
+end
+
+-- 每个 agent 各存一份，要广播到所有 agent
+function CMD.set_open_time(vfd, year, month, day, hour, min, sec)
+	assert(year, "need year,month,day or 0")
+	local t
+	if year ~= 0 then
+		assert(month and day, "need year,month,day")
+		t = TIME.os_bj_sec_by_tbl({year = year, month = month, day = day, hour = hour or 0, min = min or 0, sec = sec or 0})
+	end
+	local self = skynet.self()
+	for _, agent in ipairs(skynet.call(".gated", "lua", "get_agent_list")) do
+		if agent ~= self then
+			skynet.send(agent, "lua", "set_open_time", t)
+		end
+	end
+	GAME.set_open_time(t)
+	tell_open_time(vfd)
 end
 
 function CMD.add_item(vfd, item_id, cnt)
@@ -135,7 +161,7 @@ function CMD.add_heart(vfd, sec)
 	local last_time = user:get_heart_beat_time() or TIME.os_bj_sec()
 	user:set_heart_beat_time(last_time + sec)
 	USER_MGR.hold_heart_beat(user:get_user_id())
-	tell(vfd, os.date("%Y-%m-%d %H:%M:%S", user:get_heart_beat_time()))
+	tell(vfd, TIME.format(user:get_heart_beat_time()))
 end
 
 function CMD.open_system(vfd, system_id)

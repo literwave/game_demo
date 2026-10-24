@@ -26,7 +26,25 @@ local function on_user_lottery(fd, packet)
 		return
 	end
 	local user_id = user:get_user_id()
-	if not ITEM_MGR.check_cost_enough(user_id, conf.CostList) then
+	local cost_list = conf.CostList
+	local ctx = {lottery_id = use_lottery_times, rate = 100}
+	EVENT.dispatch(CONST.EVENT.ON_CALC_LOTTERY_COST, user_id, ctx)
+	local rate = ctx.rate
+	if rate < 100 then
+		cost_list = {}
+		for _, cost in ipairs(conf.CostList) do
+			local count = math.floor(cost.count * rate / 100)
+			if count < 1 then
+				count = 1
+			end
+			cost_list[#cost_list + 1] = {
+				cost_type = cost.cost_type,
+				itemId = cost.itemId,
+				count = count,
+			}
+		end
+	end
+	if not ITEM_MGR.check_cost_enough(user_id, cost_list) then
 		return
 	end
 	local lottery_times = user:get_lottery_times()
@@ -47,10 +65,11 @@ local function on_user_lottery(fd, packet)
 		table.insert(reward_list, GLOBAL_FUNC.gen_reward_info(entry.reward_type, entry.item_id, entry.item_count))
 	end
 	local reason_list = {CONST.FLOW_REASON.LOTTERY, use_lottery_times}
-	assert(ITEM_MGR.del_cost_list(user_id, conf.CostList, reason_list))
+	assert(ITEM_MGR.del_cost_list(user_id, cost_list, reason_list))
 	user:set_lottery_times(lottery_times)
 	REWARD_MGR.reward_user_and_show(user_id, reward_list, reason_list)
 	for_caller.s2c_user_lottery(fd, {useLotteryTimes = use_lottery_times, lotteryTimes = lottery_times})
+	EVENT.dispatch(CONST.EVENT.ON_LOTTERY, user_id, use_lottery_times)
 end
 
 function __init__()

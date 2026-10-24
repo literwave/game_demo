@@ -40,20 +40,23 @@ local function reward_hero(ret, user_id, reward_info_list, reason_list)
 	end
 end
 
-local function reward_diamond(ret, user_id, reward_info_list, reason_list)
+local function reward_soldier(ret, user_id, reward_info_list, reason_list)
 	local user = USER_MGR.try_init_user(user_id)
 	for _, reward_info in pairs(reward_info_list) do
-		local cnt = reward_info.item_count
-		user:add_gift_diamond_and_sync(cnt, reason_list)
-		table.insert(ret, reward_info)
+		local cnt = user:add_soldier(reward_info.item_count or 0)
+		if cnt > 0 then
+			LOG._flow("soldier", user_id, 0, cnt, user:get_soldier_cnt(), reason_list)
+			table.insert(ret, GLOBAL_FUNC.gen_reward_info(reward_info.reward_type, 0, cnt))
+		end
 	end
+	user:sync_soldier()
 end
 
 local GIVE_REWARD_FUNC = {
 	[CONST.REWARD_TYPE_ITEM] = reward_item,
 	[CONST.REWARD_TYPE_RES] = reward_resource,
 	[CONST.REWARD_TYPE_HERO] = reward_hero,
-	[CONST.REWARD_TYPE_DIAMOND] = reward_diamond,
+	[CONST.REWARD_TYPE_SOLDIER] = reward_soldier,
 }
 
 local function give_reward(ret, user_id, reward_type, reward_info_list, reason_list)
@@ -69,7 +72,13 @@ function reward_user(user_id, reward_list, reason_list)
 		if not reward_tbl[reward_type] then
 			reward_tbl[reward_type] = {}
 		end
-		table.insert(reward_tbl[reward_type], table.deepcopy(reward_info))
+		local info = table.deepcopy(reward_info)
+		if reward_type == CONST.REWARD_TYPE_ITEM and info.item_count > 0 then
+			local ctx = {item_id = info.item_id, rate = 1}
+			EVENT.dispatch(CONST.EVENT.ON_CALC_ITEM_REWARD, user_id, ctx)
+			info.item_count = math.floor(info.item_count * ctx.rate)
+		end
+		table.insert(reward_tbl[reward_type], info)
 	end
 	local actual_rwd_list = {}
 	for reward_type, reward_info_list in pairs(reward_tbl) do

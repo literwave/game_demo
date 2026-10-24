@@ -18,6 +18,9 @@ CLS_BUILD_DATA = "build_data"
 CLS_USER_BUILD_DOC = "user_build_doc"
 CLS_TROOP_DATA = "troop_data"
 CLS_USER_TROOP_DOC = "user_troop_doc"
+CLS_USER_TASK_DOC = "user_task_doc"
+CLS_USER_ACTIVITY_DOC = "user_activity_doc"
+CLS_SERVER_DATA = "server_data"
 
 local SCHEMA_FILES = {
 	"user.td",
@@ -28,6 +31,9 @@ local SCHEMA_FILES = {
 	"game_sid.td",
 	"build.td",
 	"troop.td",
+	"task.td",
+	"activity.td",
+	"server.td",
 }
 
 local function load_schemas()

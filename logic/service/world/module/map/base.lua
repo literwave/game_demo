@@ -65,6 +65,14 @@ function cls_map:is_block(idx)
 	return self._bit_set:get(idx)
 end
 
+function cls_map:release_birth_idx(idx)
+	if not self:in_bound(idx) or not self._birth_taken:get(idx) then
+		return
+	end
+	self._birth_taken:set(idx, false)
+	self._birth_free = self._birth_free + 1
+end
+
 function cls_map:hold_birth_idx(idx)
 	if not self:in_bound(idx) or not self._birth_ok:get(idx) or self._birth_taken:get(idx) then
 		return false

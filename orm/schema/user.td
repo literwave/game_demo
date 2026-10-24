@@ -23,6 +23,11 @@ user_data {
     _has_birth boolean
     _birth_x number
     _birth_y number
+    _soldier_cnt number
+    _hurt_cnt number
+    _login_days number
+    _week_login_days number
+    _day_online_sec number
     _lottery_times number
     _level number
     _exp number

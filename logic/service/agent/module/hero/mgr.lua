@@ -69,6 +69,7 @@ function add_hero(user_id, hero_type, reason_list)
 	local hero = create_hero(oci)
 	hero:sync_to_client()
 	LOG._flow("hero", user_id, hero_type, 1, 1, reason_list)
+	EVENT.dispatch(CONST.EVENT.ON_HERO_ADD, user_id, hero_type)
 	return hero
 end
 

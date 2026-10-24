@@ -71,12 +71,12 @@ local function init_user_queue(user_id)
 	create_queue(oci)
 end
 
-function on_user_login(user, is_first_login)
+function on_user_login(user_id, _, _, is_first_login)
 	if not is_first_login then
-		try_init_user_queues(user:get_user_id())
+		try_init_user_queues(user_id)
 		return
 	end
-	init_user_queue(user:get_user_id())
+	init_user_queue(user_id)
 end
 
 function sync_all_queue_info_to_client(user_id)
@@ -267,4 +267,5 @@ function __init__()
 	for_maker.c2s_buy_build_queue = on_req_buy_queue
 	for_maker.c2s_req_all_queue_info = on_req_all_work_queue_info
 	for_maker.c2s_cancel_build_work = on_cancel_build_work
+	EVENT.listen(CONST.EVENT.ON_USER_LOGIN)
 end

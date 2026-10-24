@@ -59,6 +59,14 @@ function is_block(idx)
 	return map_obj:is_block(idx)
 end
 
+function pos_of_idx(idx)
+	return idx_to_pos(idx, map_obj:get_width())
+end
+
+function idx_of_pos(x, y)
+	return pos_to_idx({x = x, y = y}, map_obj:get_width())
+end
+
 function alloc_birth_pos()
 	local idx = map_obj:alloc_birth_idx()
 	if not idx then
@@ -67,12 +75,19 @@ function alloc_birth_pos()
 	return idx_to_pos(idx, map_obj:get_width())
 end
 
-function find_path(from_idx, to_idx)
-	local w = map_obj:get_width()
-	local path = nav_obj:find_path(idx_to_pos(from_idx, w), idx_to_pos(to_idx, w))
+-- 行军拐点（JPS + 平滑），含起点和终点。不可达返回 nil
+function find_march_path(sx, sy, ex, ey)
+	local w, h = map_obj:get_width(), map_obj:get_height()
+	if ex < 0 or ey < 0 or ex >= w or ey >= h then
+		return
+	end
+	local path = nav_obj:find_path({x = sx, y = sy}, {x = ex, y = ey})
+	if #path < 2 then
+		return
+	end
 	local ret = {}
-	for _, pos in ipairs(path or {}) do
-		ret[#ret + 1] = pos_to_idx(pos, w)
+	for i, pos in ipairs(path) do
+		ret[i] = {_x = pos.x, _y = pos.y}
 	end
 	return ret
 end

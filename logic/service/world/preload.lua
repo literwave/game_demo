@@ -36,6 +36,7 @@ local function init_dofile()
 	end
 	math.randomseed(os.time())
 	MAP_MGR.init()
+	AOI_MGR.init()
 end
 
 init_dofile()

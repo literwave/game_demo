@@ -12,6 +12,7 @@ function cls_user:__init__(oci)
 	self._token = nil
 	self._account = nil
 	self._client_load_ok = nil
+	self._online_since = nil
 end
 
 function cls_user:get_user_id()
@@ -144,9 +145,94 @@ function cls_user:set_and_sync_heart_beat_time(time)
 	for_caller.s2c_heart_beat(fd, pto_tbl)
 end
 
+-- 返回值同 touch_day
 function cls_user:on_login()
-	self:set_login_time(TIME.os_bj_sec())
+	local now = TIME.os_bj_sec()
+	local cross = self:touch_day(now)
+	self:set_login_time(now)
+	self._online_since = now
+	return cross
 end
+
+-- 用上次登录时间判断跨了哪些周期，所以要在更新 _login_time 之前调。
+-- 在线跨天时也把 _login_time 推到现在，它表示最近一次记过登录的时间。
+-- 同一天返回 nil，否则返回 {week = 是否跨周, month = 是否跨月}
+function cls_user:touch_day(now)
+	local last = self._data._login_time
+	if last > 0 and TIME.get_rela_day_no(last) == TIME.get_rela_day_no(now) then
+		return
+	end
+	local cross = {
+		week = last == 0 or TIME.get_rela_week_no(last) ~= TIME.get_rela_week_no(now),
+		month = last == 0 or TIME.get_rela_month_no(last) ~= TIME.get_rela_month_no(now),
+	}
+	if cross.week then
+		self._data._week_login_days = 0
+	end
+	self:set_login_time(now)
+	self._data._login_days = self._data._login_days + 1
+	self._data._week_login_days = self._data._week_login_days + 1
+	self._data._day_online_sec = 0
+	return cross
+end
+
+-- 把这段在线时间记进当天。跨天的那段只算新的一天里的部分
+function cls_user:settle_online(now)
+	local since = self._online_since
+	if not since then
+		return
+	end
+	local begin = TIME.day_begin(now)
+	if since < begin then
+		since = begin
+	end
+	if now > since then
+		self._data._day_online_sec = self._data._day_online_sec + (now - since)
+	end
+	self._online_since = now
+end
+
+-- 心跳里调用。返回 touch_day 的跨周期结果、在线分钟数是否变化
+function cls_user:tick_online(now)
+	local old_min = self:get_day_online_min()
+	local cross = self:touch_day(now)
+	self:settle_online(now)
+	return cross, cross ~= nil or self:get_day_online_min() ~= old_min
+end
+
+function cls_user:on_logout()
+	self:settle_online(TIME.os_bj_sec())
+	self._online_since = nil
+end
+
+function cls_user:get_login_days()
+	return self._data._login_days
+end
+
+function cls_user:is_login_today()
+	local last = self._data._login_time
+	return last > 0 and TIME.get_rela_day_no(last) == TIME.get_rela_day_no()
+end
+
+function cls_user:get_week_login_days()
+	local last = self._data._login_time
+	if last == 0 or TIME.get_rela_week_no(last) ~= TIME.get_rela_week_no() then
+		return 0
+	end
+	return self._data._week_login_days
+end
+
+function cls_user:get_day_online_sec()
+	if not self:is_login_today() then
+		return 0
+	end
+	return self._data._day_online_sec
+end
+
+function cls_user:get_day_online_min()
+	return math.floor(self:get_day_online_sec() / 60)
+end
+
 
 function cls_user:set_login_time(time)
 	self._data._login_time = time
@@ -178,6 +264,89 @@ function cls_user:set_birth_pos(x, y)
 	self._data._has_birth = true
 end
 
+function cls_user:get_soldier_cnt()
+	return self._data._soldier_cnt
+end
+
+function cls_user:get_hurt_cnt()
+	return self._data._hurt_cnt
+end
+
+function cls_user:set_soldier_cnt(cnt)
+	if cnt < 0 then
+		cnt = 0
+	end
+	self._data._soldier_cnt = cnt
+end
+
+-- 加到城中兵力，不超过 Global Id=8 减去已出征的兵
+function cls_user:add_soldier(cnt)
+	if cnt <= 0 then
+		return 0
+	end
+	local deployed = TROOP_MGR.deployed_soldier(self:get_user_id())
+	local room = DATA_COMMON.get_soldier_max() - deployed - self:get_soldier_cnt()
+	if room < cnt then
+		cnt = room
+	end
+	if cnt <= 0 then
+		return 0
+	end
+	self._data._soldier_cnt = self:get_soldier_cnt() + cnt
+	return cnt
+end
+
+function cls_user:get_soldier_pto()
+	return {
+		count = self:get_soldier_cnt(),
+		hurtCount = self:get_hurt_cnt(),
+	}
+end
+
+function cls_user:get_city_pos_pto()
+	if not self:has_birth_pos() then
+		return {x = 0, y = 0}
+	end
+	return {x = self:get_birth_x(), y = self:get_birth_y()}
+end
+
+function cls_user:sync_soldier()
+	local fd = self:get_fd()
+	if not fd then
+		return
+	end
+	for_caller.s2c_sync_soldier(fd, {soldierInfo = self:get_soldier_pto()})
+end
+
+function cls_user:sync_city_pos()
+	local fd = self:get_fd()
+	if not fd then
+		return
+	end
+	for_caller.s2c_sync_city_pos(fd, {cityPos = self:get_city_pos_pto()})
+end
+
+-- 战力没有单独配置，用英雄四维乘等级相加，给任务和冲榜一个可比的数
+function cls_user:get_power()
+	local sum = 0
+	for _, hero in pairs(HERO_MGR.get_hero_tbl_by_user_id(self:get_user_id())) do
+		local info = DATA_COMMON.get_hero_info_by_type(hero:get_hero_type())
+		if info then
+			local base = (info.Strength or 0) + (info.Intelligence or 0) + (info.Command or 0) + (info.Charm or 0)
+			sum = sum + base * hero:get_level()
+		end
+	end
+	return sum
+end
+
+function cls_user:get_city_level()
+	local build = BUILD_MGR.get_build_by_bid(self:get_user_id(), CONST.BUILD_TYPE.MAIN_HALL)
+	if not build then
+		return 0
+	end
+	return build:get_level()
+end
+
 function cls_user:get_diamond()
 	return self._data._real_diamond + self._data._gift_diamond
 end
@@ -192,6 +361,7 @@ end
 
 function cls_user:add_sum_recharge_diamond(add_cnt)
 	self._data._sum_recharge_diamond = self._data._sum_recharge_diamond + add_cnt
+	EVENT.dispatch(CONST.EVENT.ON_RECHARGE, self:get_user_id())
 end
 
 function cls_user:get_sum_recharge_diamond()
@@ -288,8 +458,8 @@ function cls_user:get_client_pto_info()
 		birthTime = self:get_birth_time(),
 		level = self:get_level(),
 		exp = self:get_exp(),
-		birthX = self:get_birth_x(),
-		birthY = self:get_birth_y(),
+		soldierInfo = self:get_soldier_pto(),
+		cityPos = self:get_city_pos_pto(),
 	}
 end
 

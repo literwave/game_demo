@@ -15,34 +15,146 @@ function cls_troop:get_troop_idx()
 	return self._data._troop_idx
 end
 
-function cls_troop:get_pos_hero_tbl()
-	return self._data._pos_hero_tbl
+function cls_troop:get_pos_tbl()
+	return self._data._pos_tbl
 end
 
-function cls_troop:set_pos_hero(pos, hero_idx)
-	self._data._pos_hero_tbl[pos] = hero_idx
+function cls_troop:set_pos(pos, hero_idx, count, hurt)
+	if not hero_idx then
+		self._data._pos_tbl[pos] = nil
+		return
+	end
+	self._data._pos_tbl[pos] = {
+		_hero_idx = hero_idx,
+		_soldier_cnt = count,
+		_hurt_cnt = hurt,
+	}
 end
 
-function cls_troop:clear_pos_hero()
+function cls_troop:clear_pos()
 	local pos_list = {}
-	for pos in pairs(self:get_pos_hero_tbl()) do
+	for pos in pairs(self:get_pos_tbl()) do
 		pos_list[#pos_list + 1] = pos
 	end
 	for _, pos in ipairs(pos_list) do
-		self:set_pos_hero(pos, nil)
+		self:set_pos(pos, nil)
 	end
 end
 
+function cls_troop:get_soldier_sum()
+	local sum = 0
+	for _, info in pairs(self:get_pos_tbl()) do
+		sum = sum + info._soldier_cnt
+	end
+	return sum
+end
+
+function cls_troop:has_hero()
+	for _ in pairs(self:get_pos_tbl()) do
+		return true
+	end
+	return false
+end
+
+function cls_troop:find_hero(hero_idx)
+	for pos, info in pairs(self:get_pos_tbl()) do
+		if info._hero_idx == hero_idx then
+			return pos, info
+		end
+	end
+end
+
+function cls_troop:get_march_state()
+	return self._data._march_state
+end
+
+function cls_troop:get_target_type()
+	return self._data._target_type
+end
+
+function cls_troop:get_target_id()
+	return self._data._target_id
+end
+
+function cls_troop:get_end_time()
+	return self._data._end_time
+end
+
+function cls_troop:is_marching()
+	return self:get_march_state() ~= 0
+end
+
+function cls_troop:calc_pos(now)
+	return MARCH_PATH.pos_at(self._data._path, self._data._start_time, self._data._end_time, now)
+end
+
+function cls_troop:set_march(info)
+	self._data._march_state = info.state
+	self._data._target_type = info.target_type
+	self._data._target_id = info.target_id
+	self._data._path = info.path
+	self._data._start_time = info.start_time
+	self._data._end_time = info.end_time
+end
+
+function cls_troop:set_arrived()
+	self._data._march_state = CONST.MARCH_STATE.ARRIVED
+end
+
+function cls_troop:clear_march()
+	self:set_march({
+		state = 0,
+		target_type = 0,
+		target_id = 0,
+		path = {},
+		start_time = 0,
+		end_time = 0,
+	})
+end
+
+function cls_troop:get_march_info()
+	return {
+		user_id = self:get_user_id(),
+		troop_idx = self:get_troop_idx(),
+		target_type = self:get_target_type(),
+		target_id = self:get_target_id(),
+		path = MARCH_PATH.copy(self._data._path),
+		start_time = self._data._start_time,
+		end_time = self._data._end_time,
+	}
+end
+
+function cls_troop:get_march_pto()
+	local sx, sy = MARCH_PATH.first_pos(self._data._path)
+	local ex, ey = MARCH_PATH.last_pos(self._data._path)
+	return {
+		troopIdx = self:get_troop_idx(),
+		targetType = self:get_target_type(),
+		targetId = self:get_target_id(),
+		startPos = {x = math.floor(sx), y = math.floor(sy)},
+		endPos = {x = math.floor(ex), y = math.floor(ey)},
+		startTime = self._data._start_time,
+		endTime = self._data._end_time,
+		state = self:get_march_state(),
+	}
+end
+
 function cls_troop:get_pto_info()
-	local pos_hero_map = {}
-	for pos, hero_idx in pairs(self:get_pos_hero_tbl()) do
-		pos_hero_map[#pos_hero_map + 1] = {
+	local pos_map = {}
+	for pos, info in pairs(self:get_pos_tbl()) do
+		pos_map[#pos_map + 1] = {
 			key = pos,
-			value = hero_idx,
+			value = {
+				heroIdx = info._hero_idx,
+				soldier = {
+					count = info._soldier_cnt,
+					hurtCount = info._hurt_cnt,
+				},
+			},
 		}
 	end
 	return {
 		troopIdx = self:get_troop_idx(),
-		pos2HeroMap = pos_hero_map,
+		posMap = pos_map,
 	}
 end

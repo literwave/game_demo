@@ -11,3 +11,6 @@
 [submodule "vendor/aoi"]
 	path = vendor/aoi
 	url = git@github.com:cloudwu/aoi.git
+[submodule "vendor/lua-zset"]
+	path = vendor/lua-zset
+	url = https://github.com/xjdrew/lua-zset.git

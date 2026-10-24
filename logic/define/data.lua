@@ -11,6 +11,11 @@ local DATA_HEAD_ICON = sharedata.query("HeadIcon")
 local DATA_LOTTERY = sharedata.query("Lottery")
 local DATA_ITEM = sharedata.query("Item")
 local DATA_SYSTEM_OPEN = sharedata.query("SystemOpen")
+local DATA_MAIN_TASK = sharedata.query("MainTask")
+local DATA_DAILY_TASK = sharedata.query("DailyTask")
+local DATA_WEEK_TASK = sharedata.query("WeekTask")
+local DATA_ACTIVITY = sharedata.query("Activity")
+local DATA_MONSTER_GROUP = sharedata.query("MonsterGroup")
 -- local DATA_NAME_CN = sharedata.query("NameCn")
 
 -- local conf = {
@@ -24,6 +29,13 @@ local function init_config_data()
 	init_build_list = {}
 	for _, conf in pairs(DATA_BUILD_DETAIL) do
 		table.insert(init_build_list, conf.InitLev)
+	end
+	-- 配置加载后按 Id 索引，没有"第一行"了，主线起点取 Order 最小的
+	main_task_head = nil
+	for task_id, conf in pairs(DATA_MAIN_TASK) do
+		if not main_task_head or conf.Order < DATA_MAIN_TASK[main_task_head].Order then
+			main_task_head = task_id
+		end
 	end
 	-- [build_type] = { [lv] = conf }，build_max_level_tbl[build_type] = 配置里的最高等级
 	build_lv_tbl = {}
@@ -157,4 +169,52 @@ end
 
 function get_system_open_tbl()
 	return DATA_SYSTEM_OPEN
+end
+
+function get_soldier_max()
+	return get_value_by_key(8)
+end
+
+function get_main_task_head()
+	return main_task_head
+end
+
+function get_daily_task_tbl()
+	return DATA_DAILY_TASK
+end
+
+function get_week_task_tbl()
+	return DATA_WEEK_TASK
+end
+
+function get_task_conf(task_id)
+	return DATA_MAIN_TASK[task_id] or DATA_DAILY_TASK[task_id] or DATA_WEEK_TASK[task_id]
+end
+
+function get_task_type(task_id)
+	if DATA_MAIN_TASK[task_id] then
+		return CONST.TASK_TYPE.MAIN
+	end
+	if DATA_DAILY_TASK[task_id] then
+		return CONST.TASK_TYPE.DAILY
+	end
+	if DATA_WEEK_TASK[task_id] then
+		return CONST.TASK_TYPE.WEEK
+	end
+end
+
+function get_activity_conf(activity_id)
+	return DATA_ACTIVITY[activity_id]
+end
+
+function get_all_activity()
+	return DATA_ACTIVITY
+end
+
+function get_monster_group(group_id)
+	return DATA_MONSTER_GROUP[group_id]
+end
+
+function get_monster_group_tbl()
+	return DATA_MONSTER_GROUP
 end

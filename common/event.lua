@@ -12,23 +12,29 @@ skynet.register_protocol {
 	unpack = skynet.unpack,
 }
 
-local function ensure_listener(event_id)
+local function add_listener(mod, event_id)
+	if type(mod[event_id]) ~= "function" then
+		return false
+	end
 	local mods = listener[event_id]
 	if not mods then
 		mods = {}
 		listener[event_id] = mods
-		datacenter.set(ROOT, event_id, skynet.self(), true)
 	end
-	return mods
+	mods[mod] = true
+	return true
 end
 
+-- 跨服务订阅：别的服务 emit 时也会发到本服务
 function register(event_id)
-	local mod = getfenv(2)
-	if type(mod[event_id]) ~= "function" then
-		return
+	if add_listener(getfenv(2), event_id) then
+		datacenter.set(ROOT, event_id, skynet.self(), true)
 	end
-	local mods = ensure_listener(event_id)
-	mods[mod] = true
+end
+
+-- 只订阅本服务内的 dispatch / fire。agent 有多个，玩家相关的事件必须用这个，否则会发到别的 agent
+function listen(event_id)
+	add_listener(getfenv(2), event_id)
 end
 
 function unregister(event_id)
@@ -57,6 +63,21 @@ function dispatch(event_id, ...)
 		end
 	end
 	return true
+end
+
+-- 先同步分发给本服务的 listen，再异步发给 register 了的其它服务
+function fire(event_id, ...)
+	dispatch(event_id, ...)
+	local subscriber = datacenter.get(ROOT, event_id)
+	if not subscriber then
+		return
+	end
+	local self = skynet.self()
+	for addr in pairs(subscriber) do
+		if addr ~= self then
+			skynet.send(addr, "event", event_id, ...)
+		end
+	end
 end
 
 function emit(event_id, ...)

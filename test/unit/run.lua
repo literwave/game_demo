@@ -2,7 +2,7 @@
 --   skynet/3rd/lua/lua test/unit/run.lua [test_xxx.lua ...]
 -- 不带参数跑 test/unit/ 下所有 test_*.lua。每个文件返回 {用例名 = function}
 
-package.path = "lualib/?.lua;lualib/?/init.lua;test/unit/?.lua;" .. package.path
+package.path = "lualib/?.lua;lualib/?/init.lua;vendor/lua-zset/?.lua;vendor/slg-navigation/?.lua;test/unit/?.lua;" .. package.path
 package.cpath = "skynet/luaclib/?.so;" .. package.cpath
 
 local file_list = {...}

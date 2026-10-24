@@ -10,6 +10,7 @@ EVENT		= Import("../common/event.lua")
 MAIL		= Import("../common/mail.lua")
 GLOBAL_FUNC	= Import("../common/global_func.lua")
 TIME		= Import("../common/time.lua")
+MARCH_PATH	= Import("../common/march_path.lua")
 
 ORM		= Import("../orm/init.lua")
 
@@ -49,3 +50,7 @@ SYSTEM_OPEN = Import("../logic/service/agent/module/system_open/mgr.lua")
 
 TROOP_BASE = Import("../logic/service/agent/module/troop/base.lua")
 TROOP_MGR = Import("../logic/service/agent/module/troop/mgr.lua")
+
+TASK_MGR = Import("../logic/service/agent/module/task/mgr.lua")
+ACTIVITY_MGR = Import("../logic/service/agent/module/activity/mgr.lua")
+MARCH_MGR = Import("../logic/service/agent/module/march/mgr.lua")

@@ -11,6 +11,14 @@ function CMD.hot_update(path_list)
 	return hot_update(path_list)
 end
 
+function CMD.set_score(rank_type, user_id, score)
+	RANK_MGR.set_score(rank_type, user_id, score)
+end
+
+function CMD.get_rank(rank_type, user_id)
+	return RANK_MGR.get_rank(rank_type, user_id)
+end
+
 skynet.start(function()
 	skynet.error("boot activity success")
 	dofile "../logic/service/activity/preload.lua"

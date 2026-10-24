@@ -60,7 +60,6 @@ local function do_login(gate_srv, fd, user_id, addr, account, server_id, token)
 	kick_old_conn(user_id, fd)
 	local user = false
 	local is_first_login = false
-	local last_login_time = TIME.os_bj_sec()
 	if USER_MGR.is_new_user(user_id) then
 		user = USER_MGR.create_new_user(gate_srv, fd, user_id, server_id)
 		is_first_login = true
@@ -69,18 +68,14 @@ local function do_login(gate_srv, fd, user_id, addr, account, server_id, token)
 		USER_MGR.ref_login(user_id, fd, user)
 		user:set_fd(fd)
 		user:set_gate_srv(gate_srv)
-		last_login_time = user:get_login_time()
 	end
 	user:set_token(token)
 	user:set_account(account)
 	user:set_login_addr(addr)
-	USER_MGR.module_on_user_login(user, is_first_login)
-	local times = TIME.get_diff_day(TIME.os_bj_sec(), last_login_time)
-	if times > 1 then
-		USER_MGR.module_on_user_next_day(user, times)
-	end
-	CALL_OUT.call_once("USER_MGR", "module_on_user_next_day", 24, user_id)
-	EVENT.emit(CONST.EVENT.ON_USER_LOGIN, user_id, fd, gate_srv, is_first_login)
+	local cross = USER_MGR.module_on_user_login(user, is_first_login)
+	EVENT.fire(CONST.EVENT.ON_USER_LOGIN, user_id, fd, gate_srv, is_first_login)
+	-- 各模块在 ON_USER_LOGIN 里加载好数据后再补发离线期间的跨周期
+	USER_MGR.dispatch_cross(user_id, cross)
 end
 
 local is_closing = false
@@ -100,7 +95,6 @@ local function do_disconnect(fd, user_id)
 		return
 	end
 	USER_MGR.disconnect(fd, user_id)
-	EVENT.emit(CONST.EVENT.ON_USER_LOGOUT, user_id, fd)
 	-- 新连接的消息要等 login 返回后 worker 才会转发，这里删掉不会和新登录并发
 	user_queues[user_id] = nil
 end
@@ -112,6 +106,24 @@ end
 
 function CMD.hot_update(path_list)
 	return hot_update(path_list)
+end
+
+function CMD.set_open_time(t)
+	GAME.set_open_time(t)
+end
+
+function CMD.march_arrive(user_id, troop_idx, end_time)
+	get_user_queue(user_id)(function()
+		MARCH_MGR.on_arrive(user_id, troop_idx, end_time)
+	end)
+end
+
+function CMD.aoi_push(user_id, pack)
+	local fd = USER_MGR.get_fd_by_user_id(user_id)
+	if not fd then
+		return
+	end
+	MARCH_MGR.on_aoi_push(fd, pack)
 end
 
 function CMD.shutdown()

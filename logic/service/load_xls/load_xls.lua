@@ -43,6 +43,14 @@ DATA_FILE_LIST = {
 	"../game_common/server/res/Item.lua",
 	"../game_common/server/res/Lottery.lua",
 	"../game_common/server/res/SystemOpen.lua",
+	"../game_common/server/res/Activity.lua",
+	"../game_common/server/res/MainTask.lua",
+	"../game_common/server/res/DailyTask.lua",
+	"../game_common/server/res/WeekTask.lua",
+	"../game_common/server/res/MonsterGroup.lua",
+	"../game_common/server/res/Monster.lua",
+	"../game_common/server/res/EntityType.lua",
+	"../game_common/server/res/TargetType.lua",
 	"../res/innerCity.lua",
 }
 

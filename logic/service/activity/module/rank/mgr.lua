@@ -1,0 +1,65 @@
+local zset = require "zset"
+
+server_doc = nil
+-- [rank_type] = zset，成员是 user_id 的字符串
+rank_tbl = {}
+
+local function entry_tbl(rank_type)
+	if rank_type == CONST.RANK_TYPE.POWER then
+		return server_doc._power_tbl
+	end
+	if rank_type == CONST.RANK_TYPE.CITY then
+		return server_doc._city_tbl
+	end
+end
+
+-- 同分时 zset 的反向排名里 ts 小的靠前，传达到分数的时间，先到的排前面
+local function zadd(z, user_id, entry)
+	z:add(entry._score, tostring(user_id), entry._time)
+end
+
+function set_score(rank_type, user_id, score)
+	local tbl = entry_tbl(rank_type)
+	local z = rank_tbl[rank_type]
+	if not tbl or not z or not user_id then
+		return
+	end
+	if score <= 0 then
+		if tbl[user_id] then
+			tbl[user_id] = nil
+			z:rem(tostring(user_id))
+		end
+		return
+	end
+	local entry = tbl[user_id]
+	if entry and entry._score == score then
+		return
+	end
+	tbl[user_id] = {_score = score, _time = TIME.os_bj_sec()}
+	zadd(z, user_id, tbl[user_id])
+end
+
+-- 没上榜返回 0
+function get_rank(rank_type, user_id)
+	local z = rank_tbl[rank_type]
+	if not z then
+		return 0
+	end
+	return z:rev_rank(tostring(user_id)) or 0
+end
+
+local function build_rank(rank_type)
+	local z = zset.new()
+	for user_id, entry in pairs(entry_tbl(rank_type)) do
+		zadd(z, user_id, entry)
+	end
+	rank_tbl[rank_type] = z
+end
+
+function __init__()
+	MONGO_SLAVE.system_startup()
+	server_doc = ORM.load(MONGO_SLAVE.COL.SERVER, 1, ORM.CLS_SERVER_DATA)
+	for _, rank_type in pairs(CONST.RANK_TYPE) do
+		build_rank(rank_type)
+	end
+end

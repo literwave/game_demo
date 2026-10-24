@@ -63,13 +63,13 @@ local function init_user_builds(user_id)
 					_bid = bid,
 					_level = level,
 				})
+				EVENT.dispatch(CONST.EVENT.ON_BUILD_LEVEL, user_id, bid, level)
 			end
 		end
 	end
 end
 
-function on_user_login(user, is_first_login)
-	local user_id = user:get_user_id()
+function on_user_login(user_id)
 	-- 无建筑时补初始建筑（含首次创角中途失败、未 persist 的号）
 	init_user_builds(user_id)
 	sync_all_build_to_client(user_id)
@@ -116,6 +116,7 @@ local function on_create_build(fd, packet)
 		_level = 1,
 	})
 	build:sync_to_client()
+	EVENT.dispatch(CONST.EVENT.ON_BUILD_LEVEL, user_id, bid, 1)
 end
 
 local function on_up_build(fd, packet)
@@ -146,9 +147,12 @@ local function on_up_build(fd, packet)
 	end
 	build:set_level(build:get_level() + 1)
 	build:sync_to_client()
+	EVENT.dispatch(CONST.EVENT.ON_BUILD_LEVEL, user_id, packet.bid, build:get_level())
 end
 
 function __init__()
 	for_maker.c2s_create_build = on_create_build
 	for_maker.c2s_up_build = on_up_build
+	EVENT.listen(CONST.EVENT.ON_USER_LOGIN)
+	EVENT.listen(CONST.EVENT.ON_USER_LOGOUT)
 end

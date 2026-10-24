@@ -1,6 +1,6 @@
-# 编译 Skynet（submodule）、pbc protobuf.so、slg-navigation、cloudwu/aoi
+# 编译 Skynet（submodule）、pbc protobuf.so、slg-navigation、cloudwu/aoi、xjdrew/lua-zset
 
-.PHONY: all linux macosx skynet protobuf navigation aoi clean
+.PHONY: all linux macosx skynet protobuf navigation aoi zset clean
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -28,10 +28,14 @@ AOI_DIR := vendor/aoi
 AOI_SO := $(LUACLIB)/aoi/c.so
 AOI_SRC := lualib/aoi_binding.c $(AOI_DIR)/aoi.c
 
+ZSET_DIR := vendor/lua-zset
+ZSET_SO := $(LUACLIB)/skiplist/c.so
+ZSET_SRC := $(ZSET_DIR)/lua-skiplist.c $(ZSET_DIR)/skiplist.c
+
 PBC_SRC := $(wildcard $(PBC_DIR)/src/*.c)
 PBC_LUA := $(PBC_DIR)/binding/lua53/pbc-lua53.c
 
-all: skynet protobuf navigation aoi
+all: skynet protobuf navigation aoi zset
 
 linux macosx:
 	$(MAKE) all PLAT=$@
@@ -58,6 +62,12 @@ $(AOI_SO): $(AOI_SRC) $(AOI_DIR)/aoi.h
 	mkdir -p $(LUACLIB)/aoi
 	$(CC) $(CFLAGS) $(SHARED) -o $@ $(AOI_SRC) -I$(AOI_DIR) -I$(LUA_INC)
 
+zset: $(ZSET_SO)
+
+$(ZSET_SO): $(ZSET_SRC) $(ZSET_DIR)/skiplist.h
+	mkdir -p $(LUACLIB)/skiplist
+	$(CC) $(CFLAGS) $(SHARED) -o $@ $(ZSET_SRC) -I$(ZSET_DIR) -I$(LUA_INC) -lm
+
 clean:
 	-$(MAKE) -C skynet cleanall
-	rm -f $(PROTOBUF_SO) $(NAV_SO) $(AOI_SO)
+	rm -f $(PROTOBUF_SO) $(NAV_SO) $(AOI_SO) $(ZSET_SO)
